@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
+from app.bot.admin import router as admin_router
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -12,15 +13,12 @@ router = Router(name="root")
 
 
 @router.message(CommandStart())
-async def start(message: Message) -> None:
+async def start_non_admin(message: Message) -> None:
     user_id = message.from_user.id if message.from_user else None
     if user_id in settings.admin_ids:
-        await message.answer(
-            "Привет, админ платформы! 👋\n"
-            "SaaS-платформа запущена. Каркас MVP готов."
-        )
-    else:
-        await message.answer("Доступ ограничен.")
+        # Handled by admin_router; this branch is a safety net.
+        return
+    await message.answer("Доступ ограничен.")
 
 
 def create_bot() -> Bot:
@@ -29,5 +27,6 @@ def create_bot() -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
+    dp.include_router(admin_router)
     dp.include_router(router)
     return dp
