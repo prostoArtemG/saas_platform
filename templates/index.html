@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru" class="scroll-smooth">
+<html lang="{{ lang }}" class="scroll-smooth">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SaaSPlatform — Сайт + Telegram-бот за 10 минут</title>
-  <meta name="description" content="Создай современный сайт с Telegram-ботом для своего бизнеса. Без кода, без девелопера. Запуск за 10 минут." />
+  <title>SaaSPlatform — {{ t.hero.title_line1 }} {{ t.hero.title_accent }} {{ t.hero.title_line2 }}</title>
+  <meta name="description" content="{{ t.hero.subtitle }}" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/custom.css" />
   <script>
@@ -30,85 +30,73 @@
 
 <body class="bg-brand-dark text-white font-sans antialiased overflow-x-hidden">
 
-  <!-- ───────────── NAV ───────────── -->
+  <!-- NAV -->
   <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-      <a href="#" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
         <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
           <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </span>
         <span>SaaSPlatform</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm text-white/60">
-        <a href="#how" class="hover:text-white transition-colors">Как работает</a>
-        <a href="#templates" class="hover:text-white transition-colors">Шаблоны</a>
-        <a href="#pricing" class="hover:text-white transition-colors">Цены</a>
+        <a href="#how" class="hover:text-white transition-colors">{{ t.nav.how }}</a>
+        <a href="#templates" class="hover:text-white transition-colors">{{ t.nav.templates }}</a>
+        <a href="#pricing" class="hover:text-white transition-colors">{{ t.nav.pricing }}</a>
       </nav>
-      <a href="#pricing" class="cta-btn px-5 py-2 rounded-xl text-sm hidden md:inline-flex">
-        Начать →
-      </a>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+          {% for l in supported_langs %}
+          <a href="/?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+          {% endfor %}
+        </div>
+        <a href="#pricing" class="cta-btn px-5 py-2 rounded-xl text-sm hidden md:inline-flex">{{ t.nav.start }}</a>
+      </div>
     </div>
   </header>
 
-  <!-- ───────────── HERO ───────────── -->
+  <!-- HERO -->
   <section class="relative min-h-screen flex items-center pt-16 grid-bg overflow-hidden">
-    <!-- blobs -->
     <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
     <div class="relative max-w-6xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-16 items-center">
-      <!-- text -->
       <div class="animate-fade-up">
         <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs text-brand-lime font-medium mb-6 border border-brand-lime/20">
           <span class="w-1.5 h-1.5 rounded-full bg-brand-lime animate-pulse"></span>
-          Запуск за 10 минут
+          {{ t.hero.badge }}
         </div>
-
         <h1 class="text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.05] mb-6">
-          Сайт и<br/>
-          <span class="gradient-text">Telegram-бот</span><br/>
-          для бизнеса
+          {{ t.hero.title_line1 }}<br/>
+          <span class="gradient-text">{{ t.hero.title_accent }}</span><br/>
+          {{ t.hero.title_line2 }}
         </h1>
-
-        <p class="text-lg text-white/60 leading-relaxed mb-10 max-w-lg">
-          Профессиональный сайт с встроенной Telegram-админкой. Каталог, заявки, подписки — всё управляется прямо из бота. Без кода и разработчика.
-        </p>
-
+        <p class="text-lg text-white/60 leading-relaxed mb-10 max-w-lg">{{ t.hero.subtitle }}</p>
         <div class="flex flex-wrap gap-4">
-          <a href="#pricing" class="cta-btn px-8 py-3.5 rounded-2xl text-base animate-glow">
-            Попробовать бесплатно
-          </a>
-          <a href="#how" class="glass border border-white/10 hover:border-brand-lime/40 transition-colors px-8 py-3.5 rounded-2xl text-base text-white/80 hover:text-white">
-            Как это работает ↓
-          </a>
+          <a href="#pricing" class="cta-btn px-8 py-3.5 rounded-2xl text-base animate-glow">{{ t.hero.cta_primary }}</a>
+          <a href="#how" class="glass border border-white/10 hover:border-brand-lime/40 transition-colors px-8 py-3.5 rounded-2xl text-base text-white/80 hover:text-white">{{ t.hero.cta_secondary }}</a>
         </div>
-
-        <!-- stats -->
         <div class="mt-14 flex flex-wrap gap-8">
           <div>
             <div class="text-3xl font-black text-brand-lime">300+</div>
-            <div class="text-sm text-white/50 mt-0.5">Запущенных сайтов</div>
+            <div class="text-sm text-white/50 mt-0.5">{{ t.hero.stat1_label }}</div>
           </div>
           <div class="w-px bg-white/10"></div>
           <div>
-            <div class="text-3xl font-black text-brand-lime">10 мин</div>
-            <div class="text-sm text-white/50 mt-0.5">Среднее время запуска</div>
+            <div class="text-3xl font-black text-brand-lime">10 min</div>
+            <div class="text-sm text-white/50 mt-0.5">{{ t.hero.stat2_label }}</div>
           </div>
           <div class="w-px bg-white/10"></div>
           <div>
             <div class="text-3xl font-black text-brand-lime">99.9%</div>
-            <div class="text-sm text-white/50 mt-0.5">Uptime</div>
+            <div class="text-sm text-white/50 mt-0.5">{{ t.hero.stat3_label }}</div>
           </div>
         </div>
       </div>
-
-      <!-- mockup -->
+      <!-- phone mockup -->
       <div class="relative flex justify-center animate-float lg:justify-end">
         <div class="relative w-72 lg:w-80">
-          <!-- phone frame -->
           <div class="glass-card rounded-[2.5rem] p-3 shadow-2xl">
             <div class="bg-[#0d1117] rounded-[2rem] overflow-hidden">
-              <!-- status bar -->
               <div class="h-8 bg-[#0d1117] flex items-center justify-between px-5 pt-2">
                 <span class="text-xs text-white/40">9:41</span>
                 <div class="flex gap-1">
@@ -116,48 +104,43 @@
                   <div class="w-1.5 h-1.5 bg-white/30 rounded-full"></div>
                 </div>
               </div>
-              <!-- chat header -->
               <div class="flex items-center gap-3 px-4 py-3 border-b border-white/5">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-lime to-green-600 flex items-center justify-center text-xs font-bold text-black">B</div>
                 <div>
                   <div class="text-sm font-semibold">Business Bot</div>
-                  <div class="text-xs text-white/40">онлайн</div>
+                  <div class="text-xs text-white/40">online</div>
                 </div>
               </div>
-              <!-- messages -->
               <div class="p-4 space-y-3 min-h-64">
                 <div class="flex justify-start">
                   <div class="glass rounded-2xl rounded-tl-sm px-3 py-2 max-w-[85%]">
-                    <p class="text-sm">Привет! 👋 Добро пожаловать в <b>TechnoVlada</b></p>
+                    <p class="text-sm">👋 <b>TechnoVlada</b></p>
                   </div>
                 </div>
                 <div class="flex justify-start">
                   <div class="glass rounded-2xl rounded-tl-sm px-3 py-2 max-w-[85%]">
-                    <p class="text-xs text-white/60 mb-1.5">Выберите раздел:</p>
                     <div class="grid grid-cols-2 gap-1.5">
-                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">🛍 Каталог</button>
-                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">📞 Связь</button>
-                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">📋 О нас</button>
-                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">💳 Тарифы</button>
+                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">🛍 {{ t.templates.t1_tags[0] }}</button>
+                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">📞 Contact</button>
+                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">📋 About</button>
+                      <button class="bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-xs rounded-lg py-1.5 px-2">💳 {{ t.nav.pricing }}</button>
                     </div>
                   </div>
                 </div>
                 <div class="flex justify-end">
                   <div class="bg-brand-purple/70 rounded-2xl rounded-tr-sm px-3 py-2 max-w-[80%]">
-                    <p class="text-sm">🛍 Каталог</p>
+                    <p class="text-sm">🛍 {{ t.templates.t1_tags[0] }}</p>
                   </div>
                 </div>
                 <div class="flex justify-start">
                   <div class="glass rounded-2xl rounded-tl-sm px-3 py-2 max-w-[85%]">
-                    <p class="text-xs text-white/60 mb-1">Наши товары:</p>
-                    <p class="text-sm font-medium text-brand-lime">→ 12 позиций</p>
+                    <p class="text-sm font-medium text-brand-lime">→ 12 items</p>
                   </div>
                 </div>
               </div>
-              <!-- bottom bar -->
               <div class="flex items-center gap-2 px-4 py-3 border-t border-white/5">
                 <div class="flex-1 bg-white/5 rounded-full h-8 px-3 flex items-center">
-                  <span class="text-xs text-white/25">Написать сообщение...</span>
+                  <span class="text-xs text-white/25">Message...</span>
                 </div>
                 <div class="w-8 h-8 rounded-full bg-brand-lime flex items-center justify-center">
                   <svg class="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -165,73 +148,59 @@
               </div>
             </div>
           </div>
-          <!-- glow under phone -->
           <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-48 h-8 bg-brand-lime/20 blur-2xl rounded-full"></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ───────────── HOW IT WORKS ───────────── -->
+  <!-- HOW IT WORKS -->
   <section id="how" class="py-28 relative">
     <div class="absolute inset-0 grid-bg opacity-50 pointer-events-none"></div>
     <div class="relative max-w-6xl mx-auto px-6">
       <div class="text-center mb-16">
-        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">Просто</div>
-        <h2 class="text-4xl lg:text-5xl font-black mb-4">Как это <span class="gradient-text">работает</span></h2>
-        <p class="text-white/50 max-w-lg mx-auto">Три шага — и ваш бизнес онлайн с полноценным сайтом и Telegram-ботом</p>
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">{{ t.how.badge }}</div>
+        <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.how.title }} <span class="gradient-text">{{ t.how.title_accent }}</span></h2>
+        <p class="text-white/50 max-w-lg mx-auto">{{ t.how.subtitle }}</p>
       </div>
-
       <div class="grid md:grid-cols-3 gap-8">
-        <!-- step 1 -->
         <div class="glass-card rounded-3xl p-8 text-center relative">
           <div class="w-16 h-16 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center mx-auto mb-6">
             <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9m-12 12H5a2 2 0 01-2-2V9m0 0h18"/></svg>
           </div>
           <div class="absolute top-6 right-6 text-5xl font-black text-white/5 select-none">01</div>
-          <h3 class="text-xl font-bold mb-3">Создание бота</h3>
-          <p class="text-white/50 leading-relaxed text-sm">Создайте бота в @BotFather и передайте нам токен. Мы настроим всё остальное автоматически.</p>
+          <h3 class="text-xl font-bold mb-3">{{ t.how.step1_title }}</h3>
+          <p class="text-white/50 leading-relaxed text-sm">{{ t.how.step1_text }}</p>
         </div>
-
-        <!-- connector -->
-        <div class="hidden md:flex items-center justify-center absolute left-1/3 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-          <div class="w-8 h-px bg-gradient-to-r from-brand-lime/40 to-transparent"></div>
-        </div>
-
-        <!-- step 2 -->
         <div class="glass-card rounded-3xl p-8 text-center relative">
           <div class="w-16 h-16 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center mx-auto mb-6">
             <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
           </div>
           <div class="absolute top-6 right-6 text-5xl font-black text-white/5 select-none">02</div>
-          <h3 class="text-xl font-bold mb-3">Подключение</h3>
-          <p class="text-white/50 leading-relaxed text-sm">Выбираете шаблон, заполняете данные компании, настраиваете меню и контент прямо в Telegram-боте.</p>
+          <h3 class="text-xl font-bold mb-3">{{ t.how.step2_title }}</h3>
+          <p class="text-white/50 leading-relaxed text-sm">{{ t.how.step2_text }}</p>
         </div>
-
-        <!-- step 3 -->
         <div class="glass-card rounded-3xl p-8 text-center relative">
           <div class="w-16 h-16 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center mx-auto mb-6">
             <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 3l14 9-14 9V3z"/></svg>
           </div>
           <div class="absolute top-6 right-6 text-5xl font-black text-white/5 select-none">03</div>
-          <h3 class="text-xl font-bold mb-3">Запуск сайта</h3>
-          <p class="text-white/50 leading-relaxed text-sm">Получаете готовый сайт и Telegram-бота. Управляйте заявками, каталогом и клиентами из телефона.</p>
+          <h3 class="text-xl font-bold mb-3">{{ t.how.step3_title }}</h3>
+          <p class="text-white/50 leading-relaxed text-sm">{{ t.how.step3_text }}</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ───────────── TEMPLATES ───────────── -->
+  <!-- TEMPLATES -->
   <section id="templates" class="py-28">
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-16">
-        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">Шаблоны</div>
-        <h2 class="text-4xl lg:text-5xl font-black mb-4">Готовые <span class="gradient-text">решения</span></h2>
-        <p class="text-white/50 max-w-lg mx-auto">Выберите шаблон под свой бизнес и запустите сайт за 10 минут</p>
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">{{ t.templates.badge }}</div>
+        <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.templates.title }} <span class="gradient-text">{{ t.templates.title_accent }}</span></h2>
+        <p class="text-white/50 max-w-lg mx-auto">{{ t.templates.subtitle }}</p>
       </div>
-
       <div class="grid md:grid-cols-3 gap-8">
-        <!-- Technovlada -->
         <div class="glass-card rounded-3xl overflow-hidden group">
           <div class="relative h-48 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
@@ -241,20 +210,16 @@
                 <div class="text-xs text-white/40">TechnoVlada</div>
               </div>
             </div>
-            <div class="absolute top-3 right-3 bg-brand-lime/20 text-brand-lime text-xs font-medium px-2 py-0.5 rounded-full border border-brand-lime/30">Popular</div>
+            <div class="absolute top-3 right-3 bg-brand-lime/20 text-brand-lime text-xs font-medium px-2 py-0.5 rounded-full border border-brand-lime/30">{{ t.templates.popular }}</div>
           </div>
           <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">Technovlada</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">Универсальный шаблон для сервисного бизнеса. Каталог услуг, запись клиентов, портфолио.</p>
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t1_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t1_desc }}</p>
             <div class="flex flex-wrap gap-2">
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Услуги</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Каталог</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Запись</span>
+              {% for tag in t.templates.t1_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
           </div>
         </div>
-
-        <!-- Catalog -->
         <div class="glass-card rounded-3xl overflow-hidden group">
           <div class="relative h-48 bg-gradient-to-br from-blue-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
@@ -266,17 +231,13 @@
             </div>
           </div>
           <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">Catalog Template</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">Многостраничный каталог с поиском, фильтрами и детальными карточками товаров или услуг.</p>
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t2_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t2_desc }}</p>
             <div class="flex flex-wrap gap-2">
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Поиск</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Фильтры</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Карточки</span>
+              {% for tag in t.templates.t2_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
           </div>
         </div>
-
-        <!-- Store -->
         <div class="glass-card rounded-3xl overflow-hidden group">
           <div class="relative h-48 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
@@ -288,12 +249,10 @@
             </div>
           </div>
           <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">Store Template</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">Интернет-магазин с корзиной, категориями и приёмом заявок через Telegram-бота.</p>
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t3_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t3_desc }}</p>
             <div class="flex flex-wrap gap-2">
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Корзина</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Категории</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Заявки</span>
+              {% for tag in t.templates.t3_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
           </div>
         </div>
@@ -301,84 +260,60 @@
     </div>
   </section>
 
-  <!-- ───────────── PRICING ───────────── -->
+  <!-- PRICING -->
   <section id="pricing" class="py-28 relative">
     <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-64 bg-purple-700/15 blur-3xl rounded-full pointer-events-none"></div>
-
     <div class="relative max-w-6xl mx-auto px-6">
       <div class="text-center mb-16">
-        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">Цены</div>
-        <h2 class="text-4xl lg:text-5xl font-black mb-4">Прозрачные <span class="gradient-text">тарифы</span></h2>
-        <p class="text-white/50 max-w-lg mx-auto">Оплата без скрытых комиссий. Выкупи сайт и он твой навсегда.</p>
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">{{ t.pricing.badge }}</div>
+        <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.pricing.title }} <span class="gradient-text">{{ t.pricing.title_accent }}</span></h2>
+        <p class="text-white/50 max-w-lg mx-auto">{{ t.pricing.subtitle }}</p>
       </div>
-
       <div class="grid md:grid-cols-3 gap-8 items-start">
-        <!-- Starter -->
         <div class="glass-card rounded-3xl p-8">
-          <div class="text-sm font-medium text-white/50 mb-4 uppercase tracking-widest">Starter</div>
+          <div class="text-sm font-medium text-white/50 mb-4 uppercase tracking-widest">{{ t.pricing.plan1_name }}</div>
           <div class="flex items-end gap-1 mb-2">
             <span class="text-5xl font-black">$10</span>
-            <span class="text-white/40 mb-2">/мес</span>
+            <span class="text-white/40 mb-2">{{ t.pricing.plan1_period }}</span>
           </div>
-          <p class="text-white/50 text-sm mb-8">Идеально для старта. Полноценный сайт + Telegram-бот.</p>
+          <p class="text-white/50 text-sm mb-8">{{ t.pricing.plan1_desc }}</p>
           <ul class="space-y-3 mb-8 text-sm">
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Сайт на вашем домене</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Telegram-бот</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Один шаблон на выбор</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Приём заявок</li>
-            <li class="flex items-center gap-2.5 text-white/40"><span>✕</span> Выкуп</li>
+            {% for f in t.pricing.plan1_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
+            {% for f in t.pricing.plan1_missing %}<li class="flex items-center gap-2.5 text-white/40"><span>✕</span> {{ f }}</li>{% endfor %}
           </ul>
-          <a href="#" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">
-            Выбрать →
-          </a>
+          <a href="#" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_select }}</a>
         </div>
-
-        <!-- Pro (popular) -->
         <div class="glass-card plan-popular rounded-3xl p-8 relative">
-          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-lime text-black text-xs font-bold px-4 py-1 rounded-full">ПОПУЛЯРНЫЙ</div>
-          <div class="text-sm font-medium text-brand-lime mb-4 uppercase tracking-widest">Pro</div>
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-lime text-black text-xs font-bold px-4 py-1 rounded-full">{{ t.pricing.plan2_badge }}</div>
+          <div class="text-sm font-medium text-brand-lime mb-4 uppercase tracking-widest">{{ t.pricing.plan2_name }}</div>
           <div class="flex items-end gap-1 mb-2">
             <span class="text-5xl font-black">$20</span>
-            <span class="text-white/40 mb-2">/мес</span>
+            <span class="text-white/40 mb-2">{{ t.pricing.plan2_period }}</span>
           </div>
-          <p class="text-white/50 text-sm mb-8">Подписка с возможностью выкупа. Плати и накапливай.</p>
+          <p class="text-white/50 text-sm mb-8">{{ t.pricing.plan2_desc }}</p>
           <ul class="space-y-3 mb-8 text-sm">
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Всё из Starter</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Все шаблоны</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Выкуп через 5 месяцев</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Приоритетная поддержка</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Аналитика</li>
+            {% for f in t.pricing.plan2_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
-          <a href="#" class="cta-btn block text-center py-3 rounded-2xl text-sm font-semibold animate-glow">
-            Выбрать →
-          </a>
+          <a href="#" class="cta-btn block text-center py-3 rounded-2xl text-sm font-semibold animate-glow">{{ t.pricing.btn_select }}</a>
         </div>
-
-        <!-- Full Ownership -->
         <div class="glass-card rounded-3xl p-8">
-          <div class="text-sm font-medium text-white/50 mb-4 uppercase tracking-widest">Full Ownership</div>
+          <div class="text-sm font-medium text-white/50 mb-4 uppercase tracking-widest">{{ t.pricing.plan3_name }}</div>
           <div class="flex items-end gap-1 mb-2">
             <span class="text-5xl font-black">$100</span>
-            <span class="text-white/40 mb-2"> разово</span>
+            <span class="text-white/40 mb-2">{{ t.pricing.plan3_period }}</span>
           </div>
-          <p class="text-white/50 text-sm mb-8">Полное владение. Платишь один раз — сайт ваш навсегда.</p>
+          <p class="text-white/50 text-sm mb-8">{{ t.pricing.plan3_desc }}</p>
           <ul class="space-y-3 mb-8 text-sm">
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Всё из Pro</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Полное владение кодом</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Без ежемесячных платежей</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> Хостинг включён (год)</li>
-            <li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> VIP поддержка</li>
+            {% for f in t.pricing.plan3_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
-          <a href="#" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">
-            Купить →
-          </a>
+          <a href="#" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_buy }}</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ───────────── CTA BANNER ───────────── -->
+  <!-- CTA BANNER -->
   <section class="py-24">
     <div class="max-w-4xl mx-auto px-6">
       <div class="relative glass-card rounded-3xl p-12 text-center overflow-hidden">
@@ -386,66 +321,56 @@
         <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-purple-700/15 rounded-full blur-3xl pointer-events-none"></div>
         <div class="relative">
           <h2 class="text-4xl lg:text-5xl font-black mb-4">
-            Готов запустить <span class="gradient-text">сайт</span>?
+            {{ t.cta_banner.title }} <span class="gradient-text">{{ t.cta_banner.title_accent }}</span>?
           </h2>
-          <p class="text-white/50 text-lg mb-8 max-w-xl mx-auto">
-            Зарегистрируйся сейчас и получи сайт + Telegram-бот за 10 минут.
-          </p>
-          <a href="#pricing" class="cta-btn inline-flex px-10 py-4 rounded-2xl text-base animate-glow">
-            Начать бесплатно →
-          </a>
+          <p class="text-white/50 text-lg mb-8 max-w-xl mx-auto">{{ t.cta_banner.subtitle }}</p>
+          <a href="#pricing" class="cta-btn inline-flex px-10 py-4 rounded-2xl text-base animate-glow">{{ t.cta_banner.btn }}</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ───────────── FOOTER ───────────── -->
+  <!-- FOOTER -->
   <footer class="border-t border-white/5 py-12">
     <div class="max-w-6xl mx-auto px-6">
       <div class="grid md:grid-cols-4 gap-8 mb-10">
         <div class="md:col-span-2">
-          <a href="#" class="flex items-center gap-2 font-bold text-lg mb-3">
+          <a href="/" class="flex items-center gap-2 font-bold text-lg mb-3">
             <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
               <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </span>
             SaaSPlatform
           </a>
-          <p class="text-white/40 text-sm leading-relaxed max-w-xs">
-            Современная платформа для создания сайтов с Telegram-интеграцией. Для малого и среднего бизнеса.
-          </p>
+          <p class="text-white/40 text-sm leading-relaxed max-w-xs">{{ t.footer.description }}</p>
         </div>
-
         <div>
-          <div class="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Продукт</div>
+          <div class="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">{{ t.footer.col1 }}</div>
           <ul class="space-y-2.5 text-sm text-white/50">
-            <li><a href="#how" class="hover:text-white transition-colors">Как работает</a></li>
-            <li><a href="#templates" class="hover:text-white transition-colors">Шаблоны</a></li>
-            <li><a href="#pricing" class="hover:text-white transition-colors">Цены</a></li>
+            <li><a href="#how" class="hover:text-white transition-colors">{{ t.footer.links1[0] }}</a></li>
+            <li><a href="#templates" class="hover:text-white transition-colors">{{ t.footer.links1[1] }}</a></li>
+            <li><a href="#pricing" class="hover:text-white transition-colors">{{ t.footer.links1[2] }}</a></li>
           </ul>
         </div>
-
         <div>
-          <div class="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">Поддержка</div>
+          <div class="text-xs text-white/30 uppercase tracking-widest mb-4 font-medium">{{ t.footer.col2 }}</div>
           <ul class="space-y-2.5 text-sm text-white/50">
-            <li><a href="#" class="hover:text-white transition-colors">Документация</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">Telegram</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">Контакты</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">{{ t.footer.links2[0] }}</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">{{ t.footer.links2[1] }}</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">{{ t.footer.links2[2] }}</a></li>
           </ul>
         </div>
       </div>
-
       <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p class="text-white/30 text-sm">© 2026 SaaSPlatform. Все права защищены.</p>
+        <p class="text-white/30 text-sm">{{ t.footer.copyright }}</p>
         <div class="flex gap-6 text-sm text-white/30">
-          <a href="#" class="hover:text-white transition-colors">Политика конфиденциальности</a>
-          <a href="#" class="hover:text-white transition-colors">Условия использования</a>
+          <a href="#" class="hover:text-white transition-colors">{{ t.footer.privacy }}</a>
+          <a href="#" class="hover:text-white transition-colors">{{ t.footer.terms }}</a>
         </div>
       </div>
     </div>
   </footer>
 
   <script>
-    // Smooth reveal on scroll
     const observer = new IntersectionObserver(
       (entries) => entries.forEach(e => {
         if (e.isIntersecting) {
@@ -455,7 +380,6 @@
       }),
       { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     );
-
     document.querySelectorAll('.glass-card').forEach(el => {
       el.style.opacity = '0';
       el.style.transform = 'translateY(20px)';
