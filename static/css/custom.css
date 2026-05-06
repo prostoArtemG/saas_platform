@@ -1,0 +1,88 @@
+/* Custom animations and utilities not covered by Tailwind CDN */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(163, 230, 53, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(163, 230, 53, 0.6); }
+}
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float    { animation: float 4s ease-in-out infinite; }
+.animate-glow     { animation: glow-pulse 2.5s ease-in-out infinite; }
+.animate-fade-up  { animation: fade-up 0.7s ease both; }
+
+.gradient-text {
+  background: linear-gradient(135deg, #a3e635 0%, #84cc16 40%, #c084fc 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 5s ease infinite;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(163, 230, 53, 0.15);
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.glass-card:hover {
+  border-color: rgba(163, 230, 53, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(163, 230, 53, 0.1);
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(163, 230, 53, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(163, 230, 53, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.cta-btn {
+  background: linear-gradient(135deg, #a3e635, #84cc16);
+  color: #0f0a1e;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.cta-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(163, 230, 53, 0.45);
+  filter: brightness(1.1);
+}
+
+.plan-popular {
+  border-color: rgba(163, 230, 53, 0.6) !important;
+  box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.3), 0 20px 60px rgba(163, 230, 53, 0.12);
+}
+
+.step-line::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(163, 230, 53, 0.4), transparent);
+  transform: translateY(-50%);
+}

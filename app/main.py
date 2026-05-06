@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.bot.bot import create_bot, create_dispatcher
 from app.config import settings
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="saas_platform", lifespan=lifespan)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     app.include_router(site_router)
     return app
 
