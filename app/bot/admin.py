@@ -6,7 +6,6 @@ from sqlalchemy import select
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
     BTN_CLIENTS,
-    BTN_CREATE_CLIENT,
     BTN_PLANS,
     BTN_SUBSCRIPTIONS,
     admin_main_menu,
@@ -24,11 +23,6 @@ async def admin_start(message: Message) -> None:
         "Привет, админ платформы! 👋\nВыбери раздел:",
         reply_markup=admin_main_menu(),
     )
-
-
-@router.message(F.text == BTN_CREATE_CLIENT)
-async def create_client_stub(message: Message) -> None:
-    await message.answer("Скоро добавим создание клиента")
 
 
 @router.message(F.text == BTN_CLIENTS)
