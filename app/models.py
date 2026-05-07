@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    Text,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -68,5 +69,22 @@ class Subscription(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    client: Mapped["Client"] = relationship(back_populates="subscriptions")
+    client: Mapped["Client"] = relationship(back_populates="subscriptio
+
+
+class SiteRequest(Base):
+    __tablename__ = "site_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    business_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    telegram: Mapped[str] = mapped_column(String(128), nullable=False)
+    site_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    plan: Mapped[str] = mapped_column(String(64), nullable=False)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )ns")
     plan: Mapped["Plan"] = relationship(back_populates="subscriptions")

@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
 
     bot = create_bot()
     dp = create_dispatcher()
+    app.state.bot = bot
 
     polling_task = asyncio.create_task(
         dp.start_polling(bot, handle_signals=False),

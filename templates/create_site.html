@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SaaSPlatform — {{ t.create_site.title }}</title>
+  <meta name="description" content="{{ t.create_site.subtitle }}" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              lime:   '#a3e635',
+              purple: '#7c3aed',
+              dark:   '#0f0a1e',
+              card:   '#150e2e',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .form-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: white;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: rgba(163, 230, 53, 0.6);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 0 4px rgba(163, 230, 53, 0.1);
+    }
+    .form-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+    select.form-input option { background: #150e2e; color: white; }
+  </style>
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>SaaSPlatform</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+          {% for l in supported_langs %}
+          <a href="/create-site?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+          {% endfor %}
+        </div>
+        <a href="/" class="text-sm text-white/60 hover:text-white transition-colors hidden md:inline">{{ t.create_site.back }}</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- BG decoration -->
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- MAIN -->
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-2xl mx-auto">
+
+      {% if submitted %}
+      <!-- SUCCESS -->
+      <div class="glass-card rounded-3xl p-12 text-center animate-fade-up">
+        <div class="w-20 h-20 rounded-full bg-brand-lime/15 border border-brand-lime/30 flex items-center justify-center mx-auto mb-6 animate-glow">
+          <svg class="w-10 h-10 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h1 class="text-4xl font-black mb-4">
+          <span class="gradient-text">{{ t.create_site.success_title }}</span>
+        </h1>
+        <p class="text-white/60 text-lg mb-10 max-w-md mx-auto">{{ t.create_site.success_text }}</p>
+        <a href="/" class="cta-btn inline-flex px-8 py-3.5 rounded-2xl text-base">
+          {{ t.create_site.back }}
+        </a>
+      </div>
+
+      {% else %}
+      <!-- FORM -->
+      <div class="text-center mb-10 animate-fade-up">
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">SaaSPlatform</div>
+        <h1 class="text-4xl lg:text-5xl font-black mb-3">
+          <span class="gradient-text">{{ t.create_site.title }}</span>
+        </h1>
+        <p class="text-white/50 max-w-md mx-auto">{{ t.create_site.subtitle }}</p>
+      </div>
+
+      <form method="post" action="/create-site" class="glass-card rounded-3xl p-8 lg:p-10 animate-fade-up">
+
+        {% if error %}
+        <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Business name -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            {{ t.create_site.f_business }} <span class="text-brand-lime">*</span>
+          </label>
+          <input type="text" name="business_name" required maxlength="255"
+                 value="{{ form.business_name | default('') }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="TechnoVlada" />
+        </div>
+
+        <!-- Telegram -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            {{ t.create_site.f_telegram }} <span class="text-brand-lime">*</span>
+          </label>
+          <input type="text" name="telegram" required maxlength="128"
+                 value="{{ form.telegram | default('') }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="@username" />
+        </div>
+
+        <!-- Site type -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            {{ t.create_site.f_site_type }} <span class="text-brand-lime">*</span>
+          </label>
+          <select name="site_type" required class="form-input w-full px-4 py-3 rounded-xl text-base appearance-none cursor-pointer">
+            <option value="" disabled {% if not form.site_type %}selected{% endif %}>—</option>
+            {% for opt in t.create_site.site_type_options %}
+            <option value="{{ opt }}" {% if form.site_type == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Plan -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            {{ t.create_site.f_plan }} <span class="text-brand-lime">*</span>
+          </label>
+          <select name="plan" required class="form-input w-full px-4 py-3 rounded-xl text-base appearance-none cursor-pointer">
+            <option value="" disabled {% if not form.plan %}selected{% endif %}>—</option>
+            {% for opt in t.create_site.plan_options %}
+            <option value="{{ opt }}" {% if form.plan == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Comment -->
+        <div class="mb-8">
+          <label class="block text-sm font-medium text-white/70 mb-2">{{ t.create_site.f_comment }}</label>
+          <textarea name="comment" rows="4" maxlength="2000"
+                    class="form-input w-full px-4 py-3 rounded-xl text-base resize-none"
+                    placeholder="{{ t.create_site.f_comment_ph }}">{{ form.comment | default('') }}</textarea>
+        </div>
+
+        <button type="submit" class="cta-btn w-full py-4 rounded-2xl text-base animate-glow">
+          {{ t.create_site.submit }}
+        </button>
+      </form>
+
+      <div class="text-center mt-6">
+        <a href="/" class="text-sm text-white/40 hover:text-white transition-colors">{{ t.create_site.back }}</a>
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+
+</body>
+</html>

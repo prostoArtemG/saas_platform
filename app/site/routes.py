@@ -1,23 +1,35 @@
-from fastapi import APIRouter, Cookie, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, Cookie, Form, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.config import settings
+from app.db import AsyncSessionLocal
+from app.models import SiteRequest
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
+def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
+    chosen = lang or cookie or DEFAULT_LANG
+    if chosen not in SUPPORTED_LANGS:
+        chosen = DEFAULT_LANG
+    return chosen
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(
     request: Request,
-    lang: str | None = None,
-    lang_cookie: str | None = Cookie(default=None, alias="lang"),
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
-    chosen = lang or lang_cookie or DEFAULT_LANG
-    if chosen not in SUPPORTED_LANGS:
-        chosen = DEFAULT_LANG
-
+    chosen = _resolve_lang(lang, lang_cookie)
     response = templates.TemplateResponse(
         "index.html",
         {
@@ -27,8 +39,119 @@ async def index(
             "supported_langs": SUPPORTED_LANGS,
         },
     )
-    response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, httponly=False, samesite="lax")
+    response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, samesite="lax")
     return response
+
+
+@router.get("/create-site", response_class=HTMLResponse)
+async def create_site_form(
+    request: Request,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+    response = templates.TemplateResponse(
+        "create_site.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "submitted": False,
+            "error": None,
+            "form": {},
+        },
+    )
+    response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, samesite="lax")
+    return response
+
+
+@router.post("/create-site", response_class=HTMLResponse)
+async def create_site_submit(
+    request: Request,
+    business_name: str = Form(""),
+    telegram: str = Form(""),
+    site_type: str = Form(""),
+    plan: str = Form(""),
+    comment: str = Form(""),
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(None, lang_cookie)
+    t = get_t(chosen)
+
+    business_name = business_name.strip()[:255]
+    telegram = telegram.strip()[:128]
+    site_type = site_type.strip()[:64]
+    plan = plan.strip()[:64]
+    comment = (comment or "").strip()[:2000] or None
+
+    if not business_name or not telegram or not site_type or not plan:
+        return templates.TemplateResponse(
+            "create_site.html",
+            {
+                "request": request,
+                "t": t,
+                "lang": chosen,
+                "supported_langs": SUPPORTED_LANGS,
+                "submitted": False,
+                "error": t["create_site"]["error_required"],
+                "form": {
+                    "business_name": business_name,
+                    "telegram": telegram,
+                    "site_type": site_type,
+                    "plan": plan,
+                    "comment": comment or "",
+                },
+            },
+            status_code=400,
+        )
+
+    # 1. Save to DB
+    async with AsyncSessionLocal() as session:
+        req = SiteRequest(
+            business_name=business_name,
+            telegram=telegram,
+            site_type=site_type,
+            plan=plan,
+            comment=comment,
+            status="new",
+        )
+        session.add(req)
+        await session.commit()
+        await session.refresh(req)
+        req_id = req.id
+
+    # 2. Notify admins in Telegram (best-effort)
+    bot = getattr(request.app.state, "bot", None)
+    if bot is not None and settings.admin_ids:
+        text = (
+            "🆕 <b>Нова заявка на сайт</b>\n"
+            f"#<code>{req_id}</code>\n"
+            f"• Бізнес: <b>{business_name}</b>\n"
+            f"• Telegram: <code>{telegram}</code>\n"
+            f"• Тип сайту: {site_type}\n"
+            f"• Тариф: {plan}\n"
+            + (f"• Коментар: {comment}\n" if comment else "")
+        )
+        for admin_id in settings.admin_ids:
+            try:
+                await bot.send_message(admin_id, text, parse_mode="HTML")
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Failed to notify admin %s: %s", admin_id, exc)
+
+    return templates.TemplateResponse(
+        "create_site.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "submitted": True,
+            "error": None,
+            "form": {},
+        },
+    )
 
 
 @router.get("/health")

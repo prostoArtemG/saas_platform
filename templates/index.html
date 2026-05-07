@@ -50,7 +50,7 @@
           <a href="/?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
           {% endfor %}
         </div>
-        <a href="#pricing" class="cta-btn px-5 py-2 rounded-xl text-sm hidden md:inline-flex">{{ t.nav.start }}</a>
+        <a href="/create-site" class="cta-btn px-5 py-2 rounded-xl text-sm inline-flex">{{ t.nav.create_site }}</a>
       </div>
     </div>
   </header>
@@ -72,7 +72,7 @@
         </h1>
         <p class="text-lg text-white/60 leading-relaxed mb-10 max-w-lg">{{ t.hero.subtitle }}</p>
         <div class="flex flex-wrap gap-4">
-          <a href="#pricing" class="cta-btn px-8 py-3.5 rounded-2xl text-base animate-glow">{{ t.hero.cta_primary }}</a>
+          <a href="/create-site" class="cta-btn px-8 py-3.5 rounded-2xl text-base animate-glow">{{ t.hero.cta_primary }}</a>
           <a href="#how" class="glass border border-white/10 hover:border-brand-lime/40 transition-colors px-8 py-3.5 rounded-2xl text-base text-white/80 hover:text-white">{{ t.hero.cta_secondary }}</a>
         </div>
         <div class="mt-14 flex flex-wrap gap-8">
