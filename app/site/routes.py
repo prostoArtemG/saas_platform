@@ -122,21 +122,26 @@ async def create_site_submit(
         await session.refresh(req)
         req_id = req.id
 
-    # 2. Notify admins in Telegram (best-effort)
+    # 2. Notify admins in Telegram (best-effort) with inline action buttons
     bot = getattr(request.app.state, "bot", None)
     if bot is not None and settings.admin_ids:
+        from app.bot.site_request import request_actions_kb
+
         text = (
-            "🆕 <b>Нова заявка на сайт</b>\n"
+            "🆕 <b>Новая заявка</b>\n"
             f"#<code>{req_id}</code>\n"
-            f"• Бізнес: <b>{business_name}</b>\n"
+            f"• Бизнес: <b>{business_name}</b>\n"
             f"• Telegram: <code>{telegram}</code>\n"
-            f"• Тип сайту: {site_type}\n"
             f"• Тариф: {plan}\n"
-            + (f"• Коментар: {comment}\n" if comment else "")
+            f"• Тип сайта: {site_type}\n"
+            + (f"• Комментарий: {comment}\n" if comment else "")
         )
+        kb = request_actions_kb(req_id)
         for admin_id in settings.admin_ids:
             try:
-                await bot.send_message(admin_id, text, parse_mode="HTML")
+                await bot.send_message(
+                    admin_id, text, parse_mode="HTML", reply_markup=kb
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
 
