@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template not available — {{ business_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { lime:'#a3e635', purple:'#7c3aed', dark:'#0f0a1e', card:'#150e2e' } }, fontFamily: { sans: ['Inter','system-ui','sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden flex items-center justify-center px-6">
+
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed -bottom-40 -right-40 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <div class="relative max-w-xl w-full text-center animate-fade-up">
+
+    <div class="inline-flex w-20 h-20 rounded-2xl bg-amber-400/10 border border-amber-400/30 items-center justify-center mb-8 animate-glow">
+      <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"/>
+      </svg>
+    </div>
+
+    <div class="glass-card rounded-3xl p-8 md:p-10">
+      <div class="inline-flex items-center gap-2 glass border border-amber-400/30 text-amber-400 text-xs font-medium px-4 py-1.5 rounded-full mb-5">
+        Template error
+      </div>
+
+      <h1 class="text-3xl md:text-4xl font-black mb-3">
+        Site template <span class="gradient-text">"{{ template_name }}"</span><br/>is not available
+      </h1>
+      <p class="text-white/55 text-base mb-6 max-w-md mx-auto">
+        The workspace <code class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/80">{{ slug }}</code> requested a template that isn't installed on this server yet.
+      </p>
+
+      {% if available %}
+      <div class="text-left glass rounded-2xl border border-white/10 p-5 mb-8">
+        <div class="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">Available templates</div>
+        <div class="flex flex-wrap gap-2">
+          {% for tmpl in available %}
+          <span class="px-3 py-1.5 rounded-lg bg-brand-lime/10 border border-brand-lime/30 text-brand-lime text-sm font-mono">{{ tmpl }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/" class="cta-btn px-7 py-3 rounded-2xl text-base">Back to home</a>
+        <a href="/dashboard/{{ slug }}" class="px-7 py-3 rounded-2xl text-base border border-white/15 hover:border-brand-lime/40 hover:bg-white/5 text-white/80 hover:text-white transition-all font-semibold">Open dashboard</a>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

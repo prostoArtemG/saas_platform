@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Form, Request
@@ -17,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+# Whitelist of installed site templates. Each must have an `index.html`
+# at templates/sites/{name}/index.html
+AVAILABLE_TEMPLATES = {"technovlada"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
@@ -238,3 +243,64 @@ async def client_dashboard(
         }
 
     return templates.TemplateResponse("dashboard.html", ctx)
+
+
+@router.get("/site/{slug}", response_class=HTMLResponse)
+async def client_site(
+    request: Request,
+    slug: str,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+
+    if client is None:
+        return templates.TemplateResponse(
+            "404.html",
+            {
+                "request": request,
+                "t": t,
+                "lang": chosen,
+                "supported_langs": SUPPORTED_LANGS,
+                "slug": slug,
+            },
+            status_code=404,
+        )
+
+    template_name = (client.template_name or "").strip() or "technovlada"
+
+    # Validate template exists on disk and is whitelisted
+    template_path = os.path.join("templates", "sites", template_name, "index.html")
+    if template_name not in AVAILABLE_TEMPLATES or not os.path.exists(template_path):
+        return templates.TemplateResponse(
+            "site_template_error.html",
+            {
+                "request": request,
+                "t": t,
+                "lang": chosen,
+                "supported_langs": SUPPORTED_LANGS,
+                "slug": slug,
+                "business_name": client.business_name,
+                "template_name": template_name,
+                "available": sorted(AVAILABLE_TEMPLATES),
+            },
+            status_code=500,
+        )
+
+    return templates.TemplateResponse(
+        f"sites/{template_name}/index.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "client": {
+                "business_name": client.business_name,
+                "slug": client.slug,
+                "telegram_id": client.admin_telegram_id,
+            },
+        },
+    )

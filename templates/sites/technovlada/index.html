@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ client.business_name }}</title>
+  <meta name="description" content="{{ client.business_name }} — powered by SaaSPlatform" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              lime:   '#a3e635',
+              purple: '#7c3aed',
+              dark:   '#0f0a1e',
+              card:   '#150e2e',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-lime to-green-500 flex items-center justify-center text-brand-dark font-black">
+          {{ client.business_name[0] | upper }}
+        </span>
+        <span>{{ client.business_name }}</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-white/60 font-medium">
+        <a href="#about" class="hover:text-white transition-colors">About</a>
+        <a href="#services" class="hover:text-white transition-colors">Services</a>
+        <a href="#contact" class="hover:text-white transition-colors">Contact</a>
+      </nav>
+      <a href="#contact" class="cta-btn px-5 py-2 rounded-xl text-sm">Get in touch</a>
+    </div>
+  </header>
+
+  <!-- BG decoration -->
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- HERO -->
+  <section class="relative pt-32 pb-24 px-6">
+    <div class="max-w-5xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-8 animate-fade-up">
+        <span class="w-1.5 h-1.5 rounded-full bg-brand-lime animate-pulse"></span>
+        Welcome to {{ client.business_name }}
+      </div>
+      <h1 class="text-5xl lg:text-7xl font-black leading-[1.05] mb-8 animate-fade-up">
+        Building <span class="gradient-text">future-proof</span><br/>
+        digital experiences
+      </h1>
+      <p class="text-lg lg:text-xl text-white/60 leading-relaxed mb-10 max-w-2xl mx-auto animate-fade-up">
+        Premium technology solutions tailored for modern businesses. We help brands grow online with speed, design and reliability.
+      </p>
+      <div class="flex flex-wrap gap-4 justify-center animate-fade-up">
+        <a href="#contact" class="cta-btn px-8 py-3.5 rounded-2xl text-base animate-glow">Start project</a>
+        <a href="#services" class="glass border border-white/10 hover:border-brand-lime/40 transition-colors px-8 py-3.5 rounded-2xl text-base text-white/80 hover:text-white">Learn more</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="relative py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="text-xs font-bold text-brand-lime uppercase tracking-widest mb-3">What we do</div>
+        <h2 class="text-4xl lg:text-5xl font-black"><span class="gradient-text">Services</span></h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        {% for s in [
+          {'title': 'Web development', 'desc': 'Fast, modern websites built with the latest stack.', 'icon': 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'},
+          {'title': 'Brand & design', 'desc': 'Identity systems and product design that stand out.', 'icon': 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'},
+          {'title': 'Automation', 'desc': 'Telegram bots, integrations & internal tools.', 'icon': 'M13 10V3L4 14h7v7l9-11h-7z'}
+        ] %}
+        <div class="glass-card rounded-2xl p-7 hover:border-brand-lime/30 transition-colors">
+          <div class="w-11 h-11 rounded-xl bg-brand-lime/10 border border-brand-lime/30 flex items-center justify-center mb-5">
+            <svg class="w-5 h-5 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ s.icon }}"/></svg>
+          </div>
+          <h3 class="text-xl font-bold mb-2">{{ s.title }}</h3>
+          <p class="text-white/55 text-sm leading-relaxed">{{ s.desc }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="relative py-20 px-6">
+    <div class="max-w-5xl mx-auto glass-card rounded-3xl p-10 lg:p-14">
+      <div class="grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <div class="text-xs font-bold text-brand-lime uppercase tracking-widest mb-3">About</div>
+          <h2 class="text-4xl font-black mb-5">Crafted with <span class="gradient-text">precision</span></h2>
+          <p class="text-white/60 leading-relaxed mb-4">
+            {{ client.business_name }} is a technology studio building scalable digital products. We work with founders and teams to ship fast and iterate.
+          </p>
+          <p class="text-white/60 leading-relaxed">
+            Our approach combines clean code, sharp design, and obsession with performance.
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="glass rounded-2xl p-5 border border-white/10"><div class="text-3xl font-black text-brand-lime">120+</div><div class="text-xs text-white/50 mt-1 uppercase tracking-wider">Projects</div></div>
+          <div class="glass rounded-2xl p-5 border border-white/10"><div class="text-3xl font-black text-brand-lime">8 yr</div><div class="text-xs text-white/50 mt-1 uppercase tracking-wider">Experience</div></div>
+          <div class="glass rounded-2xl p-5 border border-white/10"><div class="text-3xl font-black text-brand-lime">98%</div><div class="text-xs text-white/50 mt-1 uppercase tracking-wider">Retention</div></div>
+          <div class="glass rounded-2xl p-5 border border-white/10"><div class="text-3xl font-black text-brand-lime">24/7</div><div class="text-xs text-white/50 mt-1 uppercase tracking-wider">Support</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="relative py-24 px-6">
+    <div class="max-w-3xl mx-auto text-center">
+      <div class="text-xs font-bold text-brand-lime uppercase tracking-widest mb-3">Contact</div>
+      <h2 class="text-4xl lg:text-5xl font-black mb-5">Let's <span class="gradient-text">work together</span></h2>
+      <p class="text-white/55 mb-10">Tell us about your project and we'll get back within one business day.</p>
+      <div class="glass-card rounded-3xl p-8 lg:p-10 text-left">
+        <div class="flex flex-col sm:flex-row gap-4 mb-4">
+          <input type="text" placeholder="Your name" class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-brand-lime/50 focus:outline-none text-white placeholder-white/30" />
+          <input type="email" placeholder="Email" class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-brand-lime/50 focus:outline-none text-white placeholder-white/30" />
+        </div>
+        <textarea placeholder="Message" rows="4" class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-brand-lime/50 focus:outline-none text-white placeholder-white/30 resize-none mb-5"></textarea>
+        <button class="cta-btn w-full py-4 rounded-2xl text-base">Send message</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="relative border-t border-white/5 py-10 px-6 mt-10">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/40">
+      <div>© {{ client.business_name }}. All rights reserved.</div>
+      <div>Powered by <a href="/" class="text-brand-lime hover:underline">SaaSPlatform</a></div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -26,6 +26,9 @@ class Client(Base):
     telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     admin_telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    template_name: Mapped[str] = mapped_column(
+        String(64), nullable=False, server_default="technovlada", default="technovlada"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
