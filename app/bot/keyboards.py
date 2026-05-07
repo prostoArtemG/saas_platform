@@ -5,6 +5,7 @@ BTN_CLIENTS = "📋 Клиенты"
 BTN_CREATE_PLAN = "➕ Создать тариф"
 BTN_PLANS = "💳 Тарифы"
 BTN_SUBSCRIPTIONS = "🧾 Подписки"
+BTN_PRODUCTS = "📦 Товары"
 
 
 def admin_main_menu() -> ReplyKeyboardMarkup:
@@ -15,6 +16,7 @@ def admin_main_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BTN_CREATE_PLAN)],
             [KeyboardButton(text=BTN_PLANS)],
             [KeyboardButton(text=BTN_SUBSCRIPTIONS)],
+            [KeyboardButton(text=BTN_PRODUCTS)],
         ],
         resize_keyboard=True,
         is_persistent=True,

@@ -7,6 +7,7 @@ from aiogram.types import Message
 from app.bot.admin import router as admin_router
 from app.bot.create_client import router as create_client_router
 from app.bot.create_plan import router as create_plan_router
+from app.bot.products import router as products_router
 from app.bot.site_request import router as site_request_router
 from app.config import settings
 
@@ -32,6 +33,7 @@ def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
     dp.include_router(create_plan_router)
     dp.include_router(create_client_router)
+    dp.include_router(products_router)
     dp.include_router(site_request_router)
     dp.include_router(admin_router)
     dp.include_router(router)
