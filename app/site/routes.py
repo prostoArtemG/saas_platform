@@ -5,9 +5,12 @@ from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import SiteRequest
+from app.models import Client, Plan, SiteRequest, Subscription
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -162,3 +165,76 @@ async def create_site_submit(
 @router.get("/health")
 async def health() -> dict:
     return {"status": "healthy"}
+
+
+@router.get("/dashboard/{slug}", response_class=HTMLResponse)
+async def client_dashboard(
+    request: Request,
+    slug: str,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(
+            select(Client)
+            .where(Client.slug == slug)
+            .options(selectinload(Client.subscriptions).selectinload(Subscription.plan))
+        )
+
+        if client is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {
+                    "request": request,
+                    "t": t,
+                    "lang": chosen,
+                    "supported_langs": SUPPORTED_LANGS,
+                    "slug": slug,
+                },
+                status_code=404,
+            )
+
+        # Pick the most relevant subscription: active/trial first, latest by id
+        subs = sorted(
+            client.subscriptions,
+            key=lambda s: (
+                0 if s.status in ("active", "trial") else 1,
+                -s.id,
+            ),
+        )
+        sub = subs[0] if subs else None
+        plan = sub.plan if sub else None
+
+        ctx = {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "client": {
+                "business_name": client.business_name,
+                "slug": client.slug,
+                "status": client.status,
+                "bot_connected": bool(client.telegram_bot_token),
+                "admin_telegram_id": client.admin_telegram_id,
+                "created_at": client.created_at,
+            },
+            "subscription": {
+                "status": sub.status if sub else None,
+                "expires_at": sub.expires_at if sub else None,
+            } if sub else None,
+            "plan": {
+                "name": plan.name,
+                "price_monthly": plan.price_monthly,
+                "can_buyout": plan.can_buyout,
+                "buyout_months": plan.buyout_months,
+            } if plan else None,
+            "domain": {
+                "host": f"{client.slug}.saasplatform.app",
+                "status": "pending",
+            },
+        }
+
+    return templates.TemplateResponse("dashboard.html", ctx)
