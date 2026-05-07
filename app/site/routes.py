@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, Plan, SiteRequest, Subscription
+from app.models import Client, Plan, Product, SiteRequest, Subscription
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -258,20 +258,47 @@ async def client_site(
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
 
-    if client is None:
-        return templates.TemplateResponse(
-            "404.html",
-            {
-                "request": request,
-                "t": t,
-                "lang": chosen,
-                "supported_langs": SUPPORTED_LANGS,
-                "slug": slug,
-            },
-            status_code=404,
-        )
+        if client is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {
+                    "request": request,
+                    "t": t,
+                    "lang": chosen,
+                    "supported_langs": SUPPORTED_LANGS,
+                    "slug": slug,
+                },
+                status_code=404,
+            )
 
-    template_name = (client.template_name or "").strip() or "technovlada"
+        products_rows = (
+            await session.scalars(
+                select(Product)
+                .where(Product.client_id == client.id)
+                .order_by(Product.is_available.desc(), Product.id.desc())
+            )
+        ).all()
+        products = [
+            {
+                "id": p.id,
+                "category": p.category,
+                "name": p.name,
+                "description": p.description,
+                "price": float(p.price) if p.price is not None else 0.0,
+                "image_url": p.image_url,
+                "is_available": p.is_available,
+            }
+            for p in products_rows
+        ]
+        client_data = {
+            "id": client.id,
+            "business_name": client.business_name,
+            "slug": client.slug,
+            "telegram_id": client.admin_telegram_id,
+            "template_name": client.template_name,
+        }
+
+    template_name = (client_data["template_name"] or "").strip() or "technovlada"
 
     # Validate template exists on disk and is whitelisted
     template_path = os.path.join("templates", "sites", template_name, "index.html")
@@ -284,7 +311,7 @@ async def client_site(
                 "lang": chosen,
                 "supported_langs": SUPPORTED_LANGS,
                 "slug": slug,
-                "business_name": client.business_name,
+                "business_name": client_data["business_name"],
                 "template_name": template_name,
                 "available": sorted(AVAILABLE_TEMPLATES),
             },
@@ -297,10 +324,7 @@ async def client_site(
             "request": request,
             "t": t,
             "lang": chosen,
-            "client": {
-                "business_name": client.business_name,
-                "slug": client.slug,
-                "telegram_id": client.admin_telegram_id,
-            },
+            "client": client_data,
+            "products": products,
         },
     )

@@ -39,6 +39,10 @@ class Client(Base):
         back_populates="client",
         cascade="all, delete-orphan",
     )
+    products: Mapped[list["Product"]] = relationship(
+        back_populates="client",
+        cascade="all, delete-orphan",
+    )
 
 
 class Plan(Base):
@@ -91,3 +95,29 @@ class SiteRequest(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    category: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    is_available: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true", default=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    client: Mapped["Client"] = relationship(back_populates="products")

@@ -41,6 +41,7 @@
       <nav class="hidden md:flex items-center gap-7 text-sm text-white/60 font-medium">
         <a href="#about" class="hover:text-white transition-colors">About</a>
         <a href="#services" class="hover:text-white transition-colors">Services</a>
+        <a href="#products" class="hover:text-white transition-colors">Products</a>
         <a href="#contact" class="hover:text-white transition-colors">Contact</a>
       </nav>
       <a href="#contact" class="cta-btn px-5 py-2 rounded-xl text-sm">Get in touch</a>
@@ -95,6 +96,86 @@
         </div>
         {% endfor %}
       </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section id="products" class="relative py-20 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-14">
+        <div class="text-xs font-bold text-brand-lime uppercase tracking-widest mb-3">Catalog</div>
+        <h2 class="text-4xl lg:text-5xl font-black"><span class="gradient-text">Products</span></h2>
+        {% if products %}
+        <p class="text-white/50 mt-3">{{ products|length }} item{{ '' if products|length == 1 else 's' }} available</p>
+        {% endif %}
+      </div>
+
+      {% if products %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {% for p in products %}
+        <article class="glass-card rounded-2xl overflow-hidden flex flex-col group hover:border-brand-lime/30 transition-all duration-300">
+          <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-brand-purple/20 to-brand-lime/10">
+            {% if p.image_url %}
+            <img src="{{ p.image_url }}" alt="{{ p.name }}" loading="lazy"
+                 class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            {% else %}
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg class="w-16 h-16 text-white/15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            {% endif %}
+
+            <div class="absolute top-3 right-3">
+              {% if p.is_available %}
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-lime/20 backdrop-blur-md border border-brand-lime/40 text-brand-lime">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-lime animate-pulse"></span>In stock
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/15 text-white/60">
+                <span class="w-1.5 h-1.5 rounded-full bg-white/40"></span>Out of stock
+              </span>
+              {% endif %}
+            </div>
+
+            {% if p.category %}
+            <div class="absolute top-3 left-3">
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/80">{{ p.category }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="p-5 flex flex-col flex-1">
+            <h3 class="text-lg font-bold mb-2 group-hover:text-brand-lime transition-colors">{{ p.name }}</h3>
+            {% if p.description %}
+            <p class="text-sm text-white/55 leading-relaxed mb-4 line-clamp-3">{{ p.description }}</p>
+            {% endif %}
+            <div class="mt-auto flex items-center justify-between pt-3 border-t border-white/5">
+              <div class="text-2xl font-black gradient-text">${{ "%.2f"|format(p.price) }}</div>
+              <button {% if not p.is_available %}disabled{% endif %}
+                class="px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                       {% if p.is_available %}bg-brand-lime text-brand-dark hover:bg-lime-300{% else %}bg-white/5 text-white/30 cursor-not-allowed border border-white/10{% endif %}">
+                {% if p.is_available %}Buy{% else %}N/A{% endif %}
+              </button>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <!-- Empty state -->
+      <div class="max-w-xl mx-auto glass-card rounded-3xl p-10 text-center">
+        <div class="inline-flex w-20 h-20 rounded-2xl bg-brand-lime/10 border border-brand-lime/30 items-center justify-center mb-6 animate-float">
+          <svg class="w-10 h-10 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 12H6L5 9z"/>
+          </svg>
+        </div>
+        <h3 class="text-2xl font-black mb-2">No products yet</h3>
+        <p class="text-white/50 mb-6 max-w-sm mx-auto">
+          The catalog is empty for now. Check back soon — new items are coming.
+        </p>
+        <a href="#contact" class="cta-btn inline-flex px-6 py-3 rounded-xl text-sm">Contact us</a>
+      </div>
+      {% endif %}
     </div>
   </section>
 
