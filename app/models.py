@@ -69,7 +69,8 @@ class Subscription(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    client: Mapped["Client"] = relationship(back_populates="subscriptio
+    client: Mapped["Client"] = relationship(back_populates="subscriptions")
+    plan: Mapped["Plan"] = relationship(back_populates="subscriptions")
 
 
 class SiteRequest(Base):
@@ -86,5 +87,4 @@ class SiteRequest(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-    )ns")
-    plan: Mapped["Plan"] = relationship(back_populates="subscriptions")
+    )
