@@ -61,6 +61,38 @@ async def client_domain(slug: str) -> dict:
     }
 
 
+@router.get("/client-payments/{slug}")
+async def client_payments(slug: str) -> dict:
+    """Return the payment history for a client (newest first)."""
+    async with AsyncSessionLocal() as session:
+        client = (
+            await session.execute(select(Client).where(Client.slug == slug))
+        ).scalar_one_or_none()
+        if client is None:
+            raise HTTPException(status_code=404, detail="client not found")
+
+        rows = (
+            await session.execute(
+                select(Payment)
+                .where(Payment.client_id == client.id)
+                .order_by(Payment.created_at.desc(), Payment.id.desc())
+            )
+        ).scalars().all()
+
+    items = [
+        {
+            "payment_type": p.payment_type,
+            "amount": float(p.amount) if p.amount is not None else None,
+            "currency": p.currency,
+            "status": p.status,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "paid_at": p.paid_at.isoformat() if p.paid_at else None,
+        }
+        for p in rows
+    ]
+    return {"slug": client.slug, "count": len(items), "items": items}
+
+
 class PaymentRequestIn(BaseModel):
     client_slug: str = Field(..., min_length=1, max_length=64)
     type: Literal["subscription", "domain"] = "subscription"
