@@ -36,6 +36,42 @@ async def start_non_admin(message: Message) -> None:
     await message.answer("Доступ ограничен.")
 
 
+# --------------------------------------------------------------------------
+# DEBUG fallback. MUST be the very last handler in the very last router.
+# Logs the exact text/bytes of any message that no other handler picked up,
+# and echoes it back so we can see what reply-keyboard buttons actually send.
+# --------------------------------------------------------------------------
+@router.message()
+async def debug_any_message(message: Message) -> None:
+    text = message.text
+    if text is not None:
+        as_bytes = text.encode("utf-8")
+        codepoints = [hex(ord(c)) for c in text]
+        logger.warning(
+            "DEBUG fallback: text=%r len=%d utf8=%r codepoints=%s",
+            text,
+            len(text),
+            as_bytes,
+            codepoints,
+        )
+        print(
+            f"DEBUG TEXT: {text!r} | utf8={as_bytes!r} | codepoints={codepoints}",
+            flush=True,
+        )
+        await message.answer(
+            f"DEBUG (no handler matched):\n"
+            f"text = {text!r}\n"
+            f"len = {len(text)}\n"
+            f"codepoints = {codepoints}"
+        )
+    else:
+        logger.warning(
+            "DEBUG fallback: non-text message content_type=%s",
+            message.content_type,
+        )
+        await message.answer(f"DEBUG: non-text message ({message.content_type})")
+
+
 def create_bot() -> Bot:
     return Bot(token=settings.bot_token)
 

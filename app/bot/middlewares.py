@@ -45,6 +45,13 @@ class MenuInterruptMiddleware(BaseMiddleware):
     ) -> Any:
         if isinstance(event, Message) and event.text:
             text = event.text.strip()
+            # DEBUG: log every incoming text + expected menu buttons for comparison
+            logger.warning(
+                "INCOMING text=%r codepoints=%s | known menu buttons=%s",
+                text,
+                [hex(ord(c)) for c in text],
+                {b: [hex(ord(c)) for c in b] for b in MENU_BUTTONS},
+            )
             should_reset = text in MENU_BUTTONS or text in {"/start", "/cancel"}
             if should_reset:
                 state: FSMContext | None = data.get("state")
