@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     app_host: str = Field("0.0.0.0", alias="APP_HOST")
     app_port: int = Field(8000, alias="APP_PORT")
 
+    payment_webhook_secret: str = Field("", alias="PAYMENT_WEBHOOK_SECRET")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):

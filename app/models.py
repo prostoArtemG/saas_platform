@@ -29,6 +29,9 @@ class Client(Base):
     template_name: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="technovlada", default="technovlada"
     )
+    domain_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="pending", default="pending"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -121,3 +124,23 @@ class Product(Base):
     )
 
     client: Mapped["Client"] = relationship(back_populates="products")
+
+
+class PaymentRequest(Base):
+    __tablename__ = "payment_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)  # subscription | domain
+    amount: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    currency: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    external_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="pending", default="pending"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

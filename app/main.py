@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.bot.bot import create_bot, create_dispatcher
 from app.config import settings
 from app.db import close_db, init_db
+from app.api import router as api_router
 from app.site.routes import router as site_router
 
 logging.basicConfig(
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="saas_platform", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory="static"), name="static")
     app.include_router(site_router)
+    app.include_router(api_router)
     return app
 
 
