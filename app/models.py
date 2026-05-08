@@ -32,6 +32,11 @@ class Client(Base):
     domain_status: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="pending", default="pending"
     )
+    plan_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -50,6 +55,7 @@ class Client(Base):
         back_populates="client",
         cascade="all, delete-orphan",
     )
+    plan: Mapped[Optional["Plan"]] = relationship(back_populates="clients")
 
 
 class Plan(Base):
@@ -57,11 +63,31 @@ class Plan(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    slug: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    currency: Mapped[str] = mapped_column(
+        String(8), nullable=False, server_default="USD", default="USD"
+    )
+    products_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    images_per_product_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    domains_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    users_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    analytics_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true", default=True
+    )
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, server_default=func.now()
+    )
+    # Legacy fields (kept for backward compatibility with existing code/data)
     price_monthly: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     can_buyout: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     buyout_months: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="plan")
+    clients: Mapped[list["Client"]] = relationship(back_populates="plan")
 
 
 class Subscription(Base):
