@@ -13,6 +13,7 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, Payment, PaymentRequest, Subscription
 from app.payments import get_provider
+from app.services.client_domain import get_client_domain
 from app.services.subscription_status import get_client_subscription_status
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,32 @@ async def client_status(slug: str) -> dict:
         "slug": result.slug,
         "status": result.status,
         "expires_at": result.expires_at.isoformat() if result.expires_at else None,
+    }
+
+
+@router.get("/client-domain/{slug}")
+async def client_domain(slug: str) -> dict:
+    """Return the latest domain attached to a client."""
+    async with AsyncSessionLocal() as session:
+        # Verify the client exists for proper 404 vs no-domain distinction
+        client_exists = (
+            await session.execute(select(Client).where(Client.slug == slug))
+        ).scalar_one_or_none()
+        if client_exists is None:
+            raise HTTPException(status_code=404, detail="client not found")
+        info = await get_client_domain(session, slug)
+    if info is None:
+        return {
+            "domain": None,
+            "status": "none",
+            "expires_at": None,
+            "dns_connected": False,
+        }
+    return {
+        "domain": info.domain,
+        "status": info.status,
+        "expires_at": info.expires_at.isoformat() if info.expires_at else None,
+        "dns_connected": info.dns_connected,
     }
 
 
