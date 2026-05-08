@@ -1,12 +1,15 @@
 import logging
 
 from aiogram import Bot, Dispatcher, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.bot.admin import router as admin_router
 from app.bot.clients_admin import router as clients_admin_router
 from app.bot.create_client import router as create_client_router
+from app.bot.keyboards import admin_main_menu
+from app.bot.middlewares import MenuInterruptMiddleware
 from app.bot.payments import router as payments_router
 from app.bot.plans_admin import router as plans_admin_router
 from app.bot.products import router as products_router
@@ -16,6 +19,12 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 router = Router(name="root")
+
+
+@router.message(Command("cancel"))
+async def global_cancel(message: Message, state: FSMContext) -> None:
+    """Fallback /cancel — middleware already cleared the state, just confirm."""
+    await message.answer("Ок, отменено.", reply_markup=admin_main_menu())
 
 
 @router.message(CommandStart())
@@ -33,6 +42,7 @@ def create_bot() -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
+    dp.message.outer_middleware(MenuInterruptMiddleware())
     dp.include_router(plans_admin_router)
     dp.include_router(create_client_router)
     dp.include_router(products_router)
