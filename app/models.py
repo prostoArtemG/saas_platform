@@ -144,3 +144,40 @@ class PaymentRequest(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    subscription_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("subscriptions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    payment_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="manual", default="manual"
+    )
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(
+        String(8), nullable=False, server_default="USD", default="USD"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="pending", default="pending"
+    )
+    invoice_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    payment_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    paid_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
