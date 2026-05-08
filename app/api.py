@@ -13,10 +13,25 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, Payment, PaymentRequest, Subscription
 from app.payments import get_provider
+from app.services.subscription_status import get_client_subscription_status
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["api"])
+
+
+@router.get("/client-status/{slug}")
+async def client_status(slug: str) -> dict:
+    """Return the effective subscription status for a client."""
+    async with AsyncSessionLocal() as session:
+        result = await get_client_subscription_status(session, slug)
+    if result is None:
+        raise HTTPException(status_code=404, detail="client not found")
+    return {
+        "slug": result.slug,
+        "status": result.status,
+        "expires_at": result.expires_at.isoformat() if result.expires_at else None,
+    }
 
 
 class PaymentRequestIn(BaseModel):
