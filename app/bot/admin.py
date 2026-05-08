@@ -5,13 +5,12 @@ from sqlalchemy import select
 
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
-    BTN_CLIENTS,
     BTN_PLANS,
     BTN_SUBSCRIPTIONS,
     admin_main_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, Plan, Subscription
+from app.models import Plan, Subscription
 
 router = Router(name="admin")
 router.message.filter(AdminFilter())
@@ -23,25 +22,6 @@ async def admin_start(message: Message) -> None:
         "Привет, админ платформы! 👋\nВыбери раздел:",
         reply_markup=admin_main_menu(),
     )
-
-
-@router.message(F.text == BTN_CLIENTS)
-async def list_clients(message: Message) -> None:
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(select(Client).order_by(Client.id))
-        clients = result.scalars().all()
-
-    if not clients:
-        await message.answer("📋 Клиентов пока нет.")
-        return
-
-    lines = ["📋 <b>Клиенты:</b>"]
-    for c in clients:
-        lines.append(
-            f"#{c.id} • <b>{c.business_name}</b> "
-            f"(<code>{c.slug}</code>) — {c.status}"
-        )
-    await message.answer("\n".join(lines), parse_mode="HTML")
 
 
 @router.message(F.text == BTN_PLANS)
