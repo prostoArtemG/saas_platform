@@ -14,6 +14,7 @@ from app.db import AsyncSessionLocal
 from app.models import Client, Payment, PaymentRequest, Subscription
 from app.payments import get_provider
 from app.services.client_domain import get_client_domain
+from app.services.client_limits import get_client_limits
 from app.services.subscription_status import get_client_subscription_status
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,26 @@ async def client_payments(slug: str) -> dict:
         for p in rows
     ]
     return {"slug": client.slug, "count": len(items), "items": items}
+
+
+@router.get("/client-limits/{slug}")
+async def client_limits(slug: str) -> dict:
+    """Return plan limits + current usage for a client."""
+    async with AsyncSessionLocal() as session:
+        result = await get_client_limits(session, slug)
+    if result is None:
+        raise HTTPException(status_code=404, detail="client not found")
+    return {
+        "slug": slug,
+        "plan_name": result.plan_name,
+        "products_limit": result.products_limit,
+        "products_used": result.products_used,
+        "images_per_product_limit": result.images_per_product_limit,
+        "domains_limit": result.domains_limit,
+        "users_limit": result.users_limit,
+        "users_used": result.users_used,
+        "analytics_enabled": result.analytics_enabled,
+    }
 
 
 class PaymentRequestIn(BaseModel):
