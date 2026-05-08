@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, Plan, Product, SiteRequest, Subscription
+from app.models import Client, Payment, Plan, Product, SiteRequest, Subscription
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -170,6 +170,59 @@ async def create_site_submit(
 @router.get("/health")
 async def health() -> dict:
     return {"status": "healthy"}
+
+
+@router.get("/payment/{payment_id}", response_class=HTMLResponse)
+async def payment_page(
+    request: Request,
+    payment_id: int,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        payment = await session.get(Payment, payment_id)
+        if payment is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {
+                    "request": request,
+                    "t": t,
+                    "lang": chosen,
+                    "supported_langs": SUPPORTED_LANGS,
+                    "slug": f"payment #{payment_id}",
+                },
+                status_code=404,
+            )
+
+        client = await session.get(Client, payment.client_id)
+
+        ctx_payment = {
+            "id": payment.id,
+            "client_name": client.business_name if client else "—",
+            "client_slug": client.slug if client else None,
+            "payment_type": payment.payment_type,
+            "provider": payment.provider,
+            "amount": float(payment.amount),
+            "currency": payment.currency,
+            "status": payment.status,
+            "invoice_id": payment.invoice_id,
+            "created_at": payment.created_at,
+            "paid_at": payment.paid_at,
+        }
+
+    return templates.TemplateResponse(
+        "payment.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "payment": ctx_payment,
+        },
+    )
 
 
 @router.get("/dashboard/{slug}", response_class=HTMLResponse)

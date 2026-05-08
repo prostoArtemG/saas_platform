@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment #{{ payment.id }} — SaaSPlatform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { brand: { lime:'#a3e635', purple:'#7c3aed', dark:'#0f0a1e', card:'#150e2e' } },
+        fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+      } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .badge { display:inline-flex; align-items:center; gap:.4rem; font-size:.75rem; font-weight:700; padding:.3rem .7rem; border-radius:9999px; border:1px solid; }
+    .badge-pending  { background: rgba(251,191,36,.1); color:#fbbf24; border-color: rgba(251,191,36,.3); }
+    .badge-paid     { background: rgba(163,230,53,.1); color:#a3e635; border-color: rgba(163,230,53,.35); }
+    .badge-failed   { background: rgba(239,68,68,.1); color:#f87171; border-color: rgba(239,68,68,.3); }
+    .badge-cancel   { background: rgba(255,255,255,.05); color: rgba(255,255,255,.5); border-color: rgba(255,255,255,.15); }
+    .dot { width:.55rem; height:.55rem; border-radius:9999px; }
+    .row { display:flex; align-items:center; justify-content:space-between; padding:.85rem 0; border-bottom:1px dashed rgba(255,255,255,.06); }
+    .row:last-child { border-bottom:none; }
+  </style>
+</head>
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>SaaSPlatform</span>
+      </a>
+      <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Secure payment</span>
+    </div>
+  </header>
+
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-xl mx-auto">
+
+      <!-- Header -->
+      <div class="text-center mb-8 animate-fade-up">
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">
+          Invoice #{{ payment.id }}
+        </div>
+        <h1 class="text-4xl lg:text-5xl font-black mb-2">
+          <span class="gradient-text">Payment</span>
+        </h1>
+        <p class="text-white/50">{{ payment.client_name }}</p>
+      </div>
+
+      <!-- Card -->
+      <div id="payment-card" class="glass-card rounded-3xl p-8 lg:p-10 animate-fade-up">
+
+        <!-- Amount + status -->
+        <div class="text-center pb-7 mb-2 border-b border-white/5">
+          <div class="text-5xl lg:text-6xl font-black gradient-text mb-3">
+            {{ "%.2f"|format(payment.amount) }} <span class="text-3xl text-white/70">{{ payment.currency }}</span>
+          </div>
+          <div id="status-row">
+            {% if payment.status == 'pending' %}
+              <span class="badge badge-pending"><span class="dot bg-amber-400 animate-pulse"></span>Pending</span>
+            {% elif payment.status == 'paid' %}
+              <span class="badge badge-paid"><span class="dot bg-brand-lime"></span>Paid</span>
+            {% elif payment.status == 'failed' %}
+              <span class="badge badge-failed"><span class="dot bg-red-400"></span>Failed</span>
+            {% elif payment.status == 'cancelled' %}
+              <span class="badge badge-cancel"><span class="dot bg-white/40"></span>Cancelled</span>
+            {% else %}
+              <span class="badge badge-cancel"><span class="dot bg-white/40"></span>{{ payment.status }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="text-sm">
+          <div class="row">
+            <span class="text-white/50">Client</span>
+            <span class="font-semibold">{{ payment.client_name }}</span>
+          </div>
+          <div class="row">
+            <span class="text-white/50">Type</span>
+            <span class="font-semibold capitalize">{{ payment.payment_type }}</span>
+          </div>
+          <div class="row">
+            <span class="text-white/50">Provider</span>
+            <span class="font-mono text-white/80">{{ payment.provider }}</span>
+          </div>
+          {% if payment.invoice_id %}
+          <div class="row">
+            <span class="text-white/50">Invoice ID</span>
+            <code class="text-white/70 text-xs">{{ payment.invoice_id }}</code>
+          </div>
+          {% endif %}
+          <div class="row">
+            <span class="text-white/50">Created</span>
+            <span class="text-white/80">{{ payment.created_at.strftime('%d %b %Y, %H:%M') }} UTC</span>
+          </div>
+          {% if payment.paid_at %}
+          <div class="row">
+            <span class="text-white/50">Paid at</span>
+            <span class="text-brand-lime">{{ payment.paid_at.strftime('%d %b %Y, %H:%M') }} UTC</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Action -->
+        <div id="action-area" class="mt-7">
+          {% if payment.status == 'pending' %}
+            <button id="pay-btn" type="button" class="cta-btn w-full py-4 rounded-2xl text-base animate-glow flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h.01M11 15h2m4 6H7a4 4 0 01-4-4V7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4z"/></svg>
+              💳 Оплатити
+            </button>
+            <p class="text-center text-xs text-white/35 mt-3">
+              Mock payment — натискання імітує webhook від провайдера.
+            </p>
+
+          {% elif payment.status == 'paid' %}
+            <div class="flex flex-col items-center gap-2 py-4">
+              <div class="w-14 h-14 rounded-full bg-brand-lime/15 border border-brand-lime/35 flex items-center justify-center animate-glow">
+                <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="text-2xl font-black gradient-text">✅ Оплата успішна</div>
+              <p class="text-white/50 text-sm">Дякуємо! Підписка активна.</p>
+            </div>
+          {% else %}
+            <div class="text-center text-white/50 py-3">
+              {% if payment.status == 'failed' %}Payment failed.{% else %}Payment is no longer active.{% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="text-center mt-6">
+        <a href="/" class="text-sm text-white/40 hover:text-white transition-colors">← На головну</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('pay-btn');
+      if (!btn) return;
+      const paymentId = {{ payment.id }};
+      const statusRow = document.getElementById('status-row');
+      const actionArea = document.getElementById('action-area');
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+        btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path></svg> Обробка...';
+
+        try {
+          const res = await fetch('/api/payment-webhook/mock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_id: paymentId, status: 'paid' }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.detail || 'Payment failed');
+          }
+
+          // Replace status badge + action area
+          statusRow.innerHTML = '<span class="badge badge-paid"><span class="dot bg-brand-lime"></span>Paid</span>';
+          actionArea.innerHTML = `
+            <div class="flex flex-col items-center gap-2 py-4">
+              <div class="w-14 h-14 rounded-full bg-brand-lime/15 border border-brand-lime/35 flex items-center justify-center animate-glow">
+                <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div class="text-2xl font-black gradient-text">✅ Оплата успішна</div>
+              <p class="text-white/50 text-sm">Дякуємо! Підписка активна.</p>
+            </div>`;
+        } catch (err) {
+          actionArea.innerHTML = `
+            <div class="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm text-center">
+              ${(err && err.message) || 'Помилка оплати'}
+            </div>`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
