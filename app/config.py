@@ -19,6 +19,16 @@ class Settings(BaseSettings):
 
     payment_webhook_secret: str = Field("", alias="PAYMENT_WEBHOOK_SECRET")
 
+    # Optional payment provider keys. Provider auto-registers if its key(s) set.
+    payment_provider_default: str = Field("manual", alias="PAYMENT_PROVIDER_DEFAULT")
+    payment_return_url: str = Field("", alias="PAYMENT_RETURN_URL")
+    payment_webhook_base_url: str = Field("", alias="PAYMENT_WEBHOOK_BASE_URL")
+
+    mono_token: str = Field("", alias="MONO_TOKEN")
+
+    liqpay_public_key: str = Field("", alias="LIQPAY_PUBLIC_KEY")
+    liqpay_private_key: str = Field("", alias="LIQPAY_PRIVATE_KEY")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):
