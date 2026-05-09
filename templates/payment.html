@@ -126,12 +126,23 @@
             </p>
 
           {% elif payment.status == 'paid' %}
-            <div class="flex flex-col items-center gap-2 py-4">
+            <div class="flex flex-col items-center gap-3 py-4">
               <div class="w-14 h-14 rounded-full bg-brand-lime/15 border border-brand-lime/35 flex items-center justify-center animate-glow">
                 <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
               </div>
               <div class="text-2xl font-black gradient-text">✅ Оплата успішна</div>
-              <p class="text-white/50 text-sm">Дякуємо! Підписка активна.</p>
+              {% if payment.new_expiry_human %}
+              <p class="text-white/70 text-sm text-center">
+                Підписку продовжено до
+                <span class="text-brand-lime font-semibold">{{ payment.new_expiry_human }}</span>
+              </p>
+              {% endif %}
+              <div class="flex flex-wrap gap-2 justify-center mt-1">
+                {% if payment.plan_name %}
+                <span class="badge" style="background:rgba(124,58,237,.18);color:#c4b5fd;border-color:rgba(124,58,237,.45)">📦 {{ payment.plan_name }}</span>
+                {% endif %}
+                <span class="badge badge-paid"><span class="dot bg-brand-lime"></span>{{ payment.subscription_status or 'active' }}</span>
+              </div>
             </div>
           {% else %}
             <div class="text-center text-white/50 py-3">
@@ -174,13 +185,26 @@
 
           // Replace status badge + action area
           statusRow.innerHTML = '<span class="badge badge-paid"><span class="dot bg-brand-lime"></span>Paid</span>';
+          const expiry = data.new_expiry_human;
+          const planName = data.plan_name;
+          const subStatus = data.subscription_status || 'active';
+          const expiryHtml = expiry
+            ? `<p class="text-white/70 text-sm text-center">Підписку продовжено до <span class="text-brand-lime font-semibold">${expiry}</span></p>`
+            : '';
+          const planHtml = planName
+            ? `<span class="badge" style="background:rgba(124,58,237,.18);color:#c4b5fd;border-color:rgba(124,58,237,.45)">📦 ${planName}</span>`
+            : '';
           actionArea.innerHTML = `
-            <div class="flex flex-col items-center gap-2 py-4">
+            <div class="flex flex-col items-center gap-3 py-4">
               <div class="w-14 h-14 rounded-full bg-brand-lime/15 border border-brand-lime/35 flex items-center justify-center animate-glow">
                 <svg class="w-8 h-8 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
               </div>
               <div class="text-2xl font-black gradient-text">✅ Оплата успішна</div>
-              <p class="text-white/50 text-sm">Дякуємо! Підписка активна.</p>
+              ${expiryHtml}
+              <div class="flex flex-wrap gap-2 justify-center mt-1">
+                ${planHtml}
+                <span class="badge badge-paid"><span class="dot bg-brand-lime"></span>${subStatus}</span>
+              </div>
             </div>`;
         } catch (err) {
           actionArea.innerHTML = `

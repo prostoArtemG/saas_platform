@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.bot.payments import format_payment_message, payment_actions_kb
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, Payment, PaymentRequest, Subscription
+from app.models import Client, Payment, PaymentRequest, Plan, Subscription
 from app.payments import PROVIDERS, get_provider, get_provider_strict
 from app.services.client_domain import get_client_domain
 from app.services.client_limits import get_client_limits
@@ -321,6 +321,10 @@ async def _finalize_payment(
                 sub.status = "active"
                 payment.subscription_id = sub.id
                 extra["expires_at"] = sub.expires_at.isoformat()
+                extra["new_expiry_human"] = sub.expires_at.strftime("%d.%m.%Y")
+                extra["subscription_status"] = sub.status
+                plan = await session.get(Plan, sub.plan_id) if sub.plan_id else None
+                extra["plan_name"] = plan.name if plan else None
         elif payment.payment_type == "domain" and client is not None:
             client.domain_status = "active"
             extra["domain_status"] = "active"
@@ -334,17 +338,29 @@ async def _finalize_payment(
 
 
 async def _notify_payment_finalized(bot, snapshot: dict) -> None:
-    """Best-effort admin + client notifications after a payment is finalized."""
+    """Best-effort admin + client notifications after a payment is finalized.
+
+    - Admin notification goes through the SaaS platform bot to ``settings.admin_ids``.
+    - Client notification goes (a) via the platform bot to ``client.admin_telegram_id``
+      if known, AND (b) via the client's own "tech_bot" (if ``telegram_bot_token``
+      is set) to the same admin id, so the message lands in the client's own bot
+      chat.
+    """
     if bot is None or snapshot.get("status") != "paid":
         return
+
+    new_expiry = snapshot.get("new_expiry_human") or "—"
+    plan_name = snapshot.get("plan_name") or "—"
+    sub_status = snapshot.get("subscription_status") or "active"
+
     admin_text = (
-        "💰 <b>Платёж получен</b>\n"
-        f"#<code>{snapshot['id']}</code>\n"
-        f"• Клиент: <b>{snapshot['client_name']}</b> "
+        "💳 <b>Оплата підтверджена</b>\n"
+        f"🏢 Client: <b>{snapshot['client_name']}</b> "
         f"(<code>{snapshot['client_slug']}</code>)\n"
-        f"• Тип: {snapshot['type']}\n"
-        f"• Провайдер: {snapshot['provider']}\n"
-        f"• Сумма: <b>{snapshot['amount']} {snapshot['currency']}</b>"
+        f"📦 Plan: <b>{plan_name}</b>\n"
+        f"📅 New expiry: <b>{new_expiry}</b>\n"
+        f"💰 Сума: {snapshot['amount']} {snapshot['currency']}\n"
+        f"🔌 Provider: {snapshot['provider']} • #<code>{snapshot['id']}</code>"
     )
     for admin_id in settings.admin_ids:
         try:
@@ -352,21 +368,39 @@ async def _notify_payment_finalized(bot, snapshot: dict) -> None:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Notify admin %s failed: %s", admin_id, exc)
 
-    if snapshot.get("client_admin_id"):
-        client_text = (
-            "✅ <b>Оплата отримана, дякуємо!</b>\n"
-            f"• Тип: {snapshot['type']}\n"
-            f"• Сума: <b>{snapshot['amount']} {snapshot['currency']}</b>\n"
-            f"Підписка активна."
-        )
+    client_text = (
+        "✅ <b>Оплата отримана</b>\n"
+        f"Підписку продовжено до <b>{new_expiry}</b>.\n"
+        f"📦 Тариф: {plan_name}\n"
+        f"✅ Статус: {sub_status}"
+    )
+
+    client_admin_id = snapshot.get("client_admin_id")
+    if client_admin_id:
         try:
-            await bot.send_message(
-                snapshot["client_admin_id"], client_text, parse_mode="HTML"
-            )
+            await bot.send_message(client_admin_id, client_text, parse_mode="HTML")
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Notify client %s failed: %s", snapshot["client_admin_id"], exc
+                "Notify client (platform bot) %s failed: %s", client_admin_id, exc
             )
+
+        # Best-effort: also send via the client's own tech_bot, if connected.
+        tech_bot_token = snapshot.get("client_bot_token")
+        if tech_bot_token:
+            try:
+                # Lazy import to avoid heavy aiogram setup if never used.
+                from aiogram import Bot as _Bot
+                from aiogram.client.default import DefaultBotProperties
+                tech_bot = _Bot(
+                    token=tech_bot_token,
+                    default=DefaultBotProperties(parse_mode="HTML"),
+                )
+                try:
+                    await tech_bot.send_message(client_admin_id, client_text)
+                finally:
+                    await tech_bot.session.close()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Notify client (tech_bot) failed: %s", exc)
 
 
 def _payment_snapshot(payment: Payment, client: Optional[Client]) -> dict:
@@ -380,6 +414,7 @@ def _payment_snapshot(payment: Payment, client: Optional[Client]) -> dict:
         "client_name": client.business_name if client else "—",
         "client_slug": client.slug if client else "—",
         "client_admin_id": client.admin_telegram_id if client else None,
+        "client_bot_token": client.telegram_bot_token if client else None,
     }
 
 
@@ -406,6 +441,7 @@ async def payment_webhook_mock(
         client = await session.get(Client, payment.client_id)
         await session.commit()
         snapshot = _payment_snapshot(payment, client)
+        snapshot.update(extra or {})
 
     await _notify_payment_finalized(getattr(request.app.state, "bot", None), snapshot)
     result = {"id": snapshot["id"], "status": snapshot["status"]}
@@ -497,6 +533,7 @@ async def payment_webhook_generic(
         client = await session.get(Client, payment.client_id)
         await session.commit()
         snapshot = _payment_snapshot(payment, client)
+        snapshot.update(extra or {})
 
     await _notify_payment_finalized(getattr(request.app.state, "bot", None), snapshot)
 

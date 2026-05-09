@@ -343,6 +343,29 @@ async def payment_page(
 
         client = await session.get(Client, payment.client_id)
 
+        # If subscription payment, surface plan + new expiry on the page.
+        plan_name: Optional[str] = None
+        new_expiry_human: Optional[str] = None
+        sub_status: Optional[str] = None
+        if payment.payment_type == "subscription" and client is not None:
+            sub = None
+            if payment.subscription_id is not None:
+                sub = await session.get(Subscription, payment.subscription_id)
+            if sub is None:
+                sub = await session.scalar(
+                    select(Subscription)
+                    .where(Subscription.client_id == client.id)
+                    .order_by(Subscription.id.desc())
+                    .limit(1)
+                )
+            if sub is not None:
+                if sub.expires_at:
+                    new_expiry_human = sub.expires_at.strftime("%d.%m.%Y")
+                sub_status = sub.status
+                if sub.plan_id:
+                    plan = await session.get(Plan, sub.plan_id)
+                    plan_name = plan.name if plan else None
+
         ctx_payment = {
             "id": payment.id,
             "client_name": client.business_name if client else "—",
@@ -355,6 +378,9 @@ async def payment_page(
             "invoice_id": payment.invoice_id,
             "created_at": payment.created_at,
             "paid_at": payment.paid_at,
+            "plan_name": plan_name,
+            "new_expiry_human": new_expiry_human,
+            "subscription_status": sub_status,
         }
 
     return templates.TemplateResponse(
