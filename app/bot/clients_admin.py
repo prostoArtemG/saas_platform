@@ -1,10 +1,15 @@
-"""Admin client management: card view + actions (block/activate/delete/payments/domain)."""
+"""Admin client management: card view + actions (block/activate/delete/payments/domain/connect bot)."""
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 
+import aiohttp
 from aiogram import F, Router
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -14,7 +19,7 @@ from aiogram.types import (
 from sqlalchemy import select
 
 from app.bot.filters import AdminFilter
-from app.bot.keyboards import BTN_CLIENTS
+from app.bot.keyboards import BTN_CLIENTS, admin_main_menu
 from app.db import AsyncSessionLocal
 from app.models import Client, Domain, Payment, Plan, Subscription
 
@@ -49,7 +54,10 @@ def _card_kb(client_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🌐 Домен", callback_data=f"cli:domain:{client_id}"),
             ],
             [
-                InlineKeyboardButton(text="🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
+                InlineKeyboardButton(text="� Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),
+            ],
+            [
+                InlineKeyboardButton(text="�🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
                 InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
             ],
             [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"cli:delete:{client_id}")],
@@ -133,6 +141,15 @@ async def _build_card_text(session, client: Client) -> str:
             f"({last_payment.status}) • {_fmt_dt(last_payment.created_at)}"
         )
 
+    # Bot connection status
+    if client.telegram_bot_token:
+        if client.bot_username:
+            bot_str = f"connected • @{client.bot_username}"
+        else:
+            bot_str = "connected"
+    else:
+        bot_str = "not connected"
+
     lines = [
         f"🏢 <b>{client.business_name}</b>",
         f"🌐 <code>{client.slug}</code> • {domain_str}",
@@ -140,6 +157,7 @@ async def _build_card_text(session, client: Client) -> str:
         f"✅ Статус: <b>{client.status}</b> • подписка: {sub_status}",
         f"📅 Истекает: {expires}",
         f"💳 Последний платёж: {last_payment_str}",
+        f"🤖 Bot: <b>{bot_str}</b>",
     ]
     return "\n".join(lines)
 
@@ -395,3 +413,124 @@ async def cb_delete_confirm(call: CallbackQuery) -> None:
         parse_mode="HTML",
     )
     await call.answer("Удалено")
+
+
+# ----- connect bot ------------------------------------------------------------
+
+class ConnectBot(StatesGroup):
+    waiting_token = State()
+
+
+_TOKEN_RE = re.compile(r"^\d{6,12}:[A-Za-z0-9_-]{30,}$")
+
+
+async def _telegram_get_me(token: str) -> dict:
+    """Call Telegram getMe. Returns the ``result`` dict on ok=True.
+    Raises ValueError with a human-readable description otherwise."""
+    url = f"https://api.telegram.org/bot{token}/getMe"
+    timeout = aiohttp.ClientTimeout(total=10)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as http:
+            async with http.get(url) as resp:
+                data = await resp.json(content_type=None)
+    except aiohttp.ClientError as e:
+        raise ValueError(f"network error: {e}") from e
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"unexpected error: {e}") from e
+
+    if not isinstance(data, dict) or not data.get("ok"):
+        desc = (data or {}).get("description", "invalid token")
+        raise ValueError(desc)
+    return data["result"]
+
+
+@router.callback_query(F.data.startswith("cli:connect_bot:"))
+async def cb_connect_bot(call: CallbackQuery, state: FSMContext) -> None:
+    try:
+        client_id = int(call.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await call.answer("bad id", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+    if client is None:
+        await call.answer("Клиент не найден", show_alert=True)
+        return
+
+    await state.clear()
+    await state.update_data(client_id=client_id)
+    await state.set_state(ConnectBot.waiting_token)
+    await call.message.answer(
+        f"🔗 <b>Подключение бота</b> для <b>{client.business_name}</b>\n\n"
+        f"Отправь <b>BOT_TOKEN</b> (формат <code>123456789:AA...</code>).\n"
+        f"Токен будет проверен через Telegram API getMe.\n"
+        f"Для отмены /cancel",
+        parse_mode="HTML",
+    )
+    await call.answer()
+
+
+@router.message(StateFilter(ConnectBot), Command("cancel"))
+async def cb_connect_cancel(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer("Подключение бота отменено.", reply_markup=admin_main_menu())
+
+
+@router.message(ConnectBot.waiting_token, F.text)
+async def cb_connect_token(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip()
+    data = await state.get_data()
+    client_id = data.get("client_id")
+    if client_id is None:
+        await state.clear()
+        await message.answer("Состояние сброшено.", reply_markup=admin_main_menu())
+        return
+
+    if not _TOKEN_RE.match(raw):
+        await message.answer(
+            "❌ Похоже на некорректный токен. Формат: <code>123456789:AA...</code>\n"
+            "Повтори или /cancel.",
+            parse_mode="HTML",
+        )
+        return
+
+    # Validate via Telegram getMe
+    try:
+        me = await _telegram_get_me(raw)
+    except ValueError as e:
+        await message.answer(
+            f"❌ Telegram отверг токен: <code>{e}</code>\n"
+            f"Повтори или /cancel.",
+            parse_mode="HTML",
+        )
+        return
+
+    username = me.get("username")
+    bot_id = me.get("id")
+    if not username:
+        await message.answer("❌ Telegram не вернул username. Повтори или /cancel.")
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if client is None:
+            await state.clear()
+            await message.answer("Клиент не найден.", reply_markup=admin_main_menu())
+            return
+        client.telegram_bot_token = raw
+        client.bot_username = username
+        await session.commit()
+
+    await state.clear()
+    logger.info(
+        "admin connected bot for client_id=%s @%s (id=%s)", client_id, username, bot_id
+    )
+    await message.answer(
+        f"✅ <b>Бот подключён</b>\n\n"
+        f"@{username} (id: <code>{bot_id}</code>)\n"
+        f"Токен сохранён.",
+        parse_mode="HTML",
+        reply_markup=admin_main_menu(),
+    )
+    await _send_card(message, client_id, edit=False)
