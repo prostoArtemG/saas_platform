@@ -454,6 +454,13 @@ async def payment_webhook_generic(
         except Exception:  # noqa: BLE001
             payload = None
 
+    logger.info(
+        "webhook IN provider=%s headers=%s payload=%s",
+        provider_name,
+        {k: v for k, v in headers.items() if k.lower() in ("x-sign", "x-token", "content-type", "user-agent")},
+        payload,
+    )
+
     if payload is None:
         raise HTTPException(status_code=400, detail="empty or invalid body")
 

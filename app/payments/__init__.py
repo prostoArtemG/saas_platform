@@ -355,9 +355,20 @@ if settings.liqpay_public_key and settings.liqpay_private_key:
 
 
 def get_provider(name: Optional[str]) -> PaymentProvider:
-    """Resolve provider by name; fall back to the configured default, then manual."""
+    """Resolve provider by name; fall back to the configured default, then manual.
+
+    Special case: if the caller explicitly asks for "mono" or "liqpay" but the
+    provider is not registered (no ENV keys), fall back to the mock provider so
+    that a development/staging deploy without real keys still works end-to-end.
+    """
     if name and name in PROVIDERS:
         return PROVIDERS[name]
+    if name in ("mono", "liqpay"):
+        logger.warning(
+            "Provider '%s' requested but not registered (missing ENV keys); "
+            "falling back to 'mock'.", name,
+        )
+        return PROVIDERS["mock"]
     default = settings.payment_provider_default or "manual"
     return PROVIDERS.get(default, PROVIDERS["manual"])
 
