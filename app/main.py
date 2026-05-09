@@ -28,6 +28,15 @@ async def lifespan(app: FastAPI):
     dp = create_dispatcher()
     app.state.bot = bot
 
+    # Cache platform bot username for "Open Telegram CMS" links
+    try:
+        me = await bot.get_me()
+        app.state.platform_bot_username = me.username
+        logger.info("Platform bot: @%s (id=%s)", me.username, me.id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not fetch platform bot username: %s", exc)
+        app.state.platform_bot_username = None
+
     polling_task = asyncio.create_task(
         dp.start_polling(bot, handle_signals=False),
         name="bot-polling",

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SaaSPlatform — {{ t.create_site.onb_title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              lime:   '#a3e635',
+              purple: '#7c3aed',
+              dark:   '#0f0a1e',
+              card:   '#150e2e',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: rgba(255,255,255,0.5); font-size: 0.875rem; }
+    .info-value {
+      color: white;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-align: right;
+      word-break: break-all;
+      max-width: 65%;
+    }
+    .info-value code {
+      background: rgba(163, 230, 53, 0.08);
+      border: 1px solid rgba(163, 230, 53, 0.18);
+      color: #d9f99d;
+      padding: 0.15rem 0.5rem;
+      border-radius: 0.4rem;
+      font-size: 0.85rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(163, 230, 53, 0.12);
+      color: #d9f99d;
+      border: 1px solid rgba(163, 230, 53, 0.25);
+    }
+    .pill.muted {
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.55);
+      border-color: rgba(255,255,255,0.10);
+    }
+    .btn-primary {
+      background: #a3e635;
+      color: #0f0a1e;
+      font-weight: 700;
+      transition: transform .15s, box-shadow .15s, background .15s;
+      box-shadow: 0 8px 30px rgba(163, 230, 53, 0.25);
+    }
+    .btn-primary:hover {
+      background: #b6ee5b;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 40px rgba(163, 230, 53, 0.35);
+    }
+    .btn-secondary {
+      background: rgba(124, 58, 237, 0.18);
+      color: white;
+      font-weight: 600;
+      border: 1px solid rgba(124, 58, 237, 0.45);
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .btn-secondary:hover {
+      background: rgba(124, 58, 237, 0.28);
+      border-color: rgba(124, 58, 237, 0.7);
+      transform: translateY(-1px);
+    }
+    .btn-secondary[aria-disabled="true"] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>SaaSPlatform</span>
+      </a>
+      <a href="/" class="text-sm text-white/60 hover:text-white transition-colors">{{ t.create_site.back }}</a>
+    </div>
+  </header>
+
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-2xl mx-auto">
+
+      <div class="glass-card rounded-3xl p-8 lg:p-10 animate-fade-up">
+
+        <!-- Header -->
+        <div class="text-center mb-8">
+          <div class="w-20 h-20 rounded-full bg-brand-lime/15 border border-brand-lime/30 flex items-center justify-center mx-auto mb-6 animate-glow">
+            <svg class="w-10 h-10 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h1 class="text-3xl lg:text-4xl font-black mb-3">
+            <span class="gradient-text">{{ t.create_site.onb_title }}</span>
+          </h1>
+          <p class="text-white/55 max-w-md mx-auto">{{ t.create_site.onb_subtitle }}</p>
+        </div>
+
+        <!-- Details -->
+        <div class="bg-black/20 border border-white/5 rounded-2xl px-5 py-2 mb-8">
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_business }}</span>
+            <span class="info-value">{{ data.business_name }}</span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_site_url }}</span>
+            <span class="info-value"><code>{{ data.site_url }}</code></span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_bot }}</span>
+            <span class="info-value">
+              {% if data.bot_username %}
+                <code>@{{ data.bot_username }}</code>
+              {% else %}
+                <span class="pill muted">{{ t.create_site.onb_bot_pending }}</span>
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_template }}</span>
+            <span class="info-value"><code>{{ data.template }}</code></span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_plan }}</span>
+            <span class="info-value">
+              <span class="pill">{{ data.plan }}</span>
+            </span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">{{ t.create_site.onb_trial }}</span>
+            <span class="info-value">{{ data.trial_expires_at }}</span>
+          </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <a href="{{ data.site_url }}" target="_blank" rel="noopener"
+             class="btn-primary w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-base">
+            {{ t.create_site.onb_open_site }}
+          </a>
+          {% if data.cms_url %}
+          <a href="{{ data.cms_url }}" target="_blank" rel="noopener"
+             class="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-base">
+            {{ t.create_site.onb_open_cms }}
+          </a>
+          {% else %}
+          <span aria-disabled="true"
+                class="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-base">
+            {{ t.create_site.onb_cms_unavailable }}
+          </span>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <div class="text-center mt-6">
+        <a href="/" class="text-sm text-white/40 hover:text-white transition-colors">{{ t.create_site.back }}</a>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

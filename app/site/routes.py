@@ -1,9 +1,10 @@
 import logging
 import os
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from sqlalchemy import select
@@ -12,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, Payment, Plan, Product, SiteRequest, Subscription
+from app.services.onboarding import TRIAL_DAYS, onboard_client
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -94,7 +96,7 @@ async def create_site_submit(
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
 
-    if not business_name or not telegram or not site_type or not plan:
+    def _form_error(message: str, status: int = 400) -> HTMLResponse:
         return templates.TemplateResponse(
             "create_site.html",
             {
@@ -103,7 +105,7 @@ async def create_site_submit(
                 "lang": chosen,
                 "supported_langs": SUPPORTED_LANGS,
                 "submitted": False,
-                "error": t["create_site"]["error_required"],
+                "error": message,
                 "form": {
                     "business_name": business_name,
                     "telegram": telegram,
@@ -112,57 +114,199 @@ async def create_site_submit(
                     "comment": comment or "",
                 },
             },
-            status_code=400,
+            status_code=status,
         )
 
-    # 1. Save to DB
-    async with AsyncSessionLocal() as session:
-        req = SiteRequest(
-            business_name=business_name,
-            telegram=telegram,
-            site_type=site_type,
-            plan=plan,
-            comment=comment,
-            status="new",
-        )
-        session.add(req)
-        await session.commit()
-        await session.refresh(req)
-        req_id = req.id
+    if not business_name or not telegram or not site_type or not plan:
+        return _form_error(t["create_site"]["error_required"])
 
-    # 2. Notify admins in Telegram (best-effort) with inline action buttons
+    # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
+    try:
+        async with AsyncSessionLocal() as session:
+            req = SiteRequest(
+                business_name=business_name,
+                telegram=telegram,
+                site_type=site_type,
+                plan=plan,
+                comment=comment,
+                status="provisioned",
+            )
+            session.add(req)
+            await session.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("SiteRequest audit log failed: %s", exc)
+
+    # Atomic self-service onboarding ------------------------------------------
+    template_name = "technovlada"  # only template available right now
+
+    try:
+        async with AsyncSessionLocal() as session:
+            # 1. Resolve plan: match the dropdown label by first word.
+            plan_token = (plan.split() or [""])[0].lower()
+            plan_row: Optional[Plan] = None
+            if plan_token:
+                stmt_p = (
+                    select(Plan)
+                    .where(Plan.active.is_(True))
+                    .where(Plan.name.ilike(f"{plan_token}%"))
+                    .order_by(Plan.id.asc())
+                    .limit(1)
+                )
+                plan_row = (await session.execute(stmt_p)).scalar_one_or_none()
+            if plan_row is None:
+                stmt_any = (
+                    select(Plan)
+                    .where(Plan.active.is_(True))
+                    .order_by(Plan.id.asc())
+                    .limit(1)
+                )
+                plan_row = (await session.execute(stmt_any)).scalar_one_or_none()
+            if plan_row is None:
+                return _form_error(t["create_site"]["error_no_plan"])
+
+            # 2. Generate unique slug from business_name
+            slug = await _allocate_slug(session, business_name)
+
+            # 3. Create Client + flush + onboard, all-or-nothing
+            client = Client(
+                business_name=business_name,
+                slug=slug,
+                template_name=template_name,
+                domain_status="pending",
+                status="active",
+            )
+            session.add(client)
+            try:
+                await session.flush()
+                result = await onboard_client(
+                    session, client, plan_row, trial_days=TRIAL_DAYS
+                )
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Onboarding failed: %s", exc)
+        return _form_error(t["create_site"]["error_provision"], status=500)
+
+    logger.info(
+        "Self-service onboarding OK: client_id=%s slug=%s plan=%s",
+        result.client_id, result.slug, result.plan_name,
+    )
+
+    # Notify admins (best-effort)
     bot = getattr(request.app.state, "bot", None)
     if bot is not None and settings.admin_ids:
-        from app.bot.site_request import request_actions_kb
-
         text = (
-            "🆕 <b>Новая заявка</b>\n"
-            f"#<code>{req_id}</code>\n"
-            f"• Бизнес: <b>{business_name}</b>\n"
-            f"• Telegram: <code>{telegram}</code>\n"
-            f"• Тариф: {plan}\n"
-            f"• Тип сайта: {site_type}\n"
-            + (f"• Комментарий: {comment}\n" if comment else "")
+            "\U0001f195 <b>Новый клиент (self-service)</b>\n"
+            f"\U0001f3e2 <b>{business_name}</b>\n"
+            f"\U0001f310 <code>{result.slug}</code>\n"
+            f"\U0001f4e6 Тариф: {result.plan_name}\n"
+            f"\U0001f4c5 Trial до: {result.trial_expires_at:%Y-%m-%d}\n"
+            f"\u2709\ufe0f Telegram: <code>{telegram}</code>"
         )
-        kb = request_actions_kb(req_id)
         for admin_id in settings.admin_ids:
             try:
-                await bot.send_message(
-                    admin_id, text, parse_mode="HTML", reply_markup=kb
-                )
+                await bot.send_message(admin_id, text, parse_mode="HTML")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
 
+    return RedirectResponse(
+        url=f"/onboarding-success/{result.slug}", status_code=303
+    )
+
+
+_SLUG_CLEAN_RE = re.compile(r"[^a-z0-9]+")
+
+
+async def _allocate_slug(session, business_name: str) -> str:
+    base = (business_name or "").strip().lower()
+    base = _SLUG_CLEAN_RE.sub("-", base).strip("-")
+    if not base:
+        base = "client"
+    base = base[:55]
+
+    candidate = base
+    suffix = 2
+    while True:
+        existing = (
+            await session.execute(select(Client.id).where(Client.slug == candidate))
+        ).scalar_one_or_none()
+        if existing is None:
+            return candidate
+        candidate = f"{base}-{suffix}"[:60]
+        suffix += 1
+        if suffix > 9999:  # extremely unlikely
+            raise RuntimeError("could not allocate unique slug")
+
+
+@router.get("/onboarding-success/{slug}", response_class=HTMLResponse)
+async def onboarding_success(
+    request: Request,
+    slug: str,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(Client)
+            .where(Client.slug == slug)
+            .options(selectinload(Client.subscriptions).selectinload(Subscription.plan))
+        )
+        client = (await session.execute(stmt)).scalar_one_or_none()
+        if client is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {
+                    "request": request,
+                    "t": t,
+                    "lang": chosen,
+                    "supported_langs": SUPPORTED_LANGS,
+                    "slug": slug,
+                },
+                status_code=404,
+            )
+
+        # Pick the most recent subscription
+        sub = max(client.subscriptions, key=lambda s: s.id) if client.subscriptions else None
+        plan_name = sub.plan.name if (sub and sub.plan) else "—"
+        trial_expires = (
+            sub.expires_at.strftime("%Y-%m-%d %H:%M UTC")
+            if (sub and sub.expires_at) else "—"
+        )
+
+        platform_bot_username = getattr(
+            request.app.state, "platform_bot_username", None
+        )
+        cms_url = (
+            f"https://t.me/{platform_bot_username}"
+            if platform_bot_username else None
+        )
+
+        site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
+
+        data = {
+            "business_name": client.business_name,
+            "site_url": site_url,
+            "bot_username": client.bot_username,
+            "template": client.template_name,
+            "plan": plan_name,
+            "trial_expires_at": trial_expires,
+            "cms_url": cms_url,
+        }
+
     return templates.TemplateResponse(
-        "create_site.html",
+        "onboarding_success.html",
         {
             "request": request,
             "t": t,
             "lang": chosen,
             "supported_langs": SUPPORTED_LANGS,
-            "submitted": True,
-            "error": None,
-            "form": {},
+            "data": data,
         },
     )
 
