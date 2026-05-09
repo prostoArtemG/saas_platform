@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS status     VARCHAR(32) NOT NULL DEFAULT 'active';
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS starts_at  TIMESTAMPTZ;
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS ix_subscriptions_client_id ON subscriptions (client_id);
@@ -202,7 +203,7 @@ CREATE INDEX IF NOT EXISTS ix_payments_invoice_id      ON payments (invoice_id);
 CREATE TABLE IF NOT EXISTS domains (
     id            SERIAL PRIMARY KEY,
     client_id     INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    domain        VARCHAR(255) NOT NULL UNIQUE,
+    domain        VARCHAR(255) UNIQUE,
     status        VARCHAR(32)  NOT NULL DEFAULT 'pending',
     expires_at    TIMESTAMPTZ,
     dns_connected BOOLEAN      NOT NULL DEFAULT FALSE,
@@ -213,9 +214,77 @@ ALTER TABLE domains ADD COLUMN IF NOT EXISTS status        VARCHAR(32) NOT NULL 
 ALTER TABLE domains ADD COLUMN IF NOT EXISTS expires_at    TIMESTAMPTZ;
 ALTER TABLE domains ADD COLUMN IF NOT EXISTS dns_connected BOOLEAN     NOT NULL DEFAULT FALSE;
 ALTER TABLE domains ADD COLUMN IF NOT EXISTS created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Allow NULL domain (placeholder for "not connected yet")
+ALTER TABLE domains ALTER COLUMN domain DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS ix_domains_client_id ON domains (client_id);
 CREATE INDEX IF NOT EXISTS ix_domains_domain    ON domains (domain);
+
+
+-- ---------------------------------------------------------------------------
+-- 9. client_settings (onboarding defaults)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS client_settings (
+    client_id  INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+    language   VARCHAR(8)  NOT NULL DEFAULT 'uk',
+    currency   VARCHAR(8)  NOT NULL DEFAULT 'UAH',
+    timezone   VARCHAR(64) NOT NULL DEFAULT 'Europe/Kyiv',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE client_settings ADD COLUMN IF NOT EXISTS language   VARCHAR(8)  NOT NULL DEFAULT 'uk';
+ALTER TABLE client_settings ADD COLUMN IF NOT EXISTS currency   VARCHAR(8)  NOT NULL DEFAULT 'UAH';
+ALTER TABLE client_settings ADD COLUMN IF NOT EXISTS timezone   VARCHAR(64) NOT NULL DEFAULT 'Europe/Kyiv';
+ALTER TABLE client_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ---------------------------------------------------------------------------
+-- 10. billing_state
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS billing_state (
+    client_id        INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+    status           VARCHAR(32) NOT NULL DEFAULT 'active',
+    trial_days_left  INTEGER     NOT NULL DEFAULT 0,
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE billing_state ADD COLUMN IF NOT EXISTS status          VARCHAR(32) NOT NULL DEFAULT 'active';
+ALTER TABLE billing_state ADD COLUMN IF NOT EXISTS trial_days_left INTEGER     NOT NULL DEFAULT 0;
+ALTER TABLE billing_state ADD COLUMN IF NOT EXISTS updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ---------------------------------------------------------------------------
+-- 11. limits_snapshots
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS limits_snapshots (
+    id                       SERIAL PRIMARY KEY,
+    client_id                INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    plan_id                  INTEGER          REFERENCES plans(id)   ON DELETE SET NULL,
+    products_limit           INTEGER,
+    images_per_product_limit INTEGER,
+    domains_limit            INTEGER,
+    users_limit              INTEGER,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS plan_id                  INTEGER;
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS products_limit           INTEGER;
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS images_per_product_limit INTEGER;
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS domains_limit            INTEGER;
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS users_limit              INTEGER;
+ALTER TABLE limits_snapshots ADD COLUMN IF NOT EXISTS created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE INDEX IF NOT EXISTS ix_limits_snapshots_client_id ON limits_snapshots (client_id);
+
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_limits_snapshots_plan_id'
+    ) THEN
+        ALTER TABLE limits_snapshots
+            ADD CONSTRAINT fk_limits_snapshots_plan_id
+            FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 COMMIT;
 

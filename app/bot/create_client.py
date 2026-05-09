@@ -15,6 +15,7 @@ from app.bot.filters import AdminFilter
 from app.bot.keyboards import BTN_CREATE_CLIENT, admin_main_menu
 from app.db import AsyncSessionLocal
 from app.models import Client, Plan, Subscription
+from app.services.onboarding import TRIAL_DAYS, onboard_client
 
 router = Router(name="create_client")
 router.message.filter(AdminFilter())
@@ -145,54 +146,75 @@ async def step_plan(cb: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
 
     async with AsyncSessionLocal() as session:
-        plan = await session.get(Plan, plan_id)
-        if plan is None:
-            await cb.answer("Тариф не найден", show_alert=True)
-            return
+        try:
+            plan = await session.get(Plan, plan_id)
+            if plan is None:
+                await cb.answer("Тариф не найден", show_alert=True)
+                return
 
-        # Re-check slug uniqueness right before insert.
-        slug_taken = await session.scalar(
-            select(Client.id).where(Client.slug == data["slug"])
-        )
-        if slug_taken:
+            # Re-check slug uniqueness right before insert.
+            slug_taken = await session.scalar(
+                select(Client.id).where(Client.slug == data["slug"])
+            )
+            if slug_taken:
+                await state.clear()
+                await cb.message.answer(
+                    f"Slug <code>{data['slug']}</code> уже занят. Начни заново.",
+                    parse_mode="HTML",
+                    reply_markup=admin_main_menu(),
+                )
+                await cb.answer()
+                return
+
+            client = Client(
+                business_name=data["business_name"],
+                slug=data["slug"],
+                telegram_bot_token=data["bot_token"],
+                admin_telegram_id=data["admin_tg_id"],
+                status="active",
+            )
+            session.add(client)
+            await session.flush()  # populate client.id
+
+            result = await onboard_client(session, client, plan, trial_days=TRIAL_DAYS)
+            await session.commit()
+        except Exception as exc:  # noqa: BLE001
+            await session.rollback()
             await state.clear()
             await cb.message.answer(
-                f"Slug <code>{data['slug']}</code> уже занят. Начни заново.",
+                f"❌ Не удалось создать клиента: <code>{exc}</code>\n"
+                f"Изменения откачены, ничего не создано.",
                 parse_mode="HTML",
                 reply_markup=admin_main_menu(),
             )
-            await cb.answer()
+            await cb.answer("Ошибка", show_alert=True)
             return
-
-        client = Client(
-            business_name=data["business_name"],
-            slug=data["slug"],
-            telegram_bot_token=data["bot_token"],
-            admin_telegram_id=data["admin_tg_id"],
-            status="active",
-        )
-        session.add(client)
-        await session.flush()
-
-        sub = Subscription(
-            client_id=client.id,
-            plan_id=plan.id,
-            status="trial",
-        )
-        session.add(sub)
-        await session.commit()
-
-        plan_name = plan.name
-        sub_status = sub.status
 
     await state.clear()
     await cb.message.edit_reply_markup(reply_markup=None)
+
+    def _lim(v):
+        return "∞" if v is None else str(v)
+
+    expires_str = result.trial_expires_at.strftime("%Y-%m-%d %H:%M UTC")
     await cb.message.answer(
-        "✅ <b>Клиент создан:</b>\n"
-        f"• Название: <b>{client.business_name}</b>\n"
-        f"• Slug: <code>{client.slug}</code>\n"
-        f"• Тариф: <b>{plan_name}</b>\n"
-        f"• Статус: <b>{sub_status}</b>",
+        "✅ <b>Клиент создан и онбординг завершён</b>\n\n"
+        f"🏢 <b>{result.business_name}</b>\n"
+        f"🔗 slug: <code>{result.slug}</code>\n"
+        f"📦 Тариф: <b>{result.plan_name}</b>\n"
+        f"🧾 Подписка: <b>{result.subscription_status}</b>\n"
+        f"⏳ Trial до: <b>{expires_str}</b> "
+        f"({result.trial_days_left} дн.)\n"
+        f"💳 Биллинг: <b>{result.billing_status}</b>\n\n"
+        f"<b>Лимиты:</b>\n"
+        f"• 📦 Товары: {_lim(result.products_limit)}\n"
+        f"• 🖼 Фото на товар: {_lim(result.images_per_product_limit)}\n"
+        f"• 🌐 Домены: {_lim(result.domains_limit)}\n"
+        f"• 👥 Юзеры: {_lim(result.users_limit)}\n\n"
+        f"<b>Настройки:</b>\n"
+        f"• 🌍 Язык: <code>{result.language}</code>\n"
+        f"• 💰 Валюта: <code>{result.currency}</code>\n"
+        f"• 🕒 Часовой пояс: <code>{result.timezone}</code>",
         parse_mode="HTML",
         reply_markup=admin_main_menu(),
     )

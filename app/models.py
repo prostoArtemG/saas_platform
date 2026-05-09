@@ -105,6 +105,9 @@ class Subscription(Base):
         index=True,
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    starts_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     expires_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -222,7 +225,9 @@ class Domain(Base):
         nullable=False,
         index=True,
     )
-    domain: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    domain: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="pending", default="pending"
     )
@@ -239,3 +244,59 @@ class Domain(Base):
     )
 
     client: Mapped["Client"] = relationship(back_populates="domains")
+
+
+class ClientSettings(Base):
+    __tablename__ = "client_settings"
+
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), primary_key=True
+    )
+    language: Mapped[str] = mapped_column(
+        String(8), nullable=False, server_default="uk", default="uk"
+    )
+    currency: Mapped[str] = mapped_column(
+        String(8), nullable=False, server_default="UAH", default="UAH"
+    )
+    timezone: Mapped[str] = mapped_column(
+        String(64), nullable=False, server_default="Europe/Kyiv", default="Europe/Kyiv"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class BillingState(Base):
+    __tablename__ = "billing_state"
+
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="active", default="active"
+    )
+    trial_days_left: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class LimitsSnapshot(Base):
+    __tablename__ = "limits_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    plan_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("plans.id", ondelete="SET NULL"), nullable=True
+    )
+    products_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    images_per_product_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    domains_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    users_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
