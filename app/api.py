@@ -190,9 +190,26 @@ async def receive_payment_request(
 class CreatePaymentLinkIn(BaseModel):
     client_slug: str = Field(..., min_length=1, max_length=64)
     payment_type: Literal["subscription", "domain"] = "subscription"
-    amount: float = Field(..., gt=0)
-    currency: str = Field(default="USD", max_length=8)
+    # Amount is optional: for subscription payments the platform is the source
+    # of truth and resolves the price from the client's plan in the DB. Any
+    # value sent by tech_bot is treated as a hint only and overridden if it
+    # disagrees with the plan price (logged as a warning).
+    amount: Optional[float] = Field(default=None, gt=0)
+    currency: Optional[str] = Field(default=None, max_length=8)
     provider: Optional[str] = Field(default=None, max_length=32)
+
+
+def _resolve_plan_price(plan: Optional[Plan]) -> Optional[Decimal]:
+    if plan is None:
+        return None
+    raw = plan.price if plan.price is not None else plan.price_monthly
+    if raw is None:
+        return None
+    try:
+        value = Decimal(str(raw))
+    except (InvalidOperation, ValueError):
+        return None
+    return value if value > 0 else None
 
 
 @router.post("/create-payment-link")
@@ -200,12 +217,12 @@ async def create_payment_link(
     payload: CreatePaymentLinkIn,
     request: Request,
 ) -> dict:
-    """Create a Payment row + invoice on the chosen provider, return payment_url."""
-    try:
-        amount = Decimal(str(payload.amount))
-    except (InvalidOperation, ValueError):
-        raise HTTPException(status_code=400, detail="invalid amount")
+    """Create a Payment row + invoice on the chosen provider, return payment_url.
 
+    For subscription payments, amount/currency are resolved server-side from
+    the client's Plan row. Any caller-supplied amount is informational only.
+    For domain payments (no plan binding), the caller-supplied amount is used.
+    """
     provider = get_provider(payload.provider)
 
     async with AsyncSessionLocal() as session:
@@ -216,6 +233,7 @@ async def create_payment_link(
             raise HTTPException(status_code=404, detail="client not found")
 
         subscription_id: Optional[int] = None
+        plan: Optional[Plan] = None
         if payload.payment_type == "subscription":
             sub = await session.scalar(
                 select(Subscription)
@@ -224,6 +242,46 @@ async def create_payment_link(
                 .limit(1)
             )
             subscription_id = sub.id if sub else None
+            plan_id = (sub.plan_id if sub else None) or client.plan_id
+            if plan_id is not None:
+                plan = await session.get(Plan, plan_id)
+
+        # ----- Resolve amount + currency (server is source of truth for plans) -----
+        amount: Optional[Decimal] = None
+        currency: str = (payload.currency or "USD").upper()
+
+        if payload.payment_type == "subscription":
+            plan_price = _resolve_plan_price(plan)
+            if plan_price is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="client has no plan with a configured price",
+                )
+            amount = plan_price
+            currency = (plan.currency if plan and plan.currency else currency).upper()
+
+            # Caller hint sanity-check
+            if payload.amount is not None:
+                try:
+                    hinted = Decimal(str(payload.amount))
+                except (InvalidOperation, ValueError):
+                    hinted = None
+                if hinted is not None and hinted != amount:
+                    logger.warning(
+                        "create-payment-link: ignoring caller amount=%s for client=%s; "
+                        "using plan price=%s (plan=%s)",
+                        hinted, client.slug, amount, getattr(plan, "name", None),
+                    )
+        else:
+            # Domain (or other non-plan-bound) payments: caller must send amount.
+            if payload.amount is None:
+                raise HTTPException(status_code=400, detail="amount is required")
+            try:
+                amount = Decimal(str(payload.amount))
+            except (InvalidOperation, ValueError):
+                raise HTTPException(status_code=400, detail="invalid amount")
+            if amount <= 0:
+                raise HTTPException(status_code=400, detail="invalid amount")
 
         # 1. Insert pending Payment to get an id
         payment = Payment(
@@ -232,7 +290,7 @@ async def create_payment_link(
             payment_type=payload.payment_type,
             provider=provider.name,
             amount=amount,
-            currency=payload.currency,
+            currency=currency,
             status="pending",
         )
         session.add(payment)
@@ -250,7 +308,7 @@ async def create_payment_link(
             invoice = await provider.create_invoice(
                 payment_id=payment.id,
                 amount=float(amount),
-                currency=payload.currency,
+                currency=currency,
                 description=f"{payload.payment_type} for {client.slug}",
                 return_url=return_url,
                 webhook_url=webhook_url,
