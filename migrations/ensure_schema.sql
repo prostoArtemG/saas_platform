@@ -39,6 +39,14 @@ UPDATE plans SET price = price_monthly WHERE price IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_plans_slug ON plans (slug);
 CREATE INDEX        IF NOT EXISTS ix_plans_slug ON plans (slug);
 
+-- Plan price bumps (idempotent, value-guarded so we don't overwrite custom prices).
+-- Starter: $10 -> $15
+UPDATE plans
+   SET price = 15,
+       price_monthly = 15
+ WHERE (slug = 'starter' OR LOWER(name) LIKE 'starter%')
+   AND COALESCE(price, price_monthly, 0) = 10;
+
 
 -- ---------------------------------------------------------------------------
 -- 2. clients
