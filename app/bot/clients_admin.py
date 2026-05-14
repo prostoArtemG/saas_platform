@@ -54,8 +54,7 @@ def _card_kb(client_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🌐 Домен", callback_data=f"cli:domain:{client_id}"),
             ],
             [
-                InlineKeyboardButton(text="� Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),
-            ],
+                InlineKeyboardButton(text="� Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),                InlineKeyboardButton(text="🔍 Проверить бота", callback_data=f"cli:check_bot:{client_id}"),            ],
             [
                 InlineKeyboardButton(text="�🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
                 InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
@@ -89,6 +88,24 @@ def _fmt_dt(dt) -> str:
     if dt is None:
         return "—"
     return dt.strftime("%Y-%m-%d %H:%M UTC")
+
+
+def _mask_token(token: Optional[str]) -> str:
+    """Return safe display form of a bot token, e.g. '7993832476:AA...BQDYs'."""
+    if not token:
+        return "—"
+    t = token.strip()
+    if ":" not in t:
+        # Unknown shape — fall back to length-based mask
+        if len(t) <= 6:
+            return "•" * len(t)
+        return f"{t[:2]}...{t[-3:]}"
+    head, secret = t.split(":", 1)
+    if len(secret) <= 7:
+        secret_masked = secret[:2] + "..." + secret[-2:] if len(secret) > 4 else "•••"
+    else:
+        secret_masked = f"{secret[:2]}...{secret[-5:]}"
+    return f"{head}:{secret_masked}"
 
 
 async def _build_card_text(session, client: Client) -> str:
@@ -142,6 +159,7 @@ async def _build_card_text(session, client: Client) -> str:
         )
 
     # Bot connection status
+    token_masked = _mask_token(client.telegram_bot_token)
     if client.telegram_bot_token:
         if client.bot_username:
             bot_str = f"connected • @{client.bot_username}"
@@ -150,9 +168,20 @@ async def _build_card_text(session, client: Client) -> str:
     else:
         bot_str = "not connected"
 
+    admin_tg = (
+        f"<code>{client.admin_telegram_id}</code>"
+        if client.admin_telegram_id
+        else "—"
+    )
+    bot_username_str = f"@{client.bot_username}" if client.bot_username else "—"
+
     lines = [
         f"🏢 <b>{client.business_name}</b>",
-        f"🌐 <code>{client.slug}</code> • {domain_str}",
+        f"🆔 ID: <code>{client.id}</code>",
+        f"🌐 Slug: <code>{client.slug}</code> • {domain_str}",
+        f"🤖 Bot username: {bot_username_str}",
+        f"🔑 Bot token: <code>{token_masked}</code>",
+        f"👤 Admin TG ID: {admin_tg}",
         f"📦 Тариф: {plan_name}",
         f"✅ Статус: <b>{client.status}</b> • подписка: {sub_status}",
         f"📅 Истекает: {expires}",
@@ -442,6 +471,38 @@ async def _telegram_get_me(token: str) -> dict:
         desc = (data or {}).get("description", "invalid token")
         raise ValueError(desc)
     return data["result"]
+
+
+@router.callback_query(F.data.startswith("cli:check_bot:"))
+async def cb_check_bot(call: CallbackQuery) -> None:
+    try:
+        client_id = int(call.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await call.answer("bad id", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+    if client is None:
+        await call.answer("Клиент не найден", show_alert=True)
+        return
+
+    if not client.telegram_bot_token:
+        await call.answer("Бот не подключён", show_alert=True)
+        return
+
+    try:
+        me = await _telegram_get_me(client.telegram_bot_token)
+    except ValueError as e:
+        await call.answer(f"❌ Token invalid: {e}", show_alert=True)
+        return
+
+    username = me.get("username") or "—"
+    bot_id = me.get("id")
+    await call.answer(
+        f"✅ Bot: @{username}\nID: {bot_id}",
+        show_alert=True,
+    )
 
 
 @router.callback_query(F.data.startswith("cli:connect_bot:"))
