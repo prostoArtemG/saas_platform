@@ -65,6 +65,8 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS template_name  VARCHAR(64) NOT NULL
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS domain_status  VARCHAR(32) NOT NULL DEFAULT 'pending';
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS plan_id        INTEGER;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_username   VARCHAR(64);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_id         BIGINT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_admin_ids  TEXT;
 
 CREATE INDEX IF NOT EXISTS ix_clients_slug    ON clients (slug);
 CREATE INDEX IF NOT EXISTS ix_clients_plan_id ON clients (plan_id);

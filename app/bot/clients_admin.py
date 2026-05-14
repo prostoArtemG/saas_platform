@@ -174,14 +174,21 @@ async def _build_card_text(session, client: Client) -> str:
         else "—"
     )
     bot_username_str = f"@{client.bot_username}" if client.bot_username else "—"
+    bot_id_str = f"<code>{client.bot_id}</code>" if client.bot_id else "—"
+    if client.bot_admin_ids:
+        bot_admins_str = client.bot_admin_ids
+    else:
+        bot_admins_str = "недоступно через API"
 
     lines = [
         f"🏢 <b>{client.business_name}</b>",
         f"🆔 ID: <code>{client.id}</code>",
         f"🌐 Slug: <code>{client.slug}</code> • {domain_str}",
         f"🤖 Bot username: {bot_username_str}",
+        f"🆔 Bot ID: {bot_id_str}",
         f"🔑 Bot token: <code>{token_masked}</code>",
-        f"👤 Admin TG ID: {admin_tg}",
+        f"👤 Client admin TG ID: {admin_tg}",
+        f"👥 Bot admins: {bot_admins_str}",
         f"📦 Тариф: {plan_name}",
         f"✅ Статус: <b>{client.status}</b> • подписка: {sub_status}",
         f"📅 Истекает: {expires}",
@@ -499,10 +506,27 @@ async def cb_check_bot(call: CallbackQuery) -> None:
 
     username = me.get("username") or "—"
     bot_id = me.get("id")
+
+    # Persist username + bot_id snapshot (best-effort)
+    async with AsyncSessionLocal() as session:
+        c = await session.get(Client, client_id)
+        if c is not None:
+            changed = False
+            if username and username != "—" and c.bot_username != username:
+                c.bot_username = username
+                changed = True
+            if bot_id and c.bot_id != bot_id:
+                c.bot_id = bot_id
+                changed = True
+            if changed:
+                await session.commit()
+
     await call.answer(
         f"✅ Bot: @{username}\nID: {bot_id}",
         show_alert=True,
     )
+    # Refresh card to reflect saved username/bot_id
+    await _send_card(call.message, client_id, edit=True)
 
 
 @router.callback_query(F.data.startswith("cli:connect_bot:"))
@@ -581,6 +605,8 @@ async def cb_connect_token(message: Message, state: FSMContext) -> None:
             return
         client.telegram_bot_token = raw
         client.bot_username = username
+        if bot_id:
+            client.bot_id = bot_id
         await session.commit()
 
     await state.clear()

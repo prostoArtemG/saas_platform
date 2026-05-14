@@ -25,6 +25,8 @@ class Client(Base):
     slug: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     telegram_bot_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     bot_username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    bot_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    bot_admin_ids: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     admin_telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
     template_name: Mapped[str] = mapped_column(
