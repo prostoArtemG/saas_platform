@@ -23,7 +23,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Whitelist of installed site templates. Each must have an `index.html`
 # at templates/sites/{name}/index.html
-AVAILABLE_TEMPLATES = {"technovlada"}
+AVAILABLE_TEMPLATES = {"technovlada", "shop_bot"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
@@ -137,7 +137,7 @@ async def create_site_submit(
         logger.warning("SiteRequest audit log failed: %s", exc)
 
     # Atomic self-service onboarding ------------------------------------------
-    template_name = "technovlada"  # only template available right now
+    template_name = site_type if site_type in {"technovlada", "shop_bot"} else "technovlada"
 
     try:
         async with AsyncSessionLocal() as session:

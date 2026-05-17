@@ -131,16 +131,26 @@
         </div>
 
         <!-- Site type -->
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-white/70 mb-2">
-            {{ t.create_site.f_site_type }} <span class="text-brand-lime">*</span>
-          </label>
-          <select name="site_type" required class="form-input w-full px-4 py-3 rounded-xl text-base appearance-none cursor-pointer">
-            <option value="" disabled {% if not form.site_type %}selected{% endif %}>—</option>
-            {% for opt in t.create_site.site_type_options %}
-            <option value="{{ opt }}" {% if form.site_type == opt %}selected{% endif %}>{{ opt }}</option>
-            {% endfor %}
-          </select>
+        <div class="form-group">
+          <label>Шаблон сайту</label>
+          <div class="template-grid">
+            <label class="template-option">
+              <input type="radio" name="site_type" value="technovlada" required>
+              <div class="template-card">
+                <div class="template-icon">🌐</div>
+                <div class="template-name">Technovlada</div>
+                <div class="template-desc">Бізнес-сайт з каталогом послуг</div>
+              </div>
+            </label>
+            <label class="template-option">
+              <input type="radio" name="site_type" value="shop_bot" required>
+              <div class="template-card">
+                <div class="template-icon">🛍</div>
+                <div class="template-name">ТехноМаркет</div>
+                <div class="template-desc">Інтернет-магазин з кошиком та фільтрами</div>
+              </div>
+            </label>
+          </div>
         </div>
 
         <!-- Plan -->
