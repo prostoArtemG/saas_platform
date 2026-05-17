@@ -31,6 +31,7 @@ class CreateClient(StatesGroup):
     bot_token = State()
     admin_tg_id = State()
     plan = State()
+    template = State()
 
 
 def _cancel_hint() -> str:
@@ -143,7 +144,31 @@ async def step_plan(cb: CallbackQuery, state: FSMContext) -> None:
         await cb.answer("Некорректный тариф", show_alert=True)
         return
 
+    await state.update_data(plan_id=plan_id)
+    await state.set_state(CreateClient.template)
+
+    templates_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="🛍 ТехноМаркет (магазин техніки)",
+            callback_data="cc:tmpl:shop_bot"
+        )],
+        [InlineKeyboardButton(
+            text="🌐 Technovlada (бізнес-сайт)",
+            callback_data="cc:tmpl:technovlada"
+        )],
+    ])
+    await cb.message.answer(
+        "Шаг 6/6. Выбери шаблон сайта:",
+        reply_markup=templates_kb
+    )
+    await cb.answer()
+
+
+@router.callback_query(CreateClient.template, F.data.startswith("cc:tmpl:"))
+async def step_template(cb: CallbackQuery, state: FSMContext) -> None:
+    template_name = cb.data.split(":")[2]
     data = await state.get_data()
+    plan_id = data["plan_id"]
 
     async with AsyncSessionLocal() as session:
         try:
@@ -152,7 +177,6 @@ async def step_plan(cb: CallbackQuery, state: FSMContext) -> None:
                 await cb.answer("Тариф не найден", show_alert=True)
                 return
 
-            # Re-check slug uniqueness right before insert.
             slug_taken = await session.scalar(
                 select(Client.id).where(Client.slug == data["slug"])
             )
@@ -171,19 +195,19 @@ async def step_plan(cb: CallbackQuery, state: FSMContext) -> None:
                 slug=data["slug"],
                 telegram_bot_token=data["bot_token"],
                 admin_telegram_id=data["admin_tg_id"],
+                template_name=template_name,
                 status="active",
             )
             session.add(client)
-            await session.flush()  # populate client.id
+            await session.flush()
 
             result = await onboard_client(session, client, plan, trial_days=TRIAL_DAYS)
             await session.commit()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             await session.rollback()
             await state.clear()
             await cb.message.answer(
-                f"❌ Не удалось создать клиента: <code>{exc}</code>\n"
-                f"Изменения откачены, ничего не создано.",
+                f"❌ Не удалось создать клиента: <code>{exc}</code>",
                 parse_mode="HTML",
                 reply_markup=admin_main_menu(),
             )
@@ -193,28 +217,28 @@ async def step_plan(cb: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await cb.message.edit_reply_markup(reply_markup=None)
 
+    template_labels = {
+        "shop_bot": "🛍 ТехноМаркет",
+        "technovlada": "🌐 Technovlada",
+    }
+    template_label = template_labels.get(template_name, template_name)
+
     def _lim(v):
         return "∞" if v is None else str(v)
 
     expires_str = result.trial_expires_at.strftime("%Y-%m-%d %H:%M UTC")
     await cb.message.answer(
-        "✅ <b>Клиент создан и онбординг завершён</b>\n\n"
+        "✅ <b>Клиент создан!</b>\n\n"
         f"🏢 <b>{result.business_name}</b>\n"
         f"🔗 slug: <code>{result.slug}</code>\n"
+        f"🎨 Шаблон: {template_label}\n"
         f"📦 Тариф: <b>{result.plan_name}</b>\n"
-        f"🧾 Подписка: <b>{result.subscription_status}</b>\n"
-        f"⏳ Trial до: <b>{expires_str}</b> "
-        f"({result.trial_days_left} дн.)\n"
-        f"💳 Биллинг: <b>{result.billing_status}</b>\n\n"
+        f"⏳ Trial до: <b>{expires_str}</b>\n\n"
         f"<b>Лимиты:</b>\n"
         f"• 📦 Товары: {_lim(result.products_limit)}\n"
         f"• 🖼 Фото на товар: {_lim(result.images_per_product_limit)}\n"
-        f"• 🌐 Домены: {_lim(result.domains_limit)}\n"
-        f"• 👥 Юзеры: {_lim(result.users_limit)}\n\n"
-        f"<b>Настройки:</b>\n"
-        f"• 🌍 Язык: <code>{result.language}</code>\n"
-        f"• 💰 Валюта: <code>{result.currency}</code>\n"
-        f"• 🕒 Часовой пояс: <code>{result.timezone}</code>",
+        f"• 🌐 Домены: {_lim(result.domains_limit)}\n\n"
+        f"🌐 Сайт: /site/{result.slug}",
         parse_mode="HTML",
         reply_markup=admin_main_menu(),
     )
