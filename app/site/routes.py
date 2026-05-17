@@ -582,10 +582,13 @@ async def site_order(
     # Notify client admin via Telegram
     bot = getattr(request.app.state, "bot", None)
     if bot and client.admin_telegram_id:
-        items_text = "\n".join([
-            f"\u2022 {item.get('name', '?')} \u00d7 {item.get('qty', 1)} \u2014 {item.get('price', 0)} \u0433\u0440\u043d"
-            for item in data.items
-        ])
+        lines = []
+        for item in data.items:
+            name  = item.get("name", "?")
+            qty   = item.get("qty", 1)
+            price = item.get("price", 0)
+            lines.append(f"\u2022 {name} \u00d7 {qty} \u2014 {price} \u0433\u0440\u043d")
+        items_text = "\n".join(lines)
         total = sum(
             item.get("price", 0) * item.get("qty", 1)
             for item in data.items
