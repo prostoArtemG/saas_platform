@@ -584,28 +584,26 @@ async def site_order(
     if bot and client.admin_telegram_id:
         lines = []
         for item in data.items:
-            name  = item.get("name", "?")
-            qty   = item.get("qty", 1)
+            name = item.get("name", "?")
+            qty = item.get("qty", 1)
             price = item.get("price", 0)
-            lines.append(f"\u2022 {name} \u00d7 {qty} \u2014 {price} \u0433\u0440\u043d")
-        items_text  = "\n".join(lines)
-        total       = sum(
+            lines.append(f"• {name} × {qty} — {price} грн")
+        items_text = "\n".join(lines)
+        total = sum(
             item.get("price", 0) * item.get("qty", 1)
             for item in data.items
         )
-        city_val    = data.city    or "\u2014"
-        comment_val = data.comment or "\u2014"
+        msg = (
+            "🛒 Нове замовлення!\n\n"
+            f"👤 {data.name}\n"
+            f"📞 {data.phone}\n"
+            f"🏙 {data.city or '—'}\n\n"
+            f"📦 Товари:\n{items_text}\n\n"
+            f"💰 Разом: {total} грн\n"
+            f"💬 {data.comment or '—'}"
+        )
         try:
-            await bot.send_message(
-                client.admin_telegram_id,
-                f"\U0001f6d2 \u041d\u043e\u0432\u0435 \u0437\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f!\n\n"
-                f"\U0001f464 {data.name}\n"
-                f"\U0001f4de {data.phone}\n"
-                f"\U0001f3d9 {city_val}\n\n"
-                f"\U0001f4e6 \u0422\u043e\u0432\u0430\u0440\u0438:\n{items_text}\n\n"
-                f"\U0001f4b0 \u0420\u0430\u0437\u043e\u043c: {total} \u0433\u0440\u043d\n"
-                f"\U0001f4ac {comment_val}"
-            )
+            await bot.send_message(client.admin_telegram_id, msg)
         except Exception as e:
             logger.warning("Failed to notify client %s: %s", slug, e)
 
