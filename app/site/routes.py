@@ -3,9 +3,10 @@ import os
 import re
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Form, Request
+from fastapi import APIRouter, Cookie, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -551,3 +552,56 @@ async def client_site(
             "products": products,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Site order endpoint
+# ---------------------------------------------------------------------------
+
+class SiteOrderRequest(BaseModel):
+    name: str
+    phone: str
+    city: str = ""
+    comment: str = ""
+    items: list[dict]
+
+
+@router.post("/site/{slug}/order")
+async def site_order(
+    slug: str,
+    data: SiteOrderRequest,
+    request: Request,
+) -> dict:
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(
+            select(Client).where(Client.slug == slug)
+        )
+        if client is None:
+            raise HTTPException(status_code=404, detail="client not found")
+
+    # Notify client admin via Telegram
+    bot = getattr(request.app.state, "bot", None)
+    if bot and client.admin_telegram_id:
+        items_text = "\n".join([
+            f"\u2022 {item.get('name', '?')} \u00d7 {item.get('qty', 1)} \u2014 {item.get('price', 0)} \u0433\u0440\u043d"
+            for item in data.items
+        ])
+        total = sum(
+            item.get("price", 0) * item.get("qty", 1)
+            for item in data.items
+        )
+        try:
+            await bot.send_message(
+                client.admin_telegram_id,
+                f"\U0001f6d2 \u041d\u043e\u0432\u0435 \u0437\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f!\n\n"
+                f"\U0001f464 {data.name}\n"
+                f"\U0001f4de {data.phone}\n"
+                f"\U0001f3d9 {data.city or '\u2014'}\n\n"
+                f"\U0001f4e6 \u0422\u043e\u0432\u0430\u0440\u0438:\n{items_text}\n\n"
+                f"\U0001f4b0 \u0420\u0430\u0437\u043e\u043c: {total} \u0433\u0440\u043d\n"
+                f"\U0001f4ac {data.comment or '\u2014'}"
+            )
+        except Exception as e:
+            logger.warning("Failed to notify client %s: %s", slug, e)
+
+    return {"ok": True}
