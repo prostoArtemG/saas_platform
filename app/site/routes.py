@@ -222,13 +222,38 @@ _SLUG_CLEAN_RE = re.compile(r"[^a-z0-9]+")
 
 
 async def _allocate_slug(session, business_name: str) -> str:
-    base = (business_name or "").strip().lower()
-    base = _SLUG_CLEAN_RE.sub("-", base).strip("-")
-    if not base:
-        base = "client"
-    base = base[:55]
+    TRANSLIT = {
+        'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','є':'ye','ё':'yo',
+        'ж':'zh','з':'z','и':'i','і':'i','ї':'yi','й':'y','к':'k','л':'l',
+        'м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u',
+        'ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'',
+        'ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+        'А':'a','Б':'b','В':'v','Г':'g','Д':'d','Е':'e','Є':'ye','Ё':'yo',
+        'Ж':'zh','З':'z','И':'i','І':'i','Ї':'yi','Й':'y','К':'k','Л':'l',
+        'М':'m','Н':'n','О':'o','П':'p','Р':'r','С':'s','Т':'t','У':'u',
+        'Ф':'f','Х':'kh','Ц':'ts','Ч':'ch','Ш':'sh','Щ':'shch','Ъ':'',
+        'Ы':'y','Ь':'','Э':'e','Ю':'yu','Я':'ya',
+    }
 
-    candidate = base
+    base = (business_name or "").strip()
+
+    # Transliterate Cyrillic
+    result = ""
+    for char in base:
+        result += TRANSLIT.get(char, char)
+
+    # Clean: lowercase, replace spaces and special chars with dash
+    import re
+    result = result.lower()
+    result = re.sub(r"[^a-z0-9]+", "-", result)
+    result = result.strip("-")
+
+    if not result:
+        result = "client"
+
+    result = result[:55]
+
+    candidate = result
     suffix = 2
     while True:
         existing = (
@@ -236,9 +261,9 @@ async def _allocate_slug(session, business_name: str) -> str:
         ).scalar_one_or_none()
         if existing is None:
             return candidate
-        candidate = f"{base}-{suffix}"[:60]
+        candidate = f"{result}-{suffix}"[:60]
         suffix += 1
-        if suffix > 9999:  # extremely unlikely
+        if suffix > 9999:
             raise RuntimeError("could not allocate unique slug")
 
 

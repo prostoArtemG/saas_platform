@@ -745,7 +745,7 @@
 <!-- ═══════════════════════════ CART DRAWER ══════════════════════════════════ -->
 <div class="cart-drawer" id="cart-drawer">
   <div class="cart-head">
-    <h2>🛒 Кошик</h2>
+    <h2>&#x1F6D2; Кошик</h2>
     <button class="btn-icon-close" id="cart-close">✕</button>
   </div>
   <div class="cart-list" id="cart-list"></div>
@@ -810,7 +810,7 @@
   <div class="modal-backdrop" id="success-backdrop"></div>
   <div class="modal-box" style="max-width:400px;">
     <div class="success-body">
-      <div class="success-icon">🎉</div>
+      <div class="success-icon">&#x1F389;</div>
       <div class="success-title">Замовлення прийнято!</div>
       <p class="success-text">Дякуємо за ваше замовлення.<br>Ми зв'яжемося з вами найближчим часом.</p>
       <button class="btn-continue" id="success-close">Продовжити покупки</button>
@@ -929,7 +929,7 @@
     productGrid.innerHTML = list.map(p => {
       const imgHtml = p.image_url
         ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" data-id="${p.id}">`
-        : `<div class="product-img-placeholder">📦</div>`;
+        : `<div class="product-img-placeholder">&#x1F4E6;</div>`;
       const catHtml  = p.category ? `<div class="product-category">${esc(p.category)}</div>` : "";
       const descHtml = p.description ? `<div class="product-desc">${esc(p.description)}</div>` : "";
       const unavBadge = !p.is_available ? `<div class="product-badge-unavail">Немає</div>` : "";
@@ -956,7 +956,7 @@
     /* img error → placeholder */
     productGrid.querySelectorAll(".product-img-wrap img").forEach(img => {
       img.addEventListener("error", function () {
-        this.parentNode.innerHTML = '<div class="product-img-placeholder">📦</div>';
+        this.parentNode.innerHTML = '<div class="product-img-placeholder">&#x1F4E6;</div>';
       });
     });
 
@@ -1027,7 +1027,7 @@
     cartList.innerHTML = cart.map(({ product: p, qty }) => {
       const imgHtml = p.image_url
         ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">`
-        : `<div class="cart-item-img-ph">📦</div>`;
+        : `<div class="cart-item-img-ph">&#x1F4E6;</div>`;
       return `<div class="cart-item" data-id="${p.id}">
         <div class="cart-item-img">${imgHtml}</div>
         <div class="cart-item-info">
