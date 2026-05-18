@@ -19,6 +19,14 @@ from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
 
+
+def _clean(s: Optional[str]) -> Optional[str]:
+    """Strip surrogate code points that PostgreSQL / Jinja2 cannot encode."""
+    if not s:
+        return s
+    return s.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
@@ -91,7 +99,7 @@ async def create_site_submit(
     chosen = _resolve_lang(None, lang_cookie)
     t = get_t(chosen)
 
-    business_name = business_name.strip()[:255]
+    business_name = _clean(business_name.strip()[:255]) or ""
     telegram = telegram.strip()[:128]
     site_type = site_type.strip()[:64]
     plan = plan.strip()[:64]
@@ -330,26 +338,14 @@ async def onboarding_success(
 
         site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
 
-    def clean_str(s):
-        if not s:
-            return ""
-        cleaned = ""
-        for ch in str(s):
-            try:
-                ch.encode('utf-8')
-                cleaned += ch
-            except (UnicodeEncodeError, UnicodeDecodeError):
-                pass
-        return cleaned
-
     data = {
-        "business_name": clean_str(client.business_name),
-        "site_url": clean_str(site_url),
-        "bot_username": clean_str(client.bot_username),
-        "template": clean_str(client.template_name),
-        "plan": clean_str(plan_name),
-        "trial_expires_at": clean_str(trial_expires),
-        "cms_url": clean_str(cms_url),
+        "business_name": _clean(client.business_name) or "",
+        "site_url": _clean(site_url) or "",
+        "bot_username": _clean(client.bot_username),
+        "template": _clean(client.template_name) or "",
+        "plan": _clean(plan_name) or "",
+        "trial_expires_at": _clean(trial_expires) or "",
+        "cms_url": _clean(cms_url) if cms_url else None,
     }
 
     return templates.TemplateResponse(
