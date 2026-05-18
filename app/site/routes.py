@@ -267,6 +267,21 @@ async def _allocate_slug(session, business_name: str) -> str:
             raise RuntimeError("could not allocate unique slug")
 
 
+def sanitize_str(s) -> str:
+    if not s:
+        return ""
+    result = ""
+    for char in str(s):
+        code = ord(char)
+        if code > 0xFFFF:
+            result += f"&#{code};"
+        elif 0xD800 <= code <= 0xDFFF:
+            result += ""
+        else:
+            result += char
+    return result
+
+
 @router.get("/onboarding-success/{slug}", response_class=HTMLResponse)
 async def onboarding_success(
     request: Request,
@@ -316,13 +331,13 @@ async def onboarding_success(
         site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
 
         data = {
-            "business_name": client.business_name,
-            "site_url": site_url,
-            "bot_username": client.bot_username,
-            "template": client.template_name,
-            "plan": plan_name,
-            "trial_expires_at": trial_expires,
-            "cms_url": cms_url,
+            "business_name": sanitize_str(client.business_name),
+            "site_url": sanitize_str(site_url),
+            "bot_username": sanitize_str(client.bot_username),
+            "template": sanitize_str(client.template_name),
+            "plan": sanitize_str(plan_name),
+            "trial_expires_at": sanitize_str(trial_expires),
+            "cms_url": sanitize_str(cms_url),
         }
 
     return templates.TemplateResponse(
