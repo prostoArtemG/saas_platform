@@ -330,15 +330,27 @@ async def onboarding_success(
 
         site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
 
-        data = {
-            "business_name": sanitize_str(client.business_name),
-            "site_url": sanitize_str(site_url),
-            "bot_username": sanitize_str(client.bot_username),
-            "template": sanitize_str(client.template_name),
-            "plan": sanitize_str(plan_name),
-            "trial_expires_at": sanitize_str(trial_expires),
-            "cms_url": sanitize_str(cms_url),
-        }
+    def clean_str(s):
+        if not s:
+            return ""
+        cleaned = ""
+        for ch in str(s):
+            try:
+                ch.encode('utf-8')
+                cleaned += ch
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                pass
+        return cleaned
+
+    data = {
+        "business_name": clean_str(client.business_name),
+        "site_url": clean_str(site_url),
+        "bot_username": clean_str(client.bot_username),
+        "template": clean_str(client.template_name),
+        "plan": clean_str(plan_name),
+        "trial_expires_at": clean_str(trial_expires),
+        "cms_url": clean_str(cms_url),
+    }
 
     return templates.TemplateResponse(
         "onboarding_success.html",
