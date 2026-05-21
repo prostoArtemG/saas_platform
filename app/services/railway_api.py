@@ -185,6 +185,33 @@ async def get_service_url(project_id: str, service_id: str) -> str:
         return f"https://{domains[0]['domain']}"
     return ""
 
+
+async def create_service_domain(project_id: str, service_id: str, environment_id: str) -> str:
+    """Create a Railway domain for the service and return the domain."""
+    query = """
+    mutation serviceDomainCreate($input: ServiceDomainCreateInput!) {
+        serviceDomainCreate(input: $input) {
+            id
+            domain
+        }
+    }
+    """
+    variables = {
+        "input": {
+            "projectId": project_id,
+            "serviceId": service_id,
+            "environmentId": environment_id,
+        }
+    }
+    result = await graphql(query, variables)
+    logger.info("create_service_domain result: %s", result)
+    if "errors" in result:
+        logger.warning("Domain creation failed: %s", result["errors"])
+        return ""
+    domain = result.get("data", {}).get("serviceDomainCreate", {}).get("domain", "")
+    return f"https://{domain}" if domain else ""
+
+
 async def deploy_shop_bot(
     client_name: str,
     slug: str,
@@ -253,11 +280,14 @@ async def deploy_shop_bot(
     await trigger_deployment(project_id, service_id)
     await asyncio.sleep(3)
 
-    # 7. Get URL
-    url = await get_service_url(project_id, service_id)
+    # 7. Create domain for the service
+    await asyncio.sleep(5)
+    url = await create_service_domain(project_id, service_id, environment_id)
+    if not url:
+        url = await get_service_url(project_id, service_id)
 
     return {
         "project_id": project_id,
         "service_id": service_id,
-        "url": url or webhook_url,
+        "url": url,
     }

@@ -246,11 +246,14 @@ async def create_site_submit(
                 saas_platform_url=str(request.base_url).rstrip("/"),
             )
             railway_url = deploy_result.get("url")
-            # Save bot token to client record
+            # Save bot token and Railway URL to client record
             async with AsyncSessionLocal() as update_session:
                 client_upd = await update_session.get(Client, client.id)
                 if client_upd:
                     client_upd.telegram_bot_token = bot_token
+                    if railway_url:
+                        client_upd.domain_status = "active"
+                        client_upd.bot_admin_ids = railway_url
                     await update_session.commit()
         except Exception as exc:
             logger.warning("Railway deploy failed: %s", exc)
@@ -370,7 +373,9 @@ async def onboarding_success(
             if platform_bot_username else None
         )
 
-        site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
+        # Use Railway URL if available, otherwise fallback to platform URL
+        railway_url = client.bot_admin_ids if client.bot_admin_ids and client.bot_admin_ids.startswith("http") else None
+        site_url = railway_url or (str(request.base_url).rstrip("/") + f"/site/{client.slug}")
 
     data = {
         "business_name": _clean(client.business_name) or "",
