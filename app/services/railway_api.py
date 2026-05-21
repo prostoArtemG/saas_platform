@@ -84,7 +84,29 @@ async def create_postgres(project_id: str) -> str:
     logger.info("templateDeploy postgres result: %s", result)
     return ""
 
-async def set_variables(project_id: str, service_id: str, variables: dict) -> bool:
+async def get_environment_id(project_id: str) -> str:
+    """Get the default environment ID for a project."""
+    query = """
+    query getEnvironment($projectId: String!) {
+        environments(projectId: $projectId) {
+            edges {
+                node {
+                    id
+                    name
+                }
+            }
+        }
+    }
+    """
+    variables = {"projectId": project_id}
+    result = await graphql(query, variables)
+    logger.info("get_environment_id result: %s", result)
+    edges = result.get("data", {}).get("environments", {}).get("edges", [])
+    if edges:
+        return edges[0]["node"]["id"]
+    return ""
+
+async def set_variables(project_id: str, service_id: str, environment_id: str, variables: dict) -> bool:
     query = """
     mutation variableCollectionUpsert($input: VariableCollectionUpsertInput!) {
         variableCollectionUpsert(input: $input)
@@ -94,6 +116,7 @@ async def set_variables(project_id: str, service_id: str, variables: dict) -> bo
         "input": {
             "projectId": project_id,
             "serviceId": service_id,
+            "environmentId": environment_id,
             "variables": {k: str(v) for k, v in variables.items()}
         }
     }
@@ -104,26 +127,27 @@ async def set_variables(project_id: str, service_id: str, variables: dict) -> bo
     return True
 
 async def trigger_deployment(project_id: str, service_id: str) -> str:
-    """Trigger a deployment for the service, return deployment ID."""
+    environment_id = await get_environment_id(project_id)
     query = """
-    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String) {
+    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
         serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
     }
     """
     variables = {
         "serviceId": service_id,
-        "environmentId": None,
+        "environmentId": environment_id,
     }
     logger.info("Triggering deployment for service=%s", service_id)
     result = await graphql(query, variables)
     logger.info("trigger_deployment result: %s", result)
-    return result
+    return str(result)
 
 async def get_service_url(project_id: str, service_id: str) -> str:
     """Get public URL of deployed service."""
+    environment_id = await get_environment_id(project_id)
     query = """
-    query getServiceDomain($projectId: String!, $serviceId: String!) {
-        domains(projectId: $projectId, serviceId: $serviceId) {
+    query getServiceDomain($projectId: String!, $serviceId: String!, $environmentId: String!) {
+        domains(projectId: $projectId, serviceId: $serviceId, environmentId: $environmentId) {
             serviceDomains {
                 domain
             }
@@ -133,8 +157,10 @@ async def get_service_url(project_id: str, service_id: str) -> str:
     variables = {
         "projectId": project_id,
         "serviceId": service_id,
+        "environmentId": environment_id,
     }
     result = await graphql(query, variables)
+    logger.info("get_service_url result: %s", result)
     domains = result.get("data", {}).get("domains", {}).get("serviceDomains", [])
     if domains:
         return f"https://{domains[0]['domain']}"
@@ -166,11 +192,15 @@ async def deploy_shop_bot(
     )
     await asyncio.sleep(3)
 
-    # 3. Add PostgreSQL
+    # 3. Get environment ID
+    environment_id = await get_environment_id(project_id)
+    await asyncio.sleep(2)
+
+    # 4. Add PostgreSQL
     await create_postgres(project_id)
     await asyncio.sleep(2)
 
-    # 4. Set environment variables
+    # 5. Set environment variables
     webhook_url = f"https://shop-{slug}.up.railway.app"
     env_vars = {
         "BOT_TOKEN": bot_token,
@@ -184,13 +214,13 @@ async def deploy_shop_bot(
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
     }
-    await set_variables(project_id, service_id, env_vars)
+    await set_variables(project_id, service_id, environment_id, env_vars)
 
-    # 5. Trigger deployment
+    # 6. Trigger deployment
     await trigger_deployment(project_id, service_id)
     await asyncio.sleep(3)
 
-    # 6. Get URL
+    # 7. Get URL
     await asyncio.sleep(5)
     url = await get_service_url(project_id, service_id)
 
