@@ -1,6 +1,10 @@
-import httpx
-import os
 import asyncio
+import logging
+import os
+
+import httpx
+
+logger = logging.getLogger(__name__)
 
 RAILWAY_API_URL = "https://backboard.railway.app/graphql/v2"
 RAILWAY_TOKEN = os.getenv("RAILWAY_API_TOKEN", "")
@@ -17,6 +21,7 @@ async def graphql(query: str, variables: dict = None) -> dict:
         payload["variables"] = variables
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(RAILWAY_API_URL, json=payload, headers=HEADERS)
+        logger.info("Railway API response: %s", resp.text[:500])
         return resp.json()
 
 async def create_project(name: str) -> str:
@@ -92,7 +97,10 @@ async def set_variables(project_id: str, service_id: str, variables: dict) -> bo
             "variables": {k: str(v) for k, v in variables.items()}
         }
     }
+    logger.info("Setting variables for project=%s service=%s vars=%s",
+                project_id, service_id, list(variables.keys()))
     result = await graphql(query, payload)
+    logger.info("set_variables result: %s", result)
     return True
 
 async def trigger_deployment(project_id: str, service_id: str) -> str:
@@ -106,7 +114,9 @@ async def trigger_deployment(project_id: str, service_id: str) -> str:
         "serviceId": service_id,
         "environmentId": None,
     }
+    logger.info("Triggering deployment for service=%s", service_id)
     result = await graphql(query, variables)
+    logger.info("trigger_deployment result: %s", result)
     return result
 
 async def get_service_url(project_id: str, service_id: str) -> str:
