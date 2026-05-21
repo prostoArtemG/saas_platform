@@ -235,7 +235,7 @@ async def create_site_submit(
                 client_name=business_name,
                 slug=slug,
                 bot_token=bot_token,
-                admin_ids=str(client.admin_telegram_id or ""),
+                admin_ids=telegram.strip().lstrip("@") if telegram.strip().lstrip("@").isdigit() else "",
                 cloudinary_cloud=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
                 cloudinary_key=os.getenv("CLOUDINARY_API_KEY", ""),
                 cloudinary_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
