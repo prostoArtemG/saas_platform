@@ -122,12 +122,24 @@
         <!-- Telegram -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-white/70 mb-2">
-            Telegram ID (число, дізнатись у @userinfobot) <span class="text-brand-lime">*</span>
+            Telegram (@username) <span class="text-brand-lime">*</span>
           </label>
           <input type="text" name="telegram" required maxlength="128"
-                 value="{{ form.telegram | default('') }}"
+                 value="{{ form.telegram or '' }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="@username" />
+        </div>
+
+        <!-- Telegram ID -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            Ваш Telegram ID <span class="text-brand-lime">*</span>
+          </label>
+          <input type="text" name="admin_telegram_id" required maxlength="20"
+                 value="{{ form.admin_telegram_id or '' }}"
                  class="form-input w-full px-4 py-3 rounded-xl text-base"
                  placeholder="500134490" />
+          <small class="block mt-1 text-white/40 text-xs">Дізнайтесь свій ID у <a href="https://t.me/userinfobot" target="_blank" class="underline">@userinfobot</a></small>
         </div>
 
         <!-- Bot Token -->

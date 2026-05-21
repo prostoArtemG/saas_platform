@@ -97,6 +97,7 @@ async def create_site_submit(
     plan: str = Form(""),
     comment: str = Form(""),
     bot_token: str = Form(""),
+    admin_telegram_id: str = Form(""),
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
     chosen = _resolve_lang(None, lang_cookie)
@@ -105,6 +106,7 @@ async def create_site_submit(
     business_name = _clean(business_name.strip()[:255]) or ""
     telegram = telegram.strip()[:128]
     bot_token = bot_token.strip()[:255]
+    admin_telegram_id = admin_telegram_id.strip()[:20]
     site_type = site_type.strip()[:64]
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
@@ -126,6 +128,7 @@ async def create_site_submit(
                     "plan": plan,
                     "comment": comment or "",
                     "bot_token": bot_token,
+                    "admin_telegram_id": admin_telegram_id,
                 },
             },
             status_code=status,
@@ -188,6 +191,7 @@ async def create_site_submit(
                 template_name=template_name,
                 domain_status="pending",
                 status="active",
+                admin_telegram_id=int(admin_telegram_id) if admin_telegram_id.isdigit() else None,
             )
             session.add(client)
             try:
@@ -235,7 +239,7 @@ async def create_site_submit(
                 client_name=business_name,
                 slug=slug,
                 bot_token=bot_token,
-                admin_ids=telegram.strip().lstrip("@") if telegram.strip().lstrip("@").isdigit() else "",
+                admin_ids=admin_telegram_id if admin_telegram_id.isdigit() else "",
                 cloudinary_cloud=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
                 cloudinary_key=os.getenv("CLOUDINARY_API_KEY", ""),
                 cloudinary_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
