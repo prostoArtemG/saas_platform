@@ -130,6 +130,18 @@
                  placeholder="@username" />
         </div>
 
+        <!-- Bot Token -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            Telegram Bot Token *
+          </label>
+          <input type="text" name="bot_token" maxlength="255"
+                 value="{{ form.bot_token or '' }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+          <small class="block mt-1 text-white/40 text-xs">Створіть бота у @BotFather та вставте токен</small>
+        </div>
+
         <!-- Site type -->
         <div class="form-group">
           <label>Шаблон сайту</label>

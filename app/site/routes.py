@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -15,6 +16,7 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, Payment, Plan, Product, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
+from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -94,6 +96,7 @@ async def create_site_submit(
     site_type: str = Form(""),
     plan: str = Form(""),
     comment: str = Form(""),
+    bot_token: str = Form(""),
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
     chosen = _resolve_lang(None, lang_cookie)
@@ -101,6 +104,7 @@ async def create_site_submit(
 
     business_name = _clean(business_name.strip()[:255]) or ""
     telegram = telegram.strip()[:128]
+    bot_token = bot_token.strip()[:255]
     site_type = site_type.strip()[:64]
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
@@ -121,6 +125,7 @@ async def create_site_submit(
                     "site_type": site_type,
                     "plan": plan,
                     "comment": comment or "",
+                    "bot_token": bot_token,
                 },
             },
             status_code=status,
@@ -220,6 +225,31 @@ async def create_site_submit(
                 await bot.send_message(admin_id, text, parse_mode="HTML")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
+
+    # Auto-deploy shop_bot for new client if template is shop_bot and bot_token provided
+    railway_url = None
+    if template_name == "shop_bot" and bot_token:
+        try:
+            from app.config import settings as app_settings
+            deploy_result = await deploy_shop_bot(
+                client_name=business_name,
+                slug=slug,
+                bot_token=bot_token,
+                admin_ids=str(client.admin_telegram_id or ""),
+                cloudinary_cloud=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
+                cloudinary_key=os.getenv("CLOUDINARY_API_KEY", ""),
+                cloudinary_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
+                saas_platform_url=str(request.base_url).rstrip("/"),
+            )
+            railway_url = deploy_result.get("url")
+            # Save bot token to client record
+            async with AsyncSessionLocal() as update_session:
+                client_upd = await update_session.get(Client, client.id)
+                if client_upd:
+                    client_upd.telegram_bot_token = bot_token
+                    await update_session.commit()
+        except Exception as exc:
+            logger.warning("Railway deploy failed: %s", exc)
 
     return RedirectResponse(
         url=f"/onboarding-success/{result.slug}", status_code=303
