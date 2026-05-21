@@ -195,31 +195,43 @@ async def deploy_shop_bot(
     cloudinary_secret: str,
     saas_platform_url: str,
 ) -> dict:
-    """
-    Full deployment pipeline for a new shop_bot client.
-    Returns dict with project_id, service_id, url.
-    """
     project_name = f"shop-{slug}"
 
     # 1. Create project
     project_id = await create_project(project_name)
     await asyncio.sleep(2)
 
-    # 2. Deploy shop_bot from GitHub
-    service_id = await create_service_from_github(
-        project_id, GITHUB_REPO, "shop_bot"
-    )
-    await asyncio.sleep(3)
-
-    # 3. Get environment ID
+    # 2. Get environment ID
     environment_id = await get_environment_id(project_id)
+    await asyncio.sleep(1)
+
+    # 3. Create Postgres first
+    pg_service_id = await create_postgres(project_id, environment_id)
     await asyncio.sleep(2)
 
-    # 4. Add PostgreSQL
-    pg_service_id = await create_postgres(project_id, environment_id)
-    await asyncio.sleep(3)
+    # 4. Create shop_bot service WITHOUT deploying yet
+    query = """
+    mutation serviceCreate($input: ServiceCreateInput!) {
+        serviceCreate(input: $input) {
+            id
+            name
+        }
+    }
+    """
+    variables = {
+        "input": {
+            "projectId": project_id,
+            "name": "shop_bot",
+            "source": {
+                "repo": GITHUB_REPO,
+            }
+        }
+    }
+    result = await graphql(query, variables)
+    service_id = result["data"]["serviceCreate"]["id"]
+    await asyncio.sleep(2)
 
-    # 5. Set environment variables
+    # 5. Set ALL variables before first deploy
     webhook_url = f"https://shop-{slug}.up.railway.app"
     env_vars = {
         "BOT_TOKEN": bot_token,
@@ -232,17 +244,16 @@ async def deploy_shop_bot(
         "CLOUDINARY_API_SECRET": cloudinary_secret,
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
+        "DATABASE_URL": "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway",
     }
-    if pg_service_id:
-        env_vars["DATABASE_URL"] = "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway"
     await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(2)
 
-    # 6. Trigger deployment
+    # 6. Now trigger deployment with variables already set
     await trigger_deployment(project_id, service_id)
     await asyncio.sleep(3)
 
     # 7. Get URL
-    await asyncio.sleep(5)
     url = await get_service_url(project_id, service_id)
 
     return {
