@@ -65,24 +65,43 @@ async def create_service_from_github(project_id: str, repo: str, name: str) -> s
     result = await graphql(query, variables)
     return result["data"]["serviceCreate"]["id"]
 
-async def create_postgres(project_id: str) -> str:
-    """Add PostgreSQL to project using Railway template."""
+async def create_postgres(project_id: str, environment_id: str) -> str:
+    """Add PostgreSQL to project using serviceCreate with image."""
     query = """
-    mutation templateDeploy($input: TemplateDeployInput!) {
-        templateDeploy(input: $input) {
-            workflowId
+    mutation serviceCreate($input: ServiceCreateInput!) {
+        serviceCreate(input: $input) {
+            id
+            name
         }
     }
     """
     variables = {
         "input": {
             "projectId": project_id,
-            "templateCode": "postgres",
+            "name": "Postgres",
+            "source": {
+                "image": "postgres:16"
+            }
         }
     }
     result = await graphql(query, variables)
-    logger.info("templateDeploy postgres result: %s", result)
-    return ""
+    logger.info("create_postgres result: %s", result)
+    if "errors" in result:
+        logger.warning("Postgres creation failed: %s", result["errors"])
+        return ""
+    pg_service_id = result.get("data", {}).get("serviceCreate", {}).get("id", "")
+
+    if pg_service_id and environment_id:
+        pg_vars = {
+            "POSTGRES_DB": "railway",
+            "POSTGRES_USER": "postgres",
+            "POSTGRES_PASSWORD": "postgres123",
+            "PGDATA": "/var/lib/postgresql/data/pgdata",
+        }
+        await set_variables(project_id, pg_service_id, environment_id, pg_vars)
+        logger.info("Postgres service created: %s", pg_service_id)
+
+    return pg_service_id
 
 async def get_environment_id(project_id: str) -> str:
     """Get the default environment ID for a project."""
@@ -197,8 +216,8 @@ async def deploy_shop_bot(
     await asyncio.sleep(2)
 
     # 4. Add PostgreSQL
-    await create_postgres(project_id)
-    await asyncio.sleep(2)
+    pg_service_id = await create_postgres(project_id, environment_id)
+    await asyncio.sleep(3)
 
     # 5. Set environment variables
     webhook_url = f"https://shop-{slug}.up.railway.app"
@@ -214,6 +233,8 @@ async def deploy_shop_bot(
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
     }
+    if pg_service_id:
+        env_vars["DATABASE_URL"] = "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway"
     await set_variables(project_id, service_id, environment_id, env_vars)
 
     # 6. Trigger deployment
