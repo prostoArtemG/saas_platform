@@ -66,11 +66,12 @@ async def create_service_from_github(project_id: str, repo: str, name: str) -> s
     return result["data"]["serviceCreate"]["id"]
 
 async def create_postgres(project_id: str) -> str:
-    """Add PostgreSQL to project, return service ID."""
+    """Add PostgreSQL database to project using new Railway API."""
     query = """
-    mutation pluginCreate($input: PluginCreateInput!) {
-        pluginCreate(input: $input) {
+    mutation serviceCreate($input: ServiceCreateInput!) {
+        serviceCreate(input: $input) {
             id
+            name
         }
     }
     """
@@ -78,11 +79,17 @@ async def create_postgres(project_id: str) -> str:
         "input": {
             "projectId": project_id,
             "name": "Postgres",
-            "plugin": "postgresql",
+            "source": {
+                "image": "ghcr.io/railwayapp-templates/postgres-ssl:16"
+            }
         }
     }
     result = await graphql(query, variables)
-    return result["data"]["pluginCreate"]["id"]
+    logger.info("create_postgres result: %s", result)
+    if "errors" in result:
+        logger.warning("Postgres creation failed: %s", result["errors"])
+        return ""
+    return result.get("data", {}).get("serviceCreate", {}).get("id", "")
 
 async def set_variables(project_id: str, service_id: str, variables: dict) -> bool:
     query = """
