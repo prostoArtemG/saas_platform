@@ -187,33 +187,35 @@ async def get_service_url(project_id: str, service_id: str) -> str:
 
 
 async def create_service_domain(project_id: str, service_id: str, environment_id: str) -> str:
-    try:
-        query = """
-        mutation serviceDomainCreate($input: ServiceDomainCreateInput!) {
-            serviceDomainCreate(input: $input) {
-                id
-                domain
+    for attempt in range(3):
+        try:
+            await asyncio.sleep(5 * (attempt + 1))
+            query = """
+            mutation serviceDomainCreate($input: ServiceDomainCreateInput!) {
+                serviceDomainCreate(input: $input) {
+                    id
+                    domain
+                }
             }
-        }
-        """
-        variables = {
-            "input": {
-                "projectId": project_id,
-                "serviceId": service_id,
-                "environmentId": environment_id,
+            """
+            variables = {
+                "input": {
+                    "projectId": project_id,
+                    "serviceId": service_id,
+                    "environmentId": environment_id,
+                }
             }
-        }
-        logger.info("Creating domain for service=%s project=%s env=%s", service_id, project_id, environment_id)
-        result = await graphql(query, variables)
-        logger.info("create_service_domain result: %s", result)
-        if "errors" in result:
-            logger.warning("Domain creation failed: %s", result["errors"])
-            return ""
-        domain = result.get("data", {}).get("serviceDomainCreate", {}).get("domain", "")
-        return f"https://{domain}" if domain else ""
-    except Exception as e:
-        logger.error("create_service_domain exception: %s", e)
-        return ""
+            logger.info("Creating domain attempt %d for service=%s", attempt + 1, service_id)
+            result = await graphql(query, variables)
+            logger.info("create_service_domain result: %s", result)
+            if "errors" not in result:
+                domain = result.get("data", {}).get("serviceDomainCreate", {}).get("domain", "")
+                if domain:
+                    return f"https://{domain}"
+            logger.warning("Domain creation attempt %d failed: %s", attempt + 1, result.get("errors"))
+        except Exception as e:
+            logger.error("create_service_domain attempt %d exception: %s", attempt + 1, e)
+    return ""
 
 
 async def deploy_shop_bot(
