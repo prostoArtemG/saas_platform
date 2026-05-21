@@ -80,21 +80,34 @@ async def create_postgres(project_id: str) -> str:
     return result["data"]["pluginCreate"]["id"]
 
 async def set_variables(project_id: str, service_id: str, variables: dict) -> bool:
-    """Set environment variables for service."""
     query = """
     mutation variableCollectionUpsert($input: VariableCollectionUpsertInput!) {
         variableCollectionUpsert(input: $input)
     }
     """
-    variables_payload = {
+    payload = {
         "input": {
             "projectId": project_id,
             "serviceId": service_id,
             "variables": {k: str(v) for k, v in variables.items()}
         }
     }
-    result = await graphql(query, variables_payload)
+    result = await graphql(query, payload)
     return True
+
+async def trigger_deployment(project_id: str, service_id: str) -> str:
+    """Trigger a deployment for the service, return deployment ID."""
+    query = """
+    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String) {
+        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
+    }
+    """
+    variables = {
+        "serviceId": service_id,
+        "environmentId": None,
+    }
+    result = await graphql(query, variables)
+    return result
 
 async def get_service_url(project_id: str, service_id: str) -> str:
     """Get public URL of deployed service."""
@@ -163,7 +176,11 @@ async def deploy_shop_bot(
     }
     await set_variables(project_id, service_id, env_vars)
 
-    # 5. Get URL
+    # 5. Trigger deployment
+    await trigger_deployment(project_id, service_id)
+    await asyncio.sleep(3)
+
+    # 6. Get URL
     await asyncio.sleep(5)
     url = await get_service_url(project_id, service_id)
 
