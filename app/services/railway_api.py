@@ -186,23 +186,30 @@ async def get_service_url(project_id: str, service_id: str) -> str:
     return ""
 
 
-async def create_service_domain(project_id: str, service_id: str, environment_id: str) -> str:
+async def create_service_domain(service_id: str, environment_id: str) -> str:
+    """Create a Railway domain for the service."""
     query = """
-    mutation serviceInstanceUpdate($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) {
-        serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input)
+    mutation serviceDomainCreate($input: ServiceDomainCreateInput!) {
+        serviceDomainCreate(input: $input) {
+            id
+            domain
+        }
     }
     """
     variables = {
-        "serviceId": service_id,
-        "environmentId": environment_id,
         "input": {
-            "domains": [{}]
+            "serviceId": service_id,
+            "environmentId": environment_id,
         }
     }
+    logger.info("Creating domain for service=%s env=%s", service_id, environment_id)
     result = await graphql(query, variables)
-    logger.info("serviceInstanceUpdate domain result: %s", result)
-    await asyncio.sleep(3)
-    return await get_service_url(project_id, service_id)
+    logger.info("create_service_domain result: %s", result)
+    if "errors" in result:
+        logger.warning("Domain creation failed: %s", result["errors"])
+        return ""
+    domain = result.get("data", {}).get("serviceDomainCreate", {}).get("domain", "")
+    return f"https://{domain}" if domain else ""
 
 
 async def deploy_shop_bot(
@@ -275,7 +282,7 @@ async def deploy_shop_bot(
 
     # 7. Create domain for the service
     await asyncio.sleep(5)
-    url = await create_service_domain(project_id, service_id, environment_id)
+    url = await create_service_domain(service_id, environment_id)
     if not url:
         url = await get_service_url(project_id, service_id)
 
