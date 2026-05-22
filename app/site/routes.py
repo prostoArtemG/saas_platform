@@ -258,6 +258,26 @@ async def create_site_submit(
         except Exception as exc:
             logger.warning("Railway deploy failed: %s", exc)
 
+    # Notify client in Telegram with site URL
+    if railway_url and admin_telegram_id.strip().isdigit():
+        bot = getattr(request.app.state, "bot", None)
+        if bot:
+            try:
+                await bot.send_message(
+                    int(admin_telegram_id.strip()),
+                    f"\U0001f389 <b>\u0412\u0430\u0448 \u043c\u0430\u0433\u0430\u0437\u0438\u043d \u0433\u043e\u0442\u043e\u0432\u0438\u0439!</b>\n\n"
+                    f"\U0001f3ea <b>{business_name}</b>\n\n"
+                    f"\U0001f310 \u0421\u0430\u0439\u0442: {railway_url}\n\n"
+                    f"\U0001f916 \u0412\u0456\u0434\u043a\u0440\u0438\u0439\u0442\u0435 \u0432\u0430\u0448\u043e\u0433\u043e \u0431\u043e\u0442\u0430 \u0442\u0430 \u043f\u043e\u0447\u043d\u0456\u0442\u044c \u0434\u043e\u0434\u0430\u0432\u0430\u0442\u0438 \u0442\u043e\u0432\u0430\u0440\u0438!\n\n"
+                    f"\U0001f4e6 \u041a\u043d\u043e\u043f\u043a\u0438 \u0431\u043e\u0442\u0430:\n"
+                    f"\u2022 \u0422\u043e\u0432\u0430\u0440\u0438 \u2014 \u0434\u043e\u0434\u0430\u0442\u0438 \u0442\u0430 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0442\u043e\u0432\u0430\u0440\u0438\n"
+                    f"\u2022 \u0421\u0430\u0439\u0442 \u2014 \u043d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u043d\u0430\u0437\u0432\u0438 \u0442\u0430 \u043a\u043e\u043d\u0442\u0430\u043a\u0442\u0456\u0432\n"
+                    f"\u2022 \u0417\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u043d\u044f \u2014 \u043f\u0435\u0440\u0435\u0433\u043b\u044f\u0434 \u043d\u043e\u0432\u0438\u0445 \u0437\u0430\u043c\u043e\u0432\u043b\u0435\u043d\u044c",
+                    parse_mode="HTML"
+                )
+            except Exception as exc:
+                logger.warning("Failed to notify client %s: %s", admin_telegram_id, exc)
+
     return RedirectResponse(
         url=f"/onboarding-success/{result.slug}", status_code=303
     )
