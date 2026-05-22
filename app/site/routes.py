@@ -134,7 +134,7 @@ async def create_site_submit(
             status_code=status,
         )
 
-    if not business_name or not telegram or not site_type or not plan:
+    if not business_name or not site_type or not plan:
         return _form_error(t["create_site"]["error_required"])
 
     # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
