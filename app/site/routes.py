@@ -258,6 +258,21 @@ async def create_site_submit(
         except Exception as exc:
             logger.warning("Railway deploy failed: %s", exc)
 
+    # Get bot username from token
+    if bot_token.strip() and deploy_result:
+        try:
+            from aiogram import Bot
+            tmp_bot = Bot(token=bot_token.strip())
+            bot_info = await tmp_bot.get_me()
+            await tmp_bot.session.close()
+            async with AsyncSessionLocal() as update_session:
+                client_upd = await update_session.get(Client, client.id)
+                if client_upd:
+                    client_upd.bot_username = bot_info.username
+                    await update_session.commit()
+        except Exception as exc:
+            logger.warning("Failed to get bot username: %s", exc)
+
     # Notify client via their own bot
     if railway_url and admin_telegram_id.strip().isdigit() and bot_token.strip():
         try:
@@ -386,13 +401,17 @@ async def onboarding_success(
             if (sub and sub.expires_at) else "—"
         )
 
-        platform_bot_username = getattr(
-            request.app.state, "platform_bot_username", None
-        )
-        cms_url = (
-            f"https://t.me/{platform_bot_username}"
-            if platform_bot_username else None
-        )
+        # Use client's own bot if available
+        if client.bot_username:
+            cms_url = f"https://t.me/{client.bot_username}"
+        else:
+            platform_bot_username = getattr(
+                request.app.state, "platform_bot_username", None
+            )
+            cms_url = (
+                f"https://t.me/{platform_bot_username}"
+                if platform_bot_username else None
+            )
 
         # Use Railway URL if available, otherwise fallback to platform URL
         railway_url = client.bot_admin_ids if client.bot_admin_ids and client.bot_admin_ids.startswith("http") else None
