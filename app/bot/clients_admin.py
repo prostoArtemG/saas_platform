@@ -59,7 +59,7 @@ def _card_kb(client_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="�🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
                 InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
             ],
-            [InlineKeyboardButton(text="🗑 Удалить", callback_data=f"cli:delete:{client_id}")],
+            [InlineKeyboardButton(text="🗑 Видалити", callback_data=f"client:delete:{client_id}")],
             [InlineKeyboardButton(text="« К списку", callback_data="cli:list")],
         ]
     )
@@ -449,6 +449,76 @@ async def cb_delete_confirm(call: CallbackQuery) -> None:
         parse_mode="HTML",
     )
     await call.answer("Удалено")
+
+
+# ----- delete (Ukrainian flow: client:delete:) --------------------------------
+
+@router.callback_query(F.data.startswith("client:view:"))
+async def cb_client_view(call: CallbackQuery) -> None:
+    try:
+        client_id = int(call.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await call.answer("bad id", show_alert=True)
+        return
+    ok = await _send_card(call.message, client_id, edit=True)
+    if not ok:
+        await call.answer("Клієнт не знайдений", show_alert=True)
+        return
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("client:delete:"))
+async def cb_delete_client_confirm(cb: CallbackQuery) -> None:
+    try:
+        client_id = int(cb.data.split(":")[2])
+    except (ValueError, IndexError):
+        await cb.answer("bad id", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if not client:
+            await cb.answer("Клієнт не знайдений", show_alert=True)
+            return
+        name = client.business_name
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Так, видалити", callback_data=f"client:delete_confirm:{client_id}"),
+            InlineKeyboardButton(text="❌ Скасувати", callback_data=f"client:view:{client_id}"),
+        ]
+    ])
+    await cb.message.edit_text(
+        f"⚠️ <b>Видалити клієнта?</b>\n\n"
+        f"Це видалить всі дані клієнта включаючи підписки та домени.\n\n"
+        f"Клієнт: <b>{name}</b>",
+        parse_mode="HTML",
+        reply_markup=kb,
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("client:delete_confirm:"))
+async def cb_delete_client(cb: CallbackQuery) -> None:
+    try:
+        client_id = int(cb.data.split(":")[2])
+    except (ValueError, IndexError):
+        await cb.answer("bad id", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if not client:
+            await cb.answer("Клієнт не знайдений", show_alert=True)
+            return
+        name = client.business_name
+        await session.delete(client)
+        await session.commit()
+
+    logger.info("admin deleted client id=%s name=%s", client_id, name)
+    await cb.message.edit_text(
+        f"✅ Клієнт <b>{name}</b> видалений.",
+        parse_mode="HTML",
+    )
+    await cb.answer("Видалено")
 
 
 # ----- connect bot ------------------------------------------------------------
