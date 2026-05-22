@@ -263,6 +263,7 @@ async def deploy_shop_bot(
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
+        "SITE_NAME": client_name,
         "WEBHOOK_URL": webhook_url,
         "PUBLIC_BASE_URL": webhook_url,
         "LOCAL_POLLING": "1",
