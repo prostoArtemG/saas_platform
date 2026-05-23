@@ -84,7 +84,7 @@ async def onboard_client(
     # 2. Domain placeholder
     domain = Domain(
         client_id=client.id,
-        domain=f"{client.slug}.saasplatform.app",
+        domain=f"{client.slug}.shopplatform.app",
         status="not_connected",
         dns_connected=False,
     )

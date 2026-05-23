@@ -588,7 +588,7 @@ async def client_dashboard(
                 "buyout_months": plan.buyout_months,
             } if plan else None,
             "domain": {
-                "host": f"{client.slug}.saasplatform.app",
+                "host": f"{client.slug}.shopplatform.app",
                 "status": "pending",
             },
         }
