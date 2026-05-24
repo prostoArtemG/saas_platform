@@ -212,6 +212,31 @@ async def create_service_domain(service_id: str, environment_id: str) -> str:
     return f"https://{domain}" if domain else ""
 
 
+async def add_custom_domain(service_id: str, environment_id: str, domain: str) -> bool:
+    """Add custom domain to service."""
+    query = """
+    mutation customDomainCreate($input: CustomDomainCreateInput!) {
+        customDomainCreate(input: $input) {
+            id
+            domain
+        }
+    }
+    """
+    variables = {
+        "input": {
+            "serviceId": service_id,
+            "environmentId": environment_id,
+            "domain": domain,
+        }
+    }
+    result = await graphql(query, variables)
+    logger.info("add_custom_domain result: %s", result)
+    if "errors" in result:
+        logger.warning("Custom domain creation failed: %s", result["errors"])
+        return False
+    return True
+
+
 async def deploy_shop_bot(
     client_name: str,
     slug: str,
@@ -283,9 +308,14 @@ async def deploy_shop_bot(
 
     # 7. Create domain for the service
     await asyncio.sleep(5)
-    url = await create_service_domain(service_id, environment_id)
-    if not url:
-        url = await get_service_url(project_id, service_id)
+    await create_service_domain(service_id, environment_id)
+
+    # 8. Add custom subdomain *.shopplatform.app
+    custom_domain = f"{slug}.shopplatform.app"
+    await add_custom_domain(service_id, environment_id, custom_domain)
+
+    # Use custom domain as primary URL
+    url = f"https://{custom_domain}"
 
     return {
         "project_id": project_id,
