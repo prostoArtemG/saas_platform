@@ -306,24 +306,18 @@ async def deploy_shop_bot(
     await trigger_deployment(project_id, service_id)
     await asyncio.sleep(3)
 
-    # 7. Create domain for the service
+    # 7. Create Railway domain (works immediately)
     await asyncio.sleep(5)
     railway_url = await create_service_domain(service_id, environment_id)
 
-    # 8. Wait for service to be fully provisioned before adding custom domain
-    await asyncio.sleep(30)
-
-    # Add custom subdomain *.shopplatform.app
+    # 8. Try custom domain (may take time to propagate)
     custom_domain = f"{slug}.shopplatform.app"
-    success = await add_custom_domain(service_id, environment_id, custom_domain)
+    await add_custom_domain(service_id, environment_id, custom_domain)
 
-    if success:
-        url = f"https://{custom_domain}"
-    else:
-        url = railway_url or f"https://shop-{slug}.up.railway.app"
-
+    # Return railway URL immediately — client can use it right away
     return {
         "project_id": project_id,
         "service_id": service_id,
-        "url": url,
+        "url": railway_url,
+        "custom_domain": f"https://{custom_domain}",
     }
