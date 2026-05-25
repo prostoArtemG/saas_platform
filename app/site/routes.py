@@ -233,7 +233,7 @@ async def create_site_submit(
     # Auto-deploy shop_bot for new client if template is shop_bot and bot_token provided
     deploy_result = None
     railway_url = None
-    if template_name == "shop_bot" and bot_token:
+    if template_name in ("shop_bot", "premium_store") and bot_token:
         try:
             from app.config import settings as app_settings
             deploy_result = await deploy_shop_bot(
@@ -245,6 +245,7 @@ async def create_site_submit(
                 cloudinary_key=os.getenv("CLOUDINARY_API_KEY", ""),
                 cloudinary_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
                 saas_platform_url=str(request.base_url).rstrip("/"),
+                template_name=template_name,
             )
             railway_url = deploy_result.get("url")
             # Save bot token and Railway URL to client record
