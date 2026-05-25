@@ -239,6 +239,7 @@ async def create_site_submit(
     deploy_result = None
     railway_url = None
     if template_name in ("shop_bot", "premium_store") and bot_token:
+        logger.info("Starting Railway deploy for template=%s slug=%s", template_name, slug)
         try:
             from app.config import settings as app_settings
             deploy_result = await deploy_shop_bot(
@@ -263,7 +264,7 @@ async def create_site_submit(
                         client_upd.bot_admin_ids = railway_url
                     await update_session.commit()
         except Exception as exc:
-            logger.warning("Railway deploy failed: %s", exc)
+            logger.warning("Railway deploy failed: %s", exc, exc_info=True)
 
     # Get bot username from token
     if bot_token.strip() and deploy_result:
