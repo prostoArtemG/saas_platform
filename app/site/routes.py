@@ -159,7 +159,7 @@ async def create_site_submit(
         logger.warning("SiteRequest audit log failed: %s", exc)
 
     # Atomic self-service onboarding ------------------------------------------
-    template_name = site_type if site_type in {"technovlada", "shop_bot"} else "technovlada"
+    template_name = site_type if site_type in {"technovlada", "shop_bot", "premium_store"} else "technovlada"
 
     try:
         async with AsyncSessionLocal() as session:
