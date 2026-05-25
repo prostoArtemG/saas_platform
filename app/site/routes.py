@@ -231,6 +231,7 @@ async def create_site_submit(
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
 
     # Auto-deploy shop_bot for new client if template is shop_bot and bot_token provided
+    deploy_result = None
     railway_url = None
     if template_name == "shop_bot" and bot_token:
         try:
