@@ -111,6 +111,11 @@ async def create_site_submit(
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
 
+    logger.info(
+        "create_site_submit: business_name=%s template=%s bot_token_len=%s admin_id=%s",
+        business_name, site_type, len(bot_token) if bot_token else 0, admin_telegram_id,
+    )
+
     def _form_error(message: str, status: int = 400) -> HTMLResponse:
         return templates.TemplateResponse(
             "create_site.html",
