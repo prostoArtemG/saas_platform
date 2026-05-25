@@ -112,8 +112,8 @@ async def create_site_submit(
     comment = (comment or "").strip()[:2000] or None
 
     logger.info(
-        "create_site_submit: business_name=%s template=%s bot_token_len=%s admin_id=%s",
-        business_name, site_type, len(bot_token) if bot_token else 0, admin_telegram_id,
+        "create_site_submit: business_name=%s template=%r bot_token=%r admin_id=%r",
+        business_name, site_type, bot_token[:10] if bot_token else None, admin_telegram_id,
     )
 
     def _form_error(message: str, status: int = 400) -> HTMLResponse:
@@ -238,6 +238,7 @@ async def create_site_submit(
     # Auto-deploy shop_bot for new client if template is shop_bot and bot_token provided
     deploy_result = None
     railway_url = None
+    logger.info("Deploy check: template_name=%r bot_token_bool=%r", template_name, bool(bot_token.strip()) if bot_token else False)
     if template_name in ("shop_bot", "premium_store") and bot_token:
         logger.info("Starting Railway deploy for template=%s slug=%s", template_name, slug)
         try:
