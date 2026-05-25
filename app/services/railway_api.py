@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 RAILWAY_API_URL = "https://backboard.railway.app/graphql/v2"
 RAILWAY_TOKEN = os.getenv("RAILWAY_API_TOKEN", "")
 GITHUB_REPO = "prostoArtemG/shop_bot"
+GITHUB_REPO_PREMIUM = "prostoArtemG/premium_store"
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -246,6 +247,7 @@ async def deploy_shop_bot(
     cloudinary_key: str,
     cloudinary_secret: str,
     saas_platform_url: str,
+    template_name: str = "shop_bot",
 ) -> dict:
     project_name = f"shop-{slug}"
 
@@ -275,7 +277,7 @@ async def deploy_shop_bot(
             "projectId": project_id,
             "name": "shop_bot",
             "source": {
-                "repo": GITHUB_REPO,
+                "repo": GITHUB_REPO_PREMIUM if template_name == "premium_store" else GITHUB_REPO,
             }
         }
     }
