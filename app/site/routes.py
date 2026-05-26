@@ -64,14 +64,47 @@ async def index(
     return response
 
 
-@router.get("/create-site", response_class=HTMLResponse)
-async def create_site_form(
+@router.get("/templates", response_class=HTMLResponse)
+async def templates_select(
     request: Request,
+    plan: Optional[str] = None,
     lang: Optional[str] = None,
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
     chosen = _resolve_lang(lang, lang_cookie)
     t = get_t(chosen)
+    response = templates.TemplateResponse(
+        "templates_select.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "plan": plan or "",
+        },
+    )
+    response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, samesite="lax")
+    return response
+
+
+@router.get("/create-site", response_class=HTMLResponse)
+async def create_site_form(
+    request: Request,
+    plan: Optional[str] = None,
+    template: Optional[str] = None,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+    # Map plan slug (starter/pro/full) to the full option string for pre-selection
+    plan_matched = ""
+    if plan:
+        plan_lower = plan.lower()
+        for opt in t["create_site"]["plan_options"]:
+            if opt.lower().startswith(plan_lower):
+                plan_matched = opt
+                break
     response = templates.TemplateResponse(
         "create_site.html",
         {
@@ -81,7 +114,10 @@ async def create_site_form(
             "supported_langs": SUPPORTED_LANGS,
             "submitted": False,
             "error": None,
-            "form": {},
+            "form": {
+                "plan": plan_matched,
+                "site_type": template or "",
+            },
         },
     )
     response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, samesite="lax")

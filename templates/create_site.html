@@ -159,7 +159,7 @@
           <label>Шаблон сайту</label>
           <div class="template-grid">
             <label class="template-option">
-              <input type="radio" name="site_type" value="technovlada" required>
+              <input type="radio" name="site_type" value="technovlada" required {% if form.site_type == 'technovlada' %}checked{% endif %}>
               <div class="template-card">
                 <div class="template-icon">&#x1F310;</div>
                 <div class="template-name">Technovlada</div>
@@ -167,7 +167,7 @@
               </div>
             </label>
             <label class="template-option">
-              <input type="radio" name="site_type" value="shop_bot" required>
+              <input type="radio" name="site_type" value="shop_bot" {% if form.site_type == 'shop_bot' %}checked{% endif %}>
               <div class="template-card">
                 <div class="template-icon">&#128717;</div>
                 <div class="template-name">ТехноМаркет</div>
@@ -175,7 +175,7 @@
               </div>
             </label>
             <label class="template-option">
-              <input type="radio" name="site_type" value="premium_store">
+              <input type="radio" name="site_type" value="premium_store" {% if form.site_type == 'premium_store' %}checked{% endif %}>
               <div class="template-card">
                 <div class="template-icon">⭐</div>
                 <div class="template-name">Premium Store</div>

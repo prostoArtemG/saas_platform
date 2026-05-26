@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopPlatform — Оберіть шаблон</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              lime:   '#a3e635',
+              purple: '#7c3aed',
+              dark:   '#0f0a1e',
+              card:   '#150e2e',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>ShopPlatform</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+          {% for l in supported_langs %}
+          <a href="/templates?plan={{ plan }}&lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+          {% endfor %}
+        </div>
+        <a href="/" class="text-sm text-white/60 hover:text-white transition-colors hidden md:inline">← На головну</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- BG -->
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- Header -->
+      <div class="text-center mb-12 animate-fade-up">
+        {% if plan %}
+        <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs text-brand-lime font-medium mb-4 border border-brand-lime/20">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-lime"></span>
+          Тариф: {{ plan | capitalize }}
+        </div>
+        {% endif %}
+        <h1 class="text-4xl lg:text-5xl font-black mb-4">
+          Оберіть <span class="gradient-text">шаблон</span>
+        </h1>
+        <p class="text-white/50 max-w-lg mx-auto">Клікніть на шаблон, щоб продовжити заповнення форми</p>
+      </div>
+
+      <!-- Template cards -->
+      <div class="grid md:grid-cols-3 gap-6 animate-fade-up">
+
+        <!-- TechnoVlada -->
+        <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-brand-lime/40 border border-white/5"
+             onclick="window.location='/create-site?plan={{ plan }}&template=technovlada'">
+          <div class="relative h-52 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl font-black text-brand-lime mb-2">TV</div>
+                <div class="text-xs text-white/40">TechnoVlada</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-brand-lime/20 text-brand-lime text-xs font-medium px-2 py-0.5 rounded-full border border-brand-lime/30">Популярний</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">Technovlada</h3>
+            <p class="text-white/50 text-sm mb-5 leading-relaxed">Універсальний шаблон для сервісного бізнесу. Каталог послуг, запис клієнтів, портфоліо.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Послуги</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Каталог</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Запис</span>
+            </div>
+            <div class="w-full glass border border-brand-lime/30 text-brand-lime text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-brand-lime group-hover:text-black transition-all duration-200">
+              Обрати шаблон →
+            </div>
+          </div>
+        </div>
+
+        <!-- ShopBot / TechnoMarket -->
+        <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-emerald-400/40 border border-white/5"
+             onclick="window.location='/create-site?plan={{ plan }}&template=shop_bot'">
+          <div class="relative h-52 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <svg class="w-14 h-14 text-emerald-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                <div class="text-xs text-white/40">TechnoMarket</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-emerald-400/20 text-emerald-400 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-400/30">Магазин</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">ТехноМаркет</h3>
+            <p class="text-white/50 text-sm mb-5 leading-relaxed">Інтернет-магазин із кошиком, фільтрами та прийомом замовлень через Telegram-бота.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Кошик</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Фільтри</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Замовлення</span>
+            </div>
+            <div class="w-full glass border border-emerald-400/30 text-emerald-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-emerald-400 group-hover:text-black transition-all duration-200">
+              Обрати шаблон →
+            </div>
+          </div>
+        </div>
+
+        <!-- Premium Store -->
+        <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-orange-400/40 border border-white/5"
+             onclick="window.location='/create-site?plan={{ plan }}&template=premium_store'">
+          <div class="relative h-52 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl mb-2">⭐</div>
+                <div class="text-xs text-white/40">Premium Store</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-orange-400/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-400/30">NEW</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">Premium Store</h3>
+            <p class="text-white/50 text-sm mb-5 leading-relaxed">Преміум магазин із сучасним дизайном, розширеними категоріями та аналітикою.</p>
+            <div class="flex flex-wrap gap-2 mb-6">
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Преміум</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Аналітика</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Дизайн</span>
+            </div>
+            <div class="w-full glass border border-orange-400/30 text-orange-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-orange-400 group-hover:text-black transition-all duration-200">
+              Обрати шаблон →
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Back link -->
+      <div class="text-center mt-10">
+        <a href="/#pricing" class="text-sm text-white/40 hover:text-white transition-colors">← Назад до тарифів</a>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>
