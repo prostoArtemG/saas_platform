@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.config import settings
@@ -487,6 +487,156 @@ async def onboarding_success(
     )
 
 
+# ---------------------------------------------------------------------------
+# Products web-admin
+# ---------------------------------------------------------------------------
+
+@router.get("/dashboard/{slug}/products", response_class=HTMLResponse)
+async def dashboard_products(
+    request: Request,
+    slug: str,
+    edit_id: Optional[int] = None,
+    success: Optional[str] = None,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {"request": request, "t": t, "lang": chosen,
+                 "supported_langs": SUPPORTED_LANGS, "slug": slug},
+                status_code=404,
+            )
+
+        products = (
+            await session.execute(
+                select(Product)
+                .where(Product.client_id == client.id)
+                .order_by(Product.id.desc())
+            )
+        ).scalars().all()
+
+        edit_product = None
+        if edit_id:
+            ep = await session.get(Product, edit_id)
+            if ep and ep.client_id == client.id:
+                edit_product = ep
+
+    return templates.TemplateResponse(
+        "dashboard_products.html",
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "supported_langs": SUPPORTED_LANGS,
+            "client": {"business_name": client.business_name, "slug": client.slug},
+            "products": products,
+            "edit_product": edit_product,
+            "success": success,
+        },
+    )
+
+
+@router.post("/dashboard/{slug}/products")
+async def dashboard_products_add(
+    request: Request,
+    slug: str,
+    name: str = Form(...),
+    price: str = Form("0"),
+    category: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    image_url: Optional[str] = Form(None),
+) -> RedirectResponse:
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404)
+        try:
+            price_val = float(price.replace(",", ".")) if price else 0.0
+        except ValueError:
+            price_val = 0.0
+        product = Product(
+            client_id=client.id,
+            name=name.strip(),
+            price=price_val,
+            category=category.strip() if category else None,
+            description=description.strip() if description else None,
+            image_url=image_url.strip() if image_url else None,
+        )
+        session.add(product)
+        await session.commit()
+    return RedirectResponse(f"/dashboard/{slug}/products?success=added", status_code=303)
+
+
+@router.post("/dashboard/{slug}/products/{product_id}/delete")
+async def dashboard_products_delete(
+    request: Request,
+    slug: str,
+    product_id: int,
+) -> RedirectResponse:
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404)
+        product = await session.get(Product, product_id)
+        if product and product.client_id == client.id:
+            await session.delete(product)
+            await session.commit()
+    return RedirectResponse(f"/dashboard/{slug}/products?success=deleted", status_code=303)
+
+
+@router.post("/dashboard/{slug}/products/{product_id}/toggle")
+async def dashboard_products_toggle(
+    request: Request,
+    slug: str,
+    product_id: int,
+) -> RedirectResponse:
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404)
+        product = await session.get(Product, product_id)
+        if product and product.client_id == client.id:
+            product.is_available = not product.is_available
+            await session.commit()
+    return RedirectResponse(f"/dashboard/{slug}/products", status_code=303)
+
+
+@router.post("/dashboard/{slug}/products/{product_id}/edit")
+async def dashboard_products_edit(
+    request: Request,
+    slug: str,
+    product_id: int,
+    name: str = Form(...),
+    price: str = Form("0"),
+    category: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    image_url: Optional[str] = Form(None),
+) -> RedirectResponse:
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404)
+        product = await session.get(Product, product_id)
+        if product and product.client_id == client.id:
+            try:
+                price_val = float(price.replace(",", ".")) if price else 0.0
+            except ValueError:
+                price_val = float(product.price)
+            product.name = name.strip()
+            product.price = price_val
+            product.category = category.strip() if category else None
+            product.description = description.strip() if description else None
+            product.image_url = image_url.strip() if image_url else None
+            await session.commit()
+    return RedirectResponse(f"/dashboard/{slug}/products?success=updated", status_code=303)
+
+
 @router.get("/health")
 async def health() -> dict:
     return {"status": "healthy"}
@@ -640,6 +790,11 @@ async def client_dashboard(
                 "status": "pending",
             },
         }
+
+        products_count = await session.scalar(
+            select(func.count()).where(Product.client_id == client.id)
+        ) or 0
+        ctx["products_count"] = products_count
 
     return templates.TemplateResponse("dashboard.html", ctx)
 

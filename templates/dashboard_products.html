@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Товари — {{ client.business_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              lime:   '#a3e635',
+              purple: '#7c3aed',
+              dark:   '#0f0a1e',
+              card:   '#150e2e',
+            }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .field-label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.45);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .35rem;
+    }
+    .field-input {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      color: white;
+      border-radius: .75rem;
+      padding: .65rem 1rem;
+      font-size: .95rem;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field-input:focus {
+      border-color: rgba(163,230,53,.45);
+      box-shadow: 0 0 0 3px rgba(163,230,53,.08);
+    }
+    .field-input::placeholder { color: rgba(255,255,255,.2); }
+    .btn-lime {
+      background: #a3e635;
+      color: #0f0a1e;
+      font-weight: 700;
+      border-radius: .75rem;
+      padding: .65rem 1.4rem;
+      font-size: .9rem;
+      transition: background .15s, transform .1s, box-shadow .15s;
+      box-shadow: 0 4px 20px rgba(163,230,53,.2);
+      white-space: nowrap;
+    }
+    .btn-lime:hover { background: #b6ee5b; transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: rgba(255,255,255,.5);
+      font-weight: 500;
+      border-radius: .75rem;
+      padding: .6rem 1.2rem;
+      font-size: .875rem;
+      border: 1px solid rgba(255,255,255,.1);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,.25); color: white; }
+    .btn-danger {
+      background: rgba(239,68,68,.1);
+      color: #f87171;
+      font-weight: 600;
+      border-radius: .65rem;
+      padding: .45rem .9rem;
+      font-size: .8rem;
+      border: 1px solid rgba(239,68,68,.2);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.4); }
+    .btn-edit {
+      background: rgba(124,58,237,.15);
+      color: #c4b5fd;
+      font-weight: 600;
+      border-radius: .65rem;
+      padding: .45rem .9rem;
+      font-size: .8rem;
+      border: 1px solid rgba(124,58,237,.3);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-edit:hover { background: rgba(124,58,237,.25); border-color: rgba(124,58,237,.5); }
+    .badge-avail {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; font-weight: 600; padding: .2rem .6rem;
+      border-radius: 9999px; border: 1px solid;
+      background: rgba(163,230,53,.1); color: #a3e635;
+      border-color: rgba(163,230,53,.3);
+    }
+    .badge-unavail {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .72rem; font-weight: 600; padding: .2rem .6rem;
+      border-radius: 9999px; border: 1px solid;
+      background: rgba(255,255,255,.05); color: rgba(255,255,255,.35);
+      border-color: rgba(255,255,255,.1);
+    }
+    .toast-success {
+      background: rgba(163,230,53,.12);
+      border: 1px solid rgba(163,230,53,.25);
+      color: #d9f99d;
+      border-radius: .85rem;
+      padding: .8rem 1.2rem;
+      font-size: .9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .add-form-toggle { cursor: pointer; user-select: none; }
+    .product-row:hover { background: rgba(255,255,255,.025); }
+    .product-row { transition: background .15s; border-radius: .5rem; }
+  </style>
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </span>
+        <span>SaaSPlatform</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard/{{ client.slug }}"
+           class="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-1.5">
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- BG decoration -->
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -left-40 w-96 h-96 bg-purple-700/30 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="fixed top-1/2 -right-40 w-[500px] h-[500px] bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- Page header -->
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 animate-fade-up">
+        <div>
+          <div class="text-xs font-medium text-brand-lime uppercase tracking-widest mb-2">{{ client.business_name }}</div>
+          <h1 class="text-3xl lg:text-4xl font-black">
+            <span class="gradient-text">Товари</span>
+          </h1>
+          <p class="text-white/40 text-sm mt-1">{{ products | length }} позиц{{ 'ія' if (products | length) % 10 == 1 and (products | length) % 100 != 11 else 'ії' if (products | length) % 10 in [2,3,4] and (products | length) % 100 not in [12,13,14] else 'ій' }}</p>
+        </div>
+        <button onclick="document.getElementById('add-form').classList.toggle('hidden')"
+                class="btn-lime flex items-center gap-2 self-start md:self-auto">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+          </svg>
+          Додати товар
+        </button>
+      </div>
+
+      <!-- Success toast -->
+      {% if success %}
+      <div class="toast-success mb-6 animate-fade-up">
+        <svg class="w-5 h-5 text-brand-lime shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+        {% if success == 'added' %}Товар успішно додано!
+        {% elif success == 'updated' %}Товар оновлено!
+        {% elif success == 'deleted' %}Товар видалено.
+        {% else %}Зміни збережено.
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Edit form (shown when edit_product is set) -->
+      {% if edit_product %}
+      <div class="glass-card rounded-2xl p-6 mb-6 animate-fade-up border border-purple-500/30">
+        <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Редагувати товар
+        </h2>
+        <form method="POST" action="/dashboard/{{ client.slug }}/products/{{ edit_product.id }}/edit">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="field-label">Назва *</label>
+              <input type="text" name="name" value="{{ edit_product.name }}" required class="field-input" placeholder="Назва товару"/>
+            </div>
+            <div>
+              <label class="field-label">Ціна (грн)</label>
+              <input type="text" name="price" value="{{ edit_product.price }}" class="field-input" placeholder="0.00"/>
+            </div>
+            <div>
+              <label class="field-label">Категорія</label>
+              <input type="text" name="category" value="{{ edit_product.category or '' }}" class="field-input" placeholder="Категорія"/>
+            </div>
+            <div>
+              <label class="field-label">URL зображення</label>
+              <input type="url" name="image_url" value="{{ edit_product.image_url or '' }}" class="field-input" placeholder="https://..."/>
+            </div>
+            <div class="md:col-span-2">
+              <label class="field-label">Опис</label>
+              <textarea name="description" rows="3" class="field-input resize-none"
+                        placeholder="Опис товару">{{ edit_product.description or '' }}</textarea>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="submit" class="btn-lime">Зберегти</button>
+            <a href="/dashboard/{{ client.slug }}/products" class="btn-ghost">Скасувати</a>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- Add product form (hidden by default) -->
+      <div id="add-form" class="hidden glass-card rounded-2xl p-6 mb-6 animate-fade-up border border-brand-lime/20">
+        <h2 class="text-lg font-bold mb-5 flex items-center gap-2">
+          <svg class="w-5 h-5 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+          </svg>
+          Новий товар
+        </h2>
+        <form method="POST" action="/dashboard/{{ client.slug }}/products">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="field-label">Назва *</label>
+              <input type="text" name="name" required class="field-input" placeholder="Назва товару"/>
+            </div>
+            <div>
+              <label class="field-label">Ціна (грн)</label>
+              <input type="text" name="price" value="0" class="field-input" placeholder="0.00"/>
+            </div>
+            <div>
+              <label class="field-label">Категорія</label>
+              <input type="text" name="category" class="field-input" placeholder="Наприклад: Взуття, Техніка..."/>
+            </div>
+            <div>
+              <label class="field-label">URL зображення</label>
+              <input type="url" name="image_url" class="field-input" placeholder="https://..."/>
+            </div>
+            <div class="md:col-span-2">
+              <label class="field-label">Опис</label>
+              <textarea name="description" rows="3" class="field-input resize-none"
+                        placeholder="Короткий опис товару"></textarea>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="submit" class="btn-lime">Додати</button>
+            <button type="button" onclick="document.getElementById('add-form').classList.add('hidden')"
+                    class="btn-ghost">Скасувати</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Products list -->
+      <div class="glass-card rounded-2xl overflow-hidden animate-fade-up">
+        {% if products %}
+        <!-- Table header -->
+        <div class="hidden md:grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center
+                    px-6 py-3 border-b border-white/5 text-xs font-semibold text-white/30
+                    uppercase tracking-wider">
+          <span class="w-10"></span>
+          <span>Товар</span>
+          <span class="text-right w-24">Ціна</span>
+          <span class="text-center w-24">Доступність</span>
+          <span class="text-right w-28">Дії</span>
+        </div>
+
+        <div class="divide-y divide-white/5">
+          {% for product in products %}
+          <div class="product-row grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto_auto]
+                      gap-3 md:gap-4 items-center px-6 py-4">
+
+            <!-- Image -->
+            <div class="hidden md:flex w-10 h-10 rounded-lg bg-white/5 border border-white/10
+                        items-center justify-center overflow-hidden shrink-0">
+              {% if product.image_url %}
+                <img src="{{ product.image_url }}" alt="" class="w-full h-full object-cover"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                <svg class="w-5 h-5 text-white/20 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              {% else %}
+                <svg class="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+              {% endif %}
+            </div>
+
+            <!-- Name + meta -->
+            <div class="min-w-0">
+              <div class="font-semibold text-white truncate">{{ product.name }}</div>
+              <div class="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                {% if product.category %}
+                  <span class="text-xs text-brand-lime/70">{{ product.category }}</span>
+                {% endif %}
+                {% if product.description %}
+                  <span class="text-xs text-white/30 truncate max-w-xs">{{ product.description[:60] }}{% if product.description | length > 60 %}…{% endif %}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Price -->
+            <div class="md:text-right">
+              <span class="font-bold text-white">{{ "%.0f"|format(product.price|float) }} ₴</span>
+            </div>
+
+            <!-- Toggle availability -->
+            <div class="md:text-center">
+              <form method="POST" action="/dashboard/{{ client.slug }}/products/{{ product.id }}/toggle">
+                <button type="submit" class="cursor-pointer">
+                  {% if product.is_available %}
+                    <span class="badge-avail">
+                      <span class="w-1.5 h-1.5 rounded-full bg-brand-lime"></span>
+                      Доступний
+                    </span>
+                  {% else %}
+                    <span class="badge-unavail">
+                      <span class="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+                      Приховано
+                    </span>
+                  {% endif %}
+                </button>
+              </form>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 md:justify-end">
+              <a href="/dashboard/{{ client.slug }}/products?edit_id={{ product.id }}"
+                 class="btn-edit">Ред.</a>
+              <form method="POST" action="/dashboard/{{ client.slug }}/products/{{ product.id }}/delete"
+                    onsubmit="return confirm('Видалити «{{ product.name }}»?')">
+                <button type="submit" class="btn-danger">Видалити</button>
+              </form>
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        <!-- Empty state -->
+        <div class="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-5">
+            <svg class="w-8 h-8 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <p class="text-white/50 font-medium mb-1">Товарів ще немає</p>
+          <p class="text-white/30 text-sm mb-5">Натисніть «Додати товар», щоб почати</p>
+          <button onclick="document.getElementById('add-form').classList.remove('hidden');document.getElementById('add-form').scrollIntoView({behavior:'smooth'})"
+                  class="btn-lime text-sm px-5 py-2.5">
+            + Додати перший товар
+          </button>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="text-center mt-6">
+        <a href="/dashboard/{{ client.slug }}"
+           class="text-sm text-white/40 hover:text-white transition-colors">← Назад до Dashboard</a>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

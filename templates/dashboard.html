@@ -87,26 +87,40 @@
       <!-- Top stats grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-        <!-- Plan -->
+        <!-- Products -->
+        <a href="/dashboard/{{ client.slug }}/products"
+           class="stat-card glass-card rounded-2xl p-5 animate-fade-up block group">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Товари</span>
+            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+          </div>
+          <div class="text-3xl font-black text-brand-lime">{{ products_count }}</div>
+          <div class="text-sm text-white/50 mt-1 group-hover:text-brand-lime transition-colors">Керувати →</div>
+        </a>
+
+        <!-- Orders (placeholder) -->
         <div class="stat-card glass-card rounded-2xl p-5 animate-fade-up">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Plan</span>
-            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l3.057-2L19 9l-3 8H8L5 3z"/></svg>
+            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Замовлення</span>
+            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
           </div>
-          {% if plan %}
-          <div class="text-2xl font-black">{{ plan.name }}</div>
-          <div class="text-sm text-white/50 mt-1">${{ "%.2f"|format(plan.price_monthly|float) }}/mo</div>
-          {% else %}
           <div class="text-2xl font-black text-white/30">—</div>
-          <div class="text-sm text-white/40 mt-1">No plan assigned</div>
-          {% endif %}
+          <div class="text-sm text-white/40 mt-1">Через Telegram бот</div>
         </div>
 
-        <!-- Subscription status -->
+        <!-- Subscription -->
         <div class="stat-card glass-card rounded-2xl p-5 animate-fade-up">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Subscription</span>
-            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Підписка</span>
+            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
           </div>
           {% if subscription %}
             {% if subscription.status == 'active' %}
@@ -118,24 +132,16 @@
             {% else %}
               <span class="badge badge-mute"><span class="dot bg-white/40"></span>{{ subscription.status }}</span>
             {% endif %}
+            <div class="text-sm text-white/50 mt-3">
+              {% if subscription.expires_at %}
+                до {{ subscription.expires_at.strftime('%d %b %Y') }}
+              {% else %}
+                Без обмежень
+              {% endif %}
+            </div>
           {% else %}
             <span class="badge badge-mute"><span class="dot bg-white/40"></span>None</span>
-          {% endif %}
-          <div class="text-sm text-white/50 mt-3">Current billing state</div>
-        </div>
-
-        <!-- Expires -->
-        <div class="stat-card glass-card rounded-2xl p-5 animate-fade-up">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Expires</span>
-            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          </div>
-          {% if subscription and subscription.expires_at %}
-          <div class="text-2xl font-black">{{ subscription.expires_at.strftime('%d %b %Y') }}</div>
-          <div class="text-sm text-white/50 mt-1">{{ subscription.expires_at.strftime('%H:%M UTC') }}</div>
-          {% else %}
-          <div class="text-2xl font-black text-white/30">∞</div>
-          <div class="text-sm text-white/40 mt-1">No expiration</div>
+            <div class="text-sm text-white/40 mt-3">No subscription</div>
           {% endif %}
         </div>
 
@@ -143,7 +149,9 @@
         <div class="stat-card glass-card rounded-2xl p-5 animate-fade-up">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Telegram bot</span>
-            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            <svg class="w-4 h-4 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
           </div>
           {% if client.bot_connected %}
             <span class="badge badge-active"><span class="dot bg-brand-lime"></span>Connected</span>
