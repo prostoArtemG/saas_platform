@@ -111,11 +111,6 @@ async def create_site_submit(
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
 
-    logger.info(
-        "create_site_submit: business_name=%s template=%r bot_token=%r admin_id=%r",
-        business_name, site_type, bot_token[:10] if bot_token else None, admin_telegram_id,
-    )
-
     def _form_error(message: str, status: int = 400) -> HTMLResponse:
         return templates.TemplateResponse(
             "create_site.html",
@@ -160,6 +155,11 @@ async def create_site_submit(
 
     # Atomic self-service onboarding ------------------------------------------
     template_name = site_type if site_type in {"technovlada", "shop_bot", "premium_store"} else "technovlada"
+
+    logger.info(
+        "create_site_submit: business_name=%s site_type=%r template_name=%r bot_token_len=%s",
+        business_name, site_type, template_name, len(bot_token) if bot_token else 0,
+    )
 
     try:
         async with AsyncSessionLocal() as session:
