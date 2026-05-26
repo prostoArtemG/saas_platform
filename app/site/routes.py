@@ -462,6 +462,8 @@ async def onboarding_success(
         railway_url = client.bot_admin_ids if client.bot_admin_ids and client.bot_admin_ids.startswith("http") else None
         site_url = railway_url or (str(request.base_url).rstrip("/") + f"/site/{client.slug}")
 
+    dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}"
+
     data = {
         "business_name": _clean(client.business_name) or "",
         "site_url": _clean(site_url) or "",
@@ -470,6 +472,7 @@ async def onboarding_success(
         "plan": _clean(plan_name) or "",
         "trial_expires_at": _clean(trial_expires) or "",
         "cms_url": _clean(cms_url) if cms_url else None,
+        "dashboard_url": dashboard_url,
     }
 
     return templates.TemplateResponse(
