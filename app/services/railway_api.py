@@ -20,7 +20,7 @@ async def graphql(query: str, variables: dict = None) -> dict:
     payload = {"query": query}
     if variables:
         payload["variables"] = variables
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         resp = await client.post(RAILWAY_API_URL, json=payload, headers=HEADERS)
         logger.info("Railway API response: %s", resp.text[:500])
         return resp.json()
