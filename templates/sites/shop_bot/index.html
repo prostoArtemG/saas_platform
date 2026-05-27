@@ -921,12 +921,39 @@
     });
   }
 
+  /* ── Brand filter builder ────────────────────────────────────────────────── */
+  function buildBrandFilters() {
+    const brands = [...new Set(PRODUCTS.map(p => p.brand).filter(Boolean))].sort();
+    if (!brands.length) {
+      brandSection.style.display = "none";
+      return;
+    }
+    brandSection.style.display = "";
+    brandFilters.innerHTML = "";
+    brands.forEach(brand => {
+      const count = PRODUCTS.filter(p => p.brand === brand).length;
+      const lbl = document.createElement("label");
+      lbl.className = "filter-option";
+      lbl.innerHTML =
+        `<input type="checkbox" value="${esc(brand)}">` +
+        `<span class="filter-option-label">${esc(brand)}</span>` +
+        `<span class="filter-option-count">${count}</span>`;
+      lbl.querySelector("input").addEventListener("change", e => {
+        e.target.checked ? activeBrands.add(brand) : activeBrands.delete(brand);
+        renderProducts();
+      });
+      brandFilters.appendChild(lbl);
+    });
+  }
+
   /* ── Filtering & sorting ───────────────────────────────────────────────── */
   function filtered() {
     let list = PRODUCTS.slice();
 
     if (activeCats.size > 0)
       list = list.filter(p => activeCats.has(p.category || "Без категорії"));
+    if (activeBrands.size > 0)
+      list = list.filter(p => p.brand && activeBrands.has(p.brand));
     if (priceMin !== null) list = list.filter(p => p.price >= priceMin);
     if (priceMax !== null) list = list.filter(p => p.price <= priceMax);
     if (query) {
@@ -934,7 +961,8 @@
       list = list.filter(p =>
         p.name.toLowerCase().includes(q) ||
         (p.description || "").toLowerCase().includes(q) ||
-        (p.category || "").toLowerCase().includes(q)
+        (p.category || "").toLowerCase().includes(q) ||
+        (p.brand || "").toLowerCase().includes(q)
       );
     }
     switch (sortKey) {
