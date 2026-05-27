@@ -13,9 +13,11 @@ Menu sections:
 from __future__ import annotations
 
 import logging
+import os
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -52,6 +54,38 @@ async def _get_client(user_id: int) -> Client | None:
         return await session.scalar(
             select(Client).where(Client.admin_telegram_id == user_id)
         )
+
+
+async def _upload_to_cloudinary(bot: Bot, file_id: str) -> str | None:
+    """Download a Telegram file and upload to Cloudinary. Returns secure_url or None."""
+    from app.config import settings as app_settings  # avoid circular at module level
+    if not (
+        app_settings.cloudinary_cloud_name
+        and app_settings.cloudinary_api_key
+        and app_settings.cloudinary_api_secret
+    ):
+        return None
+    try:
+        import cloudinary  # type: ignore[import]
+        import cloudinary.uploader  # type: ignore[import]
+        cloudinary.config(
+            cloud_name=app_settings.cloudinary_cloud_name,
+            api_key=app_settings.cloudinary_api_key,
+            api_secret=app_settings.cloudinary_api_secret,
+            secure=True,
+        )
+        tg_file = await bot.get_file(file_id)
+        tmp = f"/tmp/{uuid4()}.jpg"
+        try:
+            await bot.download_file(tg_file.file_path, tmp)  # type: ignore[arg-type]
+            result = cloudinary.uploader.upload(tmp, folder="shop_products")
+            return result["secure_url"]
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+    except Exception as exc:
+        logger.error("Cloudinary upload failed: %s", exc)
+        return None
 
 
 def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
@@ -446,7 +480,7 @@ async def cms_skip_old_price(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(old_price=None)
     await state.set_state(CmsAddProduct.image_url)
     await cb.message.answer(  # type: ignore[union-attr]
-        "Крок 7 — URL фото товару:",
+        "Крок 7 — Надішліть фото товару або URL посилання:",
         reply_markup=_skip_kb("image_url"),
     )
     await cb.answer()
@@ -465,7 +499,7 @@ async def cms_add_old_price(message: Message, state: FSMContext) -> None:
     await state.update_data(old_price=str(old_price))
     await state.set_state(CmsAddProduct.image_url)
     await message.answer(
-        "Крок 7 — URL фото товару:",
+        "Крок 7 — Надішліть фото товару або URL посилання:",
         reply_markup=_skip_kb("image_url"),
     )
 
@@ -477,6 +511,34 @@ async def cms_skip_image_url(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(image_url=None)
     await _do_save_product(cb.message, state)  # type: ignore[arg-type]
     await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.image_url), F.photo)
+async def cms_add_photo(message: Message, state: FSMContext) -> None:
+    """User sent a photo directly from Telegram — try Cloudinary upload."""
+    from app.config import settings as app_settings
+    if not (
+        app_settings.cloudinary_cloud_name
+        and app_settings.cloudinary_api_key
+        and app_settings.cloudinary_api_secret
+    ):
+        await message.answer(
+            "📷 Cloudinary не налаштований.\n"
+            "Надішліть посилання (URL) на фото товару або натисніть «Пропустити»:",
+            reply_markup=_skip_kb("image_url"),
+        )
+        return
+    photo = message.photo[-1]  # largest available size
+    url = await _upload_to_cloudinary(message.bot, photo.file_id)  # type: ignore[arg-type]
+    if url:
+        await state.update_data(image_url=url)
+    else:
+        await message.answer(
+            "⚠️ Не вдалось завантажити фото. Спробуйте надіслати URL або пропустіть:",
+            reply_markup=_skip_kb("image_url"),
+        )
+        return
+    await _do_save_product(message, state)
 
 
 @router.message(StateFilter(CmsAddProduct.image_url))

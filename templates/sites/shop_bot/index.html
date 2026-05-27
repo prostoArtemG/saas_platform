@@ -263,6 +263,7 @@
       overflow: hidden;
       display: flex; flex-direction: column;
       transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+      cursor: pointer;
     }
     .product-card:hover { transform: translateY(-2px); border-color: #14b8a6; box-shadow: 0 0 20px rgba(20,184,166,.15); }
     .product-card.unavailable { opacity: .6; }
@@ -1002,7 +1003,7 @@
       const btnTxt  = !p.is_available ? "Немає" : inCart(p.id) ? "✓ У кошику" : "+ Додати";
       const btnDis  = !p.is_available ? "disabled" : "";
 
-      return `<div class="product-card${!p.is_available ? " unavailable" : ""}">
+      return `<div class="product-card${!p.is_available ? " unavailable" : ""}" onclick="window.location='/site/${CLIENT_SLUG}/product/${p.id}'">
         <div class="product-img-wrap">
           ${imgHtml}${unavBadge}
         </div>
@@ -1016,7 +1017,7 @@
               ${oldPriceHtml}
               <div class="product-price">${esc(String(p.price))}<span class="product-price-currency">грн</span></div>
             </div>
-            <button class="btn-add${btnCls}" data-id="${p.id}" ${btnDis}>${btnTxt}</button>
+            <button class="btn-add${btnCls}" data-id="${p.id}" ${btnDis} onclick="event.stopPropagation()">${btnTxt}</button>
           </div>
         </div>
       </div>`;

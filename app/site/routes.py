@@ -858,7 +858,10 @@ async def client_site(
                 "category": p.category,
                 "name": p.name,
                 "description": p.description,
+                "brand": p.brand,
                 "price": float(p.price) if p.price is not None else 0.0,
+                "old_price": float(p.old_price) if p.old_price is not None else None,
+                "specs": p.specs,
                 "image_url": p.image_url,
                 "is_available": p.is_available,
             }
@@ -900,6 +903,81 @@ async def client_site(
             "lang": chosen,
             "client": client_data,
             "products": products,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Product detail page
+# ---------------------------------------------------------------------------
+
+
+@router.get("/site/{slug}/product/{product_id}", response_class=HTMLResponse)
+async def client_site_product(
+    request: Request,
+    slug: str,
+    product_id: int,
+    lang: Optional[str] = None,
+    lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+) -> HTMLResponse:
+    chosen = _resolve_lang(lang, lang_cookie)
+    t = get_t(chosen)
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {"request": request, "t": t, "lang": chosen,
+                 "supported_langs": SUPPORTED_LANGS, "slug": slug},
+                status_code=404,
+            )
+
+        product = await session.scalar(
+            select(Product)
+            .where(Product.id == product_id)
+            .where(Product.client_id == client.id)
+        )
+        if product is None:
+            return templates.TemplateResponse(
+                "404.html",
+                {"request": request, "t": t, "lang": chosen,
+                 "supported_langs": SUPPORTED_LANGS, "slug": slug},
+                status_code=404,
+            )
+
+    client_data = {
+        "id": client.id,
+        "business_name": client.business_name,
+        "slug": client.slug,
+        "template_name": client.template_name,
+    }
+    product_data = {
+        "id": product.id,
+        "name": _clean(product.name),
+        "category": _clean(product.category),
+        "description": _clean(product.description),
+        "brand": _clean(product.brand),
+        "price": float(product.price) if product.price is not None else 0.0,
+        "old_price": float(product.old_price) if product.old_price is not None else None,
+        "specs": _clean(product.specs),
+        "image_url": product.image_url,
+        "is_available": product.is_available,
+    }
+
+    template_name = (client_data["template_name"] or "").strip() or "technovlada"
+    product_tpl = f"sites/{template_name}/product.html"
+    if not os.path.exists(os.path.join("templates", product_tpl)):
+        return RedirectResponse(url=f"/site/{slug}")
+
+    return templates.TemplateResponse(
+        product_tpl,
+        {
+            "request": request,
+            "t": t,
+            "lang": chosen,
+            "client": client_data,
+            "product": product_data,
         },
     )
 

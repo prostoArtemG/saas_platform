@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     liqpay_public_key: str = Field("", alias="LIQPAY_PUBLIC_KEY")
     liqpay_private_key: str = Field("", alias="LIQPAY_PRIVATE_KEY")
 
+    # Optional Cloudinary (for bot photo uploads). All three must be set to enable.
+    cloudinary_cloud_name: str = Field("", alias="CLOUDINARY_CLOUD_NAME")
+    cloudinary_api_key: str = Field("", alias="CLOUDINARY_API_KEY")
+    cloudinary_api_secret: str = Field("", alias="CLOUDINARY_API_SECRET")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):
