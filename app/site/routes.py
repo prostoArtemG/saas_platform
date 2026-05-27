@@ -271,11 +271,11 @@ async def create_site_submit(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
 
-    # Auto-deploy shop_bot for new client if template is shop_bot and bot_token provided
+    # Auto-deploy only for premium_store template
     deploy_result = None
     railway_url = None
     logger.info("Deploy check: template_name=%r bot_token_bool=%r", template_name, bool(bot_token.strip()) if bot_token else False)
-    if template_name in ("shop_bot", "premium_store") and bot_token:
+    if template_name == "premium_store" and bot_token:
         logger.info("Starting Railway deploy for template=%s slug=%s", template_name, slug)
         try:
             from app.config import settings as app_settings
