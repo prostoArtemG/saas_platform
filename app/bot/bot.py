@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.bot.admin import router as admin_router
+from app.bot.client_cms import router as client_cms_router
 from app.bot.clients_admin import router as clients_admin_router
 from app.bot.create_client import router as create_client_router
 from app.bot.keyboards import admin_main_menu
@@ -23,17 +24,18 @@ router = Router(name="root")
 
 @router.message(Command("cancel"))
 async def global_cancel(message: Message, state: FSMContext) -> None:
-    """Fallback /cancel — middleware already cleared the state, just confirm."""
-    await message.answer("Ок, отменено.", reply_markup=admin_main_menu())
+    """Fallback /cancel for users not in any FSM state."""
+    await message.answer("Ок, отменено.")
 
 
 @router.message(CommandStart())
-async def start_non_admin(message: Message) -> None:
+async def start_unknown(message: Message) -> None:
+    """Catch-all /start for users who are neither platform admins nor clients."""
     user_id = message.from_user.id if message.from_user else None
-    if user_id in settings.admin_ids:
-        # Handled by admin_router; this branch is a safety net.
+    if user_id and user_id in settings.admin_ids:
+        # Safety net — should be handled by admin_router first.
         return
-    await message.answer("Доступ ограничен.")
+    await message.answer("⛔ Доступ ограничен.")
 
 
 # --------------------------------------------------------------------------
@@ -79,6 +81,7 @@ def create_bot() -> Bot:
 def create_dispatcher() -> Dispatcher:
     dp = Dispatcher()
     dp.message.outer_middleware(MenuInterruptMiddleware())
+    # Platform admin routers (AdminFilter guards each one)
     dp.include_router(plans_admin_router)
     dp.include_router(create_client_router)
     dp.include_router(products_router)
@@ -86,5 +89,8 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(payments_router)
     dp.include_router(clients_admin_router)
     dp.include_router(admin_router)
+    # Client CMS router (ClientFilter guards it; must come before root router)
+    dp.include_router(client_cms_router)
+    # Root router: fallback handlers (no role filter)
     dp.include_router(router)
     return dp
