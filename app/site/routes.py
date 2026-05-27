@@ -551,6 +551,9 @@ async def dashboard_products_add(
     category: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     image_url: Optional[str] = Form(None),
+    brand: Optional[str] = Form(None),
+    old_price: Optional[str] = Form(None),
+    specs: Optional[str] = Form(None),
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
@@ -560,6 +563,10 @@ async def dashboard_products_add(
             price_val = float(price.replace(",", ".")) if price else 0.0
         except ValueError:
             price_val = 0.0
+        try:
+            old_price_val = float(old_price.replace(",", ".")) if old_price else None
+        except ValueError:
+            old_price_val = None
         product = Product(
             client_id=client.id,
             name=name.strip(),
@@ -567,6 +574,9 @@ async def dashboard_products_add(
             category=category.strip() if category else None,
             description=description.strip() if description else None,
             image_url=image_url.strip() if image_url else None,
+            brand=brand.strip() if brand else None,
+            old_price=old_price_val,
+            specs=specs.strip() if specs else None,
         )
         session.add(product)
         await session.commit()
@@ -617,6 +627,9 @@ async def dashboard_products_edit(
     category: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     image_url: Optional[str] = Form(None),
+    brand: Optional[str] = Form(None),
+    old_price: Optional[str] = Form(None),
+    specs: Optional[str] = Form(None),
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
@@ -628,11 +641,18 @@ async def dashboard_products_edit(
                 price_val = float(price.replace(",", ".")) if price else 0.0
             except ValueError:
                 price_val = float(product.price)
+            try:
+                old_price_val = float(old_price.replace(",", ".")) if old_price else None
+            except ValueError:
+                old_price_val = None
             product.name = name.strip()
             product.price = price_val
             product.category = category.strip() if category else None
             product.description = description.strip() if description else None
             product.image_url = image_url.strip() if image_url else None
+            product.brand = brand.strip() if brand else None
+            product.old_price = old_price_val
+            product.specs = specs.strip() if specs else None
             await session.commit()
     return RedirectResponse(f"/dashboard/{slug}/products?success=updated", status_code=303)
 

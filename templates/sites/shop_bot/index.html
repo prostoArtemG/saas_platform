@@ -658,6 +658,19 @@
     @media (min-width: 769px) {
       .search-toggle { display: none; }
     }
+    /* ── Brand & old price ─────────────────────────────────────────────────────────── */
+    .product-brand {
+      font-size: 11px; font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: 2px;
+    }
+    .product-old-price {
+      font-size: 12px;
+      color: var(--text-3);
+      text-decoration: line-through;
+      line-height: 1.2;
+    }
+    .product-price-wrap { display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
@@ -707,6 +720,10 @@
     <div class="filter-section">
       <div class="filter-title">Категорії</div>
       <div id="cat-filters"></div>
+    </div>
+    <div class="filter-section" id="brand-section" style="display:none">
+      <div class="filter-title">Бренд</div>
+      <div id="brand-filters"></div>
     </div>
     <div class="filter-section">
       <div class="filter-title">Ціна, грн</div>
@@ -843,7 +860,8 @@
 
   /* ── State ─────────────────────────────────────────────────────────────── */
   let cart       = [];   // [{ product, qty }]
-  let activeCats = new Set();
+  let activeCats  = new Set();
+  let activeBrands = new Set();
   let priceMin   = null;
   let priceMax   = null;
   let query      = "";
@@ -864,6 +882,8 @@
   const orderModal   = $("order-modal");
   const successModal = $("success-modal");
   const catFilters   = $("cat-filters");
+  const brandFilters  = $("brand-filters");
+  const brandSection  = $("brand-section");
 
   /* ── Utilities ─────────────────────────────────────────────────────────── */
   function esc(s) {
@@ -944,8 +964,11 @@
       const imgHtml = p.image_url
         ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" data-id="${p.id}">`
         : `<div class="product-img-placeholder">&#x1F4E6;</div>`;
-      const catHtml  = p.category ? `<div class="product-category">${esc(p.category)}</div>` : "";
-      const descHtml = p.description ? `<div class="product-desc">${esc(p.description)}</div>` : "";
+      const catHtml   = p.category ? `<div class="product-category">${esc(p.category)}</div>` : "";
+      const brandHtml = p.brand    ? `<div class="product-brand">${esc(p.brand)}</div>`       : "";
+      const descHtml  = p.description ? `<div class="product-desc">${esc(p.description)}</div>` : "";
+      const oldPriceHtml = p.old_price
+        ? `<div class="product-old-price">${esc(String(p.old_price))} грн</div>` : "";
       const unavBadge = !p.is_available ? `<div class="product-badge-unavail">Немає</div>` : "";
       const btnCls  = !p.is_available ? "" : inCart(p.id) ? " in-cart" : "";
       const btnTxt  = !p.is_available ? "Немає" : inCart(p.id) ? "✓ У кошику" : "+ Додати";
@@ -957,10 +980,14 @@
         </div>
         <div class="product-info">
           ${catHtml}
+          ${brandHtml}
           <div class="product-name">${esc(p.name)}</div>
           ${descHtml}
           <div class="product-footer">
-            <div class="product-price">${esc(String(p.price))}<span class="product-price-currency">грн</span></div>
+            <div class="product-price-wrap">
+              ${oldPriceHtml}
+              <div class="product-price">${esc(String(p.price))}<span class="product-price-currency">грн</span></div>
+            </div>
             <button class="btn-add${btnCls}" data-id="${p.id}" ${btnDis}>${btnTxt}</button>
           </div>
         </div>
@@ -1227,12 +1254,14 @@
 
   $("btn-reset").addEventListener("click", () => {
     activeCats.clear();
+    activeBrands.clear();
     priceMin = priceMax = null;
     query    = "";
     $("price-min").value   = "";
     $("price-max").value   = "";
     $("search-input").value = "";
     catFilters.querySelectorAll("input[type=checkbox]").forEach(cb => (cb.checked = false));
+    brandFilters.querySelectorAll("input[type=checkbox]").forEach(cb => (cb.checked = false));
     renderProducts();
   });
 
@@ -1246,6 +1275,7 @@
 
   /* ── Init ──────────────────────────────────────────────────────────────── */
   buildCatFilters();
+  buildBrandFilters();
   renderProducts();
   syncCart();
 

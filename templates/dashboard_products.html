@@ -218,6 +218,14 @@
               <input type="text" name="category" value="{{ edit_product.category or '' }}" class="field-input" placeholder="Категорія"/>
             </div>
             <div>
+              <label class="field-label">Бренд</label>
+              <input type="text" name="brand" value="{{ edit_product.brand or '' }}" class="field-input" placeholder="Бренд"/>
+            </div>
+            <div>
+              <label class="field-label">Стара ціна (грн)</label>
+              <input type="text" name="old_price" value="{{ edit_product.old_price or '' }}" class="field-input" placeholder="Закреслена ціна"/>
+            </div>
+            <div>
               <label class="field-label">URL зображення</label>
               <input type="url" name="image_url" value="{{ edit_product.image_url or '' }}" class="field-input" placeholder="https://..."/>
             </div>
@@ -225,6 +233,11 @@
               <label class="field-label">Опис</label>
               <textarea name="description" rows="3" class="field-input resize-none"
                         placeholder="Опис товару">{{ edit_product.description or '' }}</textarea>
+            </div>
+            <div class="md:col-span-2">
+              <label class="field-label">Характеристики</label>
+              <textarea name="specs" rows="3" class="field-input resize-none"
+                        placeholder="Технічні характеристики">{{ edit_product.specs or '' }}</textarea>
             </div>
           </div>
           <div class="flex items-center gap-3">
@@ -258,6 +271,14 @@
               <input type="text" name="category" class="field-input" placeholder="Наприклад: Взуття, Техніка..."/>
             </div>
             <div>
+              <label class="field-label">Бренд</label>
+              <input type="text" name="brand" class="field-input" placeholder="Бренд"/>
+            </div>
+            <div>
+              <label class="field-label">Стара ціна (грн)</label>
+              <input type="text" name="old_price" class="field-input" placeholder="Закреслена ціна"/>
+            </div>
+            <div>
               <label class="field-label">URL зображення</label>
               <input type="url" name="image_url" class="field-input" placeholder="https://..."/>
             </div>
@@ -265,6 +286,11 @@
               <label class="field-label">Опис</label>
               <textarea name="description" rows="3" class="field-input resize-none"
                         placeholder="Короткий опис товару"></textarea>
+            </div>
+            <div class="md:col-span-2">
+              <label class="field-label">Характеристики</label>
+              <textarea name="specs" rows="3" class="field-input resize-none"
+                        placeholder="Технічні характеристики"></textarea>
             </div>
           </div>
           <div class="flex items-center gap-3">
@@ -319,6 +345,9 @@
                 {% if product.category %}
                   <span class="text-xs text-brand-lime/70">{{ product.category }}</span>
                 {% endif %}
+                {% if product.brand %}
+                  <span class="text-xs text-purple-400/80">{{ product.brand }}</span>
+                {% endif %}
                 {% if product.description %}
                   <span class="text-xs text-white/30 truncate max-w-xs">{{ product.description[:60] }}{% if product.description | length > 60 %}…{% endif %}</span>
                 {% endif %}
@@ -327,6 +356,9 @@
 
             <!-- Price -->
             <div class="md:text-right">
+              {% if product.old_price %}
+                <span class="text-xs text-white/30 line-through block">{{ "%.0f"|format(product.old_price|float) }} ₴</span>
+              {% endif %}
               <span class="font-bold text-white">{{ "%.0f"|format(product.price|float) }} ₴</span>
             </div>
 

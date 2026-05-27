@@ -44,8 +44,6 @@ router = Router(name="client_cms")
 router.message.filter(ClientFilter())
 router.callback_query.filter(ClientFilter())
 
-SKIP = "-"
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,26 +67,47 @@ def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def _availability_kb() -> InlineKeyboardMarkup:
+def _categories_kb(cats: list[str]) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(text=c, callback_data=f"cms:cat:pick:{i}")]
+        for i, c in enumerate(cats)
+    ]
+    rows.append([InlineKeyboardButton(text="✏️ Нова категорія", callback_data="cms:cat:new")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _brands_kb(brands: list[str]) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(text=b, callback_data=f"cms:brand:pick:{i}")]
+        for i, b in enumerate(brands)
+    ]
+    rows.append([
+        InlineKeyboardButton(text="✏️ Новий бренд", callback_data="cms:brand:new"),
+        InlineKeyboardButton(text="⏭ Пропустити", callback_data="cms:brand:skip"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _skip_kb(field: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="✅ Да", callback_data="cms:avail:1"),
-                InlineKeyboardButton(text="❌ Нет", callback_data="cms:avail:0"),
-            ]
-        ]
+        inline_keyboard=[[
+            InlineKeyboardButton(text="⏭ Пропустити", callback_data=f"cms:skip:{field}")
+        ]]
     )
 
 
-# ── FSM states ────────────────────────────────────────────────────────────────
+# ── FSM states ────────────────────────────────────────────────────────────────────────────────
 
 class CmsAddProduct(StatesGroup):
-    name = State()
-    category = State()
-    description = State()
-    price = State()
-    image_url = State()
-    is_available = State()
+    category       = State()  # inline KB: pick existing or enter new
+    category_input = State()  # text input: new category name
+    name           = State()  # text input: product name
+    brand          = State()  # inline KB: pick existing, new, or skip
+    brand_input    = State()  # text input: new brand name
+    specs          = State()  # text input or skip: tech specs
+    price          = State()  # text input: price
+    old_price      = State()  # text input or skip: original price (for discount display)
+    image_url      = State()  # text input or skip: photo URL → saves product
 
 
 # ── /start ───────────────────────────────────────────────────────────────────
@@ -112,7 +131,7 @@ async def client_start(message: Message) -> None:
 @router.message(StateFilter(CmsAddProduct), Command("cancel"))
 async def cms_cancel(message: Message, state: FSMContext) -> None:
     await state.clear()
-    await message.answer("Добавление отменено.", reply_markup=client_main_menu())
+    await message.answer("Додавання скасовано.", reply_markup=client_main_menu())
 
 
 # ── 📦 Товары ─────────────────────────────────────────────────────────────────
@@ -139,8 +158,9 @@ async def cms_products(message: Message, state: FSMContext) -> None:
         for p in products:
             mark = "✅" if p.is_available else "❌"
             cat = f" · {p.category}" if p.category else ""
+            brand = f" [{p.brand}]" if p.brand else ""
             lines.append(
-                f"{mark} #{p.id} <b>{p.name}</b> — {p.price} грн{cat}"
+                f"{mark} #{p.id} <b>{p.name}</b>{brand} — {p.price} грн{cat}"
             )
     else:
         lines.append("<i>Товаров пока нет. Добавьте первый!</i>")
@@ -217,59 +237,189 @@ async def cms_start_add(cb: CallbackQuery, state: FSMContext) -> None:
     try:
         client_id = int(cb.data.split(":")[3])
     except (ValueError, IndexError):
-        await cb.answer("Ошибка", show_alert=True)
+        await cb.answer("Помилка", show_alert=True)
         return
 
-    # Verify the client belongs to this user
     user_id = cb.from_user.id  # type: ignore[union-attr]
     client = await _get_client(user_id)
     if client is None or client.id != client_id:
-        await cb.answer("Нет доступа", show_alert=True)
+        await cb.answer("Немає доступу", show_alert=True)
         return
 
-    await state.update_data(client_id=client_id)
-    await state.set_state(CmsAddProduct.name)
+    async with AsyncSessionLocal() as session:
+        cats = list(
+            await session.scalars(
+                select(Product.category)
+                .where(Product.client_id == client_id)
+                .where(Product.category.isnot(None))
+                .distinct()
+                .order_by(Product.category)
+            )
+        )
+
+    await state.update_data(client_id=client_id, possible_categories=cats)
+    await state.set_state(CmsAddProduct.category)
     await cb.message.answer(  # type: ignore[union-attr]
-        "📦 <b>Новый товар</b>\n\n"
-        f"Шаг 1/6 — Название:\n"
-        f"<i>(отправь /cancel для отмены)</i>",
+        "📦 <b>Новий товар</b>\n\n"
+        "Крок 1 — Виберіть або введіть категорію:\n"
+        "<i>(відправ /cancel для скасування)</i>",
         parse_mode="HTML",
+        reply_markup=_categories_kb(cats),
     )
     await cb.answer()
 
+
+# ── category state ────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cms:cat:pick:"), StateFilter(CmsAddProduct.category))
+async def cms_cat_pick(cb: CallbackQuery, state: FSMContext) -> None:
+    try:
+        idx = int(cb.data.rsplit(":", 1)[-1])
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    data = await state.get_data()
+    cats = data.get("possible_categories", [])
+    cat = cats[idx] if 0 <= idx < len(cats) else None
+    await state.update_data(category=cat)
+    await state.set_state(CmsAddProduct.name)
+    await cb.message.answer("Крок 2 — Введіть назву товару:")  # type: ignore[union-attr]
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:cat:new", StateFilter(CmsAddProduct.category))
+async def cms_cat_new(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(CmsAddProduct.category_input)
+    await cb.message.answer("Введіть нову категорію:")  # type: ignore[union-attr]
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.category))
+async def cms_cat_typed(message: Message, state: FSMContext) -> None:
+    cat = (message.text or "").strip()
+    await state.update_data(category=cat or None)
+    await state.set_state(CmsAddProduct.name)
+    await message.answer("Крок 2 — Введіть назву товару:")
+
+
+@router.message(StateFilter(CmsAddProduct.category_input))
+async def cms_cat_input(message: Message, state: FSMContext) -> None:
+    cat = (message.text or "").strip()
+    await state.update_data(category=cat or None)
+    await state.set_state(CmsAddProduct.name)
+    await message.answer("Крок 2 — Введіть назву товару:")
+
+
+# ── name state ────────────────────────────────────────────────────────────────
 
 @router.message(StateFilter(CmsAddProduct.name))
 async def cms_add_name(message: Message, state: FSMContext) -> None:
     text = (message.text or "").strip()
     if not text:
-        await message.answer("Название не может быть пустым. Введите название:")
+        await message.answer("Назва не може бути порожньою. Введіть назву:")
         return
-    await state.update_data(name=text)
-    await state.set_state(CmsAddProduct.category)
+    data = await state.get_data()
+    client_id: int = data["client_id"]
+
+    async with AsyncSessionLocal() as session:
+        brands = list(
+            await session.scalars(
+                select(Product.brand)
+                .where(Product.client_id == client_id)
+                .where(Product.brand.isnot(None))
+                .distinct()
+                .order_by(Product.brand)
+            )
+        )
+
+    await state.update_data(name=text, possible_brands=brands)
+    await state.set_state(CmsAddProduct.brand)
     await message.answer(
-        f"Шаг 2/6 — Категория (или <code>{SKIP}</code> чтобы пропустить):",
-        parse_mode="HTML",
+        "Крок 3 — Виберіть або введіть бренд:",
+        reply_markup=_brands_kb(brands),
     )
 
 
-@router.message(StateFilter(CmsAddProduct.category))
-async def cms_add_category(message: Message, state: FSMContext) -> None:
-    val = (message.text or "").strip()
-    await state.update_data(category=None if val == SKIP else val)
-    await state.set_state(CmsAddProduct.description)
+# ── brand state ───────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cms:brand:pick:"), StateFilter(CmsAddProduct.brand))
+async def cms_brand_pick(cb: CallbackQuery, state: FSMContext) -> None:
+    try:
+        idx = int(cb.data.rsplit(":", 1)[-1])
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    data = await state.get_data()
+    brands = data.get("possible_brands", [])
+    brand = brands[idx] if 0 <= idx < len(brands) else None
+    await state.update_data(brand=brand)
+    await state.set_state(CmsAddProduct.specs)
+    await cb.message.answer(  # type: ignore[union-attr]
+        "Крок 4 — Характеристики товару:",
+        reply_markup=_skip_kb("specs"),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:brand:new", StateFilter(CmsAddProduct.brand))
+async def cms_brand_new(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(CmsAddProduct.brand_input)
+    await cb.message.answer("Введіть новий бренд:")  # type: ignore[union-attr]
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:brand:skip", StateFilter(CmsAddProduct.brand))
+async def cms_brand_skip(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(brand=None)
+    await state.set_state(CmsAddProduct.specs)
+    await cb.message.answer(  # type: ignore[union-attr]
+        "Крок 4 — Характеристики товару:",
+        reply_markup=_skip_kb("specs"),
+    )
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.brand))
+async def cms_brand_typed(message: Message, state: FSMContext) -> None:
+    brand = (message.text or "").strip()
+    await state.update_data(brand=brand or None)
+    await state.set_state(CmsAddProduct.specs)
     await message.answer(
-        f"Шаг 3/6 — Описание (или <code>{SKIP}</code>):",
-        parse_mode="HTML",
+        "Крок 4 — Характеристики товару:",
+        reply_markup=_skip_kb("specs"),
     )
 
 
-@router.message(StateFilter(CmsAddProduct.description))
-async def cms_add_description(message: Message, state: FSMContext) -> None:
-    val = (message.text or "").strip()
-    await state.update_data(description=None if val == SKIP else val)
+@router.message(StateFilter(CmsAddProduct.brand_input))
+async def cms_brand_input(message: Message, state: FSMContext) -> None:
+    brand = (message.text or "").strip()
+    await state.update_data(brand=brand or None)
+    await state.set_state(CmsAddProduct.specs)
+    await message.answer(
+        "Крок 4 — Характеристики товару:",
+        reply_markup=_skip_kb("specs"),
+    )
+
+
+# ── specs state ───────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "cms:skip:specs", StateFilter(CmsAddProduct.specs))
+async def cms_skip_specs(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(specs=None)
     await state.set_state(CmsAddProduct.price)
-    await message.answer("Шаг 4/6 — Цена (например: 150 или 99.99):")
+    await cb.message.answer("Крок 5 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
+    await cb.answer()
 
+
+@router.message(StateFilter(CmsAddProduct.specs))
+async def cms_add_specs(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    await state.update_data(specs=val or None)
+    await state.set_state(CmsAddProduct.price)
+    await message.answer("Крок 5 — Ціна (наприклад: 150):")
+
+
+# ── price state ───────────────────────────────────────────────────────────────
 
 @router.message(StateFilter(CmsAddProduct.price))
 async def cms_add_price(message: Message, state: FSMContext) -> None:
@@ -279,61 +429,91 @@ async def cms_add_price(message: Message, state: FSMContext) -> None:
         if price < 0:
             raise ValueError("negative price")
     except (InvalidOperation, ValueError):
-        await message.answer("Некорректная цена. Введите число (например: 150):")
+        await message.answer("Некоректна ціна. Введіть число (наприклад: 150):")
         return
     await state.update_data(price=str(price))
+    await state.set_state(CmsAddProduct.old_price)
+    await message.answer(
+        "Крок 6 — Стара ціна (для відображення знижки):",
+        reply_markup=_skip_kb("old_price"),
+    )
+
+
+# ── old_price state ───────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "cms:skip:old_price", StateFilter(CmsAddProduct.old_price))
+async def cms_skip_old_price(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(old_price=None)
+    await state.set_state(CmsAddProduct.image_url)
+    await cb.message.answer(  # type: ignore[union-attr]
+        "Крок 7 — URL фото товару:",
+        reply_markup=_skip_kb("image_url"),
+    )
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.old_price))
+async def cms_add_old_price(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip().replace(",", ".")
+    try:
+        old_price = Decimal(raw)
+        if old_price < 0:
+            raise ValueError("negative")
+    except (InvalidOperation, ValueError):
+        await message.answer("Некоректна ціна. Введіть число або натисніть «Пропустити»:")
+        return
+    await state.update_data(old_price=str(old_price))
     await state.set_state(CmsAddProduct.image_url)
     await message.answer(
-        f"Шаг 5/6 — URL изображения (или <code>{SKIP}</code>):",
-        parse_mode="HTML",
+        "Крок 7 — URL фото товару:",
+        reply_markup=_skip_kb("image_url"),
     )
+
+
+# ── image_url state & save ────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "cms:skip:image_url", StateFilter(CmsAddProduct.image_url))
+async def cms_skip_image_url(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(image_url=None)
+    await _do_save_product(cb.message, state)  # type: ignore[arg-type]
+    await cb.answer()
 
 
 @router.message(StateFilter(CmsAddProduct.image_url))
 async def cms_add_image_url(message: Message, state: FSMContext) -> None:
     val = (message.text or "").strip()
-    await state.update_data(image_url=None if val == SKIP else val)
-    await state.set_state(CmsAddProduct.is_available)
-    await message.answer(
-        "Шаг 6/6 — Товар доступен для заказа?",
-        reply_markup=_availability_kb(),
-    )
+    await state.update_data(image_url=val or None)
+    await _do_save_product(message, state)
 
 
-@router.callback_query(F.data.startswith("cms:avail:"), StateFilter(CmsAddProduct.is_available))
-async def cms_add_availability(cb: CallbackQuery, state: FSMContext) -> None:
-    is_available = cb.data.endswith(":1")
+async def _do_save_product(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    client_id: int | None = data.get("client_id")
-
-    # Re-verify ownership
-    user_id = cb.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
-    if client is None or client.id != client_id:
-        await cb.answer("Нет доступа", show_alert=True)
-        await state.clear()
-        return
+    client_id: int = data["client_id"]
+    old_price_val = Decimal(data["old_price"]) if data.get("old_price") else None
 
     async with AsyncSessionLocal() as session:
         product = Product(
             client_id=client_id,
             name=data["name"],
             category=data.get("category"),
-            description=data.get("description"),
+            brand=data.get("brand"),
+            specs=data.get("specs"),
             price=Decimal(data["price"]),
+            old_price=old_price_val,
             image_url=data.get("image_url"),
-            is_available=is_available,
+            is_available=True,
         )
         session.add(product)
         await session.commit()
         await session.refresh(product)
 
     await state.clear()
-    avail_label = "✅ Да" if is_available else "❌ Нет"
-    await cb.message.answer(  # type: ignore[union-attr]
-        f"✅ Товар <b>{data['name']}</b> добавлен!\n"
-        f"Цена: {data['price']} грн · Доступен: {avail_label}",
+    cat_label = f" · {data['category']}" if data.get("category") else ""
+    brand_label = f" [{data['brand']}]" if data.get("brand") else ""
+    old_price_label = f" (знижка з {data['old_price']} грн)" if data.get("old_price") else ""
+    await message.answer(
+        f"✅ Товар <b>{data['name']}</b>{brand_label} додано!{cat_label}\n"
+        f"Ціна: {data['price']} грн{old_price_label}",
         parse_mode="HTML",
         reply_markup=client_main_menu(),
     )
-    await cb.answer("Товар добавлен")

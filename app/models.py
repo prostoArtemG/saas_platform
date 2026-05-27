@@ -150,6 +150,9 @@ class Product(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
     image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    brand: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    old_price: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    specs: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_available: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="true", default=True
     )
