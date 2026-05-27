@@ -1,5 +1,6 @@
 from aiogram import F, Router
 from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy import select
 
@@ -7,16 +8,43 @@ from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
     BTN_SUBSCRIPTIONS,
     admin_main_menu,
+    client_main_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Subscription
+from app.models import Client, Subscription
 
 router = Router(name="admin")
 router.message.filter(AdminFilter())
 
 
 @router.message(CommandStart())
-async def admin_start(message: Message) -> None:
+async def admin_start(message: Message, state: FSMContext) -> None:
+    text = message.text or ""
+    parts = text.split(maxsplit=1)
+    arg = parts[1].strip() if len(parts) > 1 else ""
+
+    if arg.startswith("client_"):
+        slug = arg[len("client_"):]
+        async with AsyncSessionLocal() as session:
+            client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            await message.answer(
+                f"❌ Клієнт з slug <code>{slug}</code> не знайдений.",
+                parse_mode="HTML",
+            )
+            return
+        await state.update_data(selected_client_id=client.id)
+        await message.answer(
+            f"🔧 <b>Тест-режим</b>: {client.business_name}\n"
+            f"Slug: <code>{client.slug}</code>\n\n"
+            f"Введіть /start щоб повернутися до панелі адміна.",
+            parse_mode="HTML",
+            reply_markup=client_main_menu(),
+        )
+        return
+
+    # Normal admin /start — clear any active test mode
+    await state.clear()
     await message.answer(
         "Привет, админ платформы! 👋\nВыбери раздел:",
         reply_markup=admin_main_menu(),

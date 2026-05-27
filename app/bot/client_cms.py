@@ -56,6 +56,31 @@ async def _get_client(user_id: int) -> Client | None:
         )
 
 
+async def _get_effective_client(user_id: int, state: FSMContext) -> Client | None:
+    """Return the client for this user.
+
+    If the user is a platform admin in test mode (``selected_client_id`` set in
+    FSM state), return that client directly.  Otherwise fall back to the normal
+    lookup by admin_telegram_id.
+    """
+    from app.config import settings as app_settings
+    data = await state.get_data()
+    selected_id = data.get("selected_client_id")
+    if selected_id is not None and user_id in app_settings.admin_ids:
+        async with AsyncSessionLocal() as session:
+            return await session.get(Client, selected_id)
+    return await _get_client(user_id)
+
+
+async def _clear_fsm_keep_test(state: FSMContext) -> None:
+    """Clear FSM state but preserve ``selected_client_id`` for admin test mode."""
+    data = await state.get_data()
+    selected_id = data.get("selected_client_id")
+    await state.clear()
+    if selected_id is not None:
+        await state.update_data(selected_client_id=selected_id)
+
+
 async def _upload_to_cloudinary(bot: Bot, file_id: str) -> str | None:
     """Download a Telegram file and upload to Cloudinary. Returns secure_url or None."""
     from app.config import settings as app_settings  # avoid circular at module level
@@ -147,9 +172,9 @@ class CmsAddProduct(StatesGroup):
 # ── /start ───────────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
-async def client_start(message: Message) -> None:
+async def client_start(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
+    client = await _get_effective_client(user_id, state)
     if client is None:
         return
     await message.answer(
@@ -164,7 +189,7 @@ async def client_start(message: Message) -> None:
 
 @router.message(StateFilter(CmsAddProduct), Command("cancel"))
 async def cms_cancel(message: Message, state: FSMContext) -> None:
-    await state.clear()
+    await _clear_fsm_keep_test(state)
     await message.answer("Додавання скасовано.", reply_markup=client_main_menu())
 
 
@@ -172,9 +197,9 @@ async def cms_cancel(message: Message, state: FSMContext) -> None:
 
 @router.message(F.text == BTN_CMS_PRODUCTS)
 async def cms_products(message: Message, state: FSMContext) -> None:
-    await state.clear()
+    await _clear_fsm_keep_test(state)
     user_id = message.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
+    client = await _get_effective_client(user_id, state)
     if client is None:
         return
 
@@ -209,9 +234,9 @@ async def cms_products(message: Message, state: FSMContext) -> None:
 # ── 🌐 Мой сайт ──────────────────────────────────────────────────────────────
 
 @router.message(F.text == BTN_CMS_SITE)
-async def cms_site(message: Message) -> None:
+async def cms_site(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
+    client = await _get_effective_client(user_id, state)
     if client is None:
         return
 
@@ -247,9 +272,9 @@ async def cms_orders(message: Message) -> None:
 # ── ⚙️ Настройки ──────────────────────────────────────────────────────────────
 
 @router.message(F.text == BTN_CMS_SETTINGS)
-async def cms_settings(message: Message) -> None:
+async def cms_settings(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
+    client = await _get_effective_client(user_id, state)
     if client is None:
         return
 
@@ -275,7 +300,7 @@ async def cms_start_add(cb: CallbackQuery, state: FSMContext) -> None:
         return
 
     user_id = cb.from_user.id  # type: ignore[union-attr]
-    client = await _get_client(user_id)
+    client = await _get_effective_client(user_id, state)
     if client is None or client.id != client_id:
         await cb.answer("Немає доступу", show_alert=True)
         return
@@ -569,7 +594,7 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
         await session.commit()
         await session.refresh(product)
 
-    await state.clear()
+    await _clear_fsm_keep_test(state)
     cat_label = f" · {data['category']}" if data.get("category") else ""
     brand_label = f" [{data['brand']}]" if data.get("brand") else ""
     old_price_label = f" (знижка з {data['old_price']} грн)" if data.get("old_price") else ""
