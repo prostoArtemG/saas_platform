@@ -127,6 +127,18 @@ def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
     )
 
 
+def _groups_kb(groups: list[str]) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = [
+        [InlineKeyboardButton(text=g, callback_data=f"cms:group:pick:{i}")]
+        for i, g in enumerate(groups)
+    ]
+    rows.append([
+        InlineKeyboardButton(text="✏️ Нова група", callback_data="cms:group:new"),
+        InlineKeyboardButton(text="⏭ Пропустити", callback_data="cms:group:skip"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def _categories_kb(cats: list[str]) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = [
         [InlineKeyboardButton(text=c, callback_data=f"cms:cat:pick:{i}")]
@@ -159,11 +171,13 @@ def _skip_kb(field: str) -> InlineKeyboardMarkup:
 # ── FSM states ────────────────────────────────────────────────────────────────────────────────
 
 class CmsAddProduct(StatesGroup):
+    group          = State()  # inline KB: pick existing, new, or skip
+    group_input    = State()  # text input: new group name
     category       = State()  # inline KB: pick existing or enter new
     category_input = State()  # text input: new category name
-    name           = State()  # text input: product name
     brand          = State()  # inline KB: pick existing, new, or skip
     brand_input    = State()  # text input: new brand name
+    name           = State()  # text input: model / product name
     specs          = State()  # text input or skip: tech specs
     price          = State()  # text input: price
     old_price      = State()  # text input or skip: original price (for discount display)
@@ -309,26 +323,109 @@ async def cms_start_add(cb: CallbackQuery, state: FSMContext) -> None:
         return
 
     async with AsyncSessionLocal() as session:
-        cats = list(
+        groups = list(
             await session.scalars(
-                select(Product.category)
+                select(Product.group_name)
                 .where(Product.client_id == client_id)
-                .where(Product.category.isnot(None))
+                .where(Product.group_name.isnot(None))
                 .distinct()
-                .order_by(Product.category)
+                .order_by(Product.group_name)
             )
         )
 
-    await state.update_data(client_id=client_id, possible_categories=cats)
-    await state.set_state(CmsAddProduct.category)
+    await state.update_data(client_id=client_id, possible_groups=groups)
+    await state.set_state(CmsAddProduct.group)
     await cb.message.answer(  # type: ignore[union-attr]
         "📦 <b>Новий товар</b>\n\n"
-        "Крок 1 — Виберіть або введіть категорію:\n"
+        "Крок 1 — Виберіть або введіть групу товарів:\n"
         "<i>(відправ /cancel для скасування)</i>",
         parse_mode="HTML",
-        reply_markup=_categories_kb(cats),
+        reply_markup=_groups_kb(groups),
     )
     await cb.answer()
+
+
+# ── FSM helpers: go to next step ─────────────────────────────────────────────
+
+async def _go_to_category(msg: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    client_id: int = data["client_id"]
+    async with AsyncSessionLocal() as session:
+        cats = list(await session.scalars(
+            select(Product.category)
+            .where(Product.client_id == client_id)
+            .where(Product.category.isnot(None))
+            .distinct().order_by(Product.category)
+        ))
+    await state.update_data(possible_categories=cats)
+    await state.set_state(CmsAddProduct.category)
+    await msg.answer(
+        "Крок 2 — Виберіть або введіть категорію:",
+        reply_markup=_categories_kb(cats),
+    )
+
+
+async def _go_to_brand(msg: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+    client_id: int = data["client_id"]
+    async with AsyncSessionLocal() as session:
+        brands = list(await session.scalars(
+            select(Product.brand)
+            .where(Product.client_id == client_id)
+            .where(Product.brand.isnot(None))
+            .distinct().order_by(Product.brand)
+        ))
+    await state.update_data(possible_brands=brands)
+    await state.set_state(CmsAddProduct.brand)
+    await msg.answer(
+        "Крок 3 — Виберіть або введіть бренд:",
+        reply_markup=_brands_kb(brands),
+    )
+
+
+# ── group state ───────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cms:group:pick:"), StateFilter(CmsAddProduct.group))
+async def cms_group_pick(cb: CallbackQuery, state: FSMContext) -> None:
+    try:
+        idx = int(cb.data.rsplit(":", 1)[-1])
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    data = await state.get_data()
+    groups = data.get("possible_groups", [])
+    group = groups[idx] if 0 <= idx < len(groups) else None
+    await state.update_data(group_name=group)
+    await _go_to_category(cb.message, state)  # type: ignore[arg-type]
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:group:new", StateFilter(CmsAddProduct.group))
+async def cms_group_new(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(CmsAddProduct.group_input)
+    await cb.message.answer("Введіть нову групу товарів:")  # type: ignore[union-attr]
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:group:skip", StateFilter(CmsAddProduct.group))
+async def cms_group_skip(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(group_name=None)
+    await _go_to_category(cb.message, state)  # type: ignore[arg-type]
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.group))
+async def cms_group_typed(message: Message, state: FSMContext) -> None:
+    group = (message.text or "").strip()
+    await state.update_data(group_name=group or None)
+    await _go_to_category(message, state)
+
+
+@router.message(StateFilter(CmsAddProduct.group_input))
+async def cms_group_input(message: Message, state: FSMContext) -> None:
+    group = (message.text or "").strip()
+    await state.update_data(group_name=group or None)
+    await _go_to_category(message, state)
 
 
 # ── category state ────────────────────────────────────────────────────────────
@@ -344,8 +441,7 @@ async def cms_cat_pick(cb: CallbackQuery, state: FSMContext) -> None:
     cats = data.get("possible_categories", [])
     cat = cats[idx] if 0 <= idx < len(cats) else None
     await state.update_data(category=cat)
-    await state.set_state(CmsAddProduct.name)
-    await cb.message.answer("Крок 2 — Введіть назву товару:")  # type: ignore[union-attr]
+    await _go_to_brand(cb.message, state)  # type: ignore[arg-type]
     await cb.answer()
 
 
@@ -360,16 +456,14 @@ async def cms_cat_new(cb: CallbackQuery, state: FSMContext) -> None:
 async def cms_cat_typed(message: Message, state: FSMContext) -> None:
     cat = (message.text or "").strip()
     await state.update_data(category=cat or None)
-    await state.set_state(CmsAddProduct.name)
-    await message.answer("Крок 2 — Введіть назву товару:")
+    await _go_to_brand(message, state)
 
 
 @router.message(StateFilter(CmsAddProduct.category_input))
 async def cms_cat_input(message: Message, state: FSMContext) -> None:
     cat = (message.text or "").strip()
     await state.update_data(category=cat or None)
-    await state.set_state(CmsAddProduct.name)
-    await message.answer("Крок 2 — Введіть назву товару:")
+    await _go_to_brand(message, state)
 
 
 # ── name state ────────────────────────────────────────────────────────────────
@@ -380,25 +474,11 @@ async def cms_add_name(message: Message, state: FSMContext) -> None:
     if not text:
         await message.answer("Назва не може бути порожньою. Введіть назву:")
         return
-    data = await state.get_data()
-    client_id: int = data["client_id"]
-
-    async with AsyncSessionLocal() as session:
-        brands = list(
-            await session.scalars(
-                select(Product.brand)
-                .where(Product.client_id == client_id)
-                .where(Product.brand.isnot(None))
-                .distinct()
-                .order_by(Product.brand)
-            )
-        )
-
-    await state.update_data(name=text, possible_brands=brands)
-    await state.set_state(CmsAddProduct.brand)
+    await state.update_data(name=text)
+    await state.set_state(CmsAddProduct.specs)
     await message.answer(
-        "Крок 3 — Виберіть або введіть бренд:",
-        reply_markup=_brands_kb(brands),
+        "Крок 5 — Характеристики товару:",
+        reply_markup=_skip_kb("specs"),
     )
 
 
@@ -415,11 +495,8 @@ async def cms_brand_pick(cb: CallbackQuery, state: FSMContext) -> None:
     brands = data.get("possible_brands", [])
     brand = brands[idx] if 0 <= idx < len(brands) else None
     await state.update_data(brand=brand)
-    await state.set_state(CmsAddProduct.specs)
-    await cb.message.answer(  # type: ignore[union-attr]
-        "Крок 4 — Характеристики товару:",
-        reply_markup=_skip_kb("specs"),
-    )
+    await state.set_state(CmsAddProduct.name)
+    await cb.message.answer("Крок 4 — Введіть модель / назву товару:")  # type: ignore[union-attr]
     await cb.answer()
 
 
@@ -433,11 +510,8 @@ async def cms_brand_new(cb: CallbackQuery, state: FSMContext) -> None:
 @router.callback_query(F.data == "cms:brand:skip", StateFilter(CmsAddProduct.brand))
 async def cms_brand_skip(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(brand=None)
-    await state.set_state(CmsAddProduct.specs)
-    await cb.message.answer(  # type: ignore[union-attr]
-        "Крок 4 — Характеристики товару:",
-        reply_markup=_skip_kb("specs"),
-    )
+    await state.set_state(CmsAddProduct.name)
+    await cb.message.answer("Крок 4 — Введіть модель / назву товару:")  # type: ignore[union-attr]
     await cb.answer()
 
 
@@ -445,22 +519,16 @@ async def cms_brand_skip(cb: CallbackQuery, state: FSMContext) -> None:
 async def cms_brand_typed(message: Message, state: FSMContext) -> None:
     brand = (message.text or "").strip()
     await state.update_data(brand=brand or None)
-    await state.set_state(CmsAddProduct.specs)
-    await message.answer(
-        "Крок 4 — Характеристики товару:",
-        reply_markup=_skip_kb("specs"),
-    )
+    await state.set_state(CmsAddProduct.name)
+    await message.answer("Крок 4 — Введіть модель / назву товару:")
 
 
 @router.message(StateFilter(CmsAddProduct.brand_input))
 async def cms_brand_input(message: Message, state: FSMContext) -> None:
     brand = (message.text or "").strip()
     await state.update_data(brand=brand or None)
-    await state.set_state(CmsAddProduct.specs)
-    await message.answer(
-        "Крок 4 — Характеристики товару:",
-        reply_markup=_skip_kb("specs"),
-    )
+    await state.set_state(CmsAddProduct.name)
+    await message.answer("Крок 4 — Введіть модель / назву товару:")
 
 
 # ── specs state ───────────────────────────────────────────────────────────────
@@ -469,7 +537,7 @@ async def cms_brand_input(message: Message, state: FSMContext) -> None:
 async def cms_skip_specs(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(specs=None)
     await state.set_state(CmsAddProduct.price)
-    await cb.message.answer("Крок 5 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
+    await cb.message.answer("Крок 6 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
     await cb.answer()
 
 
@@ -478,7 +546,7 @@ async def cms_add_specs(message: Message, state: FSMContext) -> None:
     val = (message.text or "").strip()
     await state.update_data(specs=val or None)
     await state.set_state(CmsAddProduct.price)
-    await message.answer("Крок 5 — Ціна (наприклад: 150):")
+    await message.answer("Крок 6 — Ціна (наприклад: 150):")
 
 
 # ── price state ───────────────────────────────────────────────────────────────
@@ -496,7 +564,7 @@ async def cms_add_price(message: Message, state: FSMContext) -> None:
     await state.update_data(price=str(price))
     await state.set_state(CmsAddProduct.old_price)
     await message.answer(
-        "Крок 6 — Стара ціна (для відображення знижки):",
+        "Крок 7 — Стара ціна (для відображення знижки):",
         reply_markup=_skip_kb("old_price"),
     )
 
@@ -508,7 +576,7 @@ async def cms_skip_old_price(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(old_price=None)
     await state.set_state(CmsAddProduct.image_url)
     await cb.message.answer(  # type: ignore[union-attr]
-        "Крок 7 — Надішліть фото товару або URL посилання:",
+        "Крок 8 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
         reply_markup=_skip_kb("image_url"),
     )
     await cb.answer()
@@ -527,7 +595,7 @@ async def cms_add_old_price(message: Message, state: FSMContext) -> None:
     await state.update_data(old_price=str(old_price))
     await state.set_state(CmsAddProduct.image_url)
     await message.answer(
-        "Крок 7 — Надішліть фото товару або URL посилання:",
+        "Крок 8 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
         reply_markup=_skip_kb("image_url"),
     )
 
@@ -585,6 +653,7 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
         product = Product(
             client_id=client_id,
             name=data["name"],
+            group_name=data.get("group_name"),
             category=data.get("category"),
             brand=data.get("brand"),
             specs=data.get("specs"),
@@ -600,11 +669,12 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
     await _clear_fsm_keep_test(state)
     data_after = await state.get_data()
     menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
+    group_label = f" [{data['group_name']}]" if data.get("group_name") else ""
     cat_label = f" · {data['category']}" if data.get("category") else ""
     brand_label = f" [{data['brand']}]" if data.get("brand") else ""
     old_price_label = f" (знижка з {data['old_price']} грн)" if data.get("old_price") else ""
     await message.answer(
-        f"✅ Товар <b>{data['name']}</b>{brand_label} додано!{cat_label}\n"
+        f"✅ Товар <b>{data['name']}</b>{brand_label} додано!{group_label}{cat_label}\n"
         f"Ціна: {data['price']} грн{old_price_label}",
         parse_mode="HTML",
         reply_markup=menu,

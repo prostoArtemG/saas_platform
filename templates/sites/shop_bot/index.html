@@ -617,6 +617,11 @@
       <span class="filters-reset" onclick="resetFilters()">Скинути</span>
     </div>
 
+    <div class="filter-group" id="groupFilterGroup" style="display:none">
+      <div class="filter-title">Група</div>
+      <div id="groupFilterList"></div>
+    </div>
+
     <div class="filter-group" id="catFilterGroup" style="display:none">
       <div class="filter-title">Категорія</div>
       <div id="catFilterList"></div>
@@ -772,6 +777,7 @@ const CLIENT_SLUG = {{ client.slug | tojson }};
 
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let cart         = [];
+let selectedGroup = null;
 let selectedCat  = null;
 let activeBrands = new Set();
 let priceMin     = null;
@@ -790,6 +796,31 @@ function esc(s) {
 
 function fmt(n) {
   return n.toLocaleString("uk-UA", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "\u00a0грн";
+}
+
+/* ── Sidebar: group radio ──────────────────────────────────────────────────── */
+function buildGroupFilter() {
+  const groups    = [...new Set(PRODUCTS.map(p => p.group_name).filter(Boolean))].sort();
+  const group     = $("groupFilterGroup");
+  const container = $("groupFilterList");
+  if (!groups.length) return;
+  group.style.display = "";
+  container.innerHTML = "";
+  groups.forEach(g => {
+    const lbl = document.createElement("label");
+    lbl.className = "filter-item";
+    lbl.innerHTML =
+      `<input type="radio" name="groupRadio" value="${esc(g)}"${selectedGroup === g ? " checked" : ""}>` +
+      `<span>${esc(g)}</span>`;
+    lbl.querySelector("input").addEventListener("change", e => {
+      selectedGroup = e.target.checked ? g : null;
+      selectedCat = null;
+      buildCatNav();
+      buildCatFilter();
+      renderProducts();
+    });
+    container.appendChild(lbl);
+  });
 }
 
 /* ── Category nav (horizontal tabs under header) ──────────────────────────── */
@@ -940,7 +971,7 @@ function renderProducts() {
     const discHtml = discPct ? `<div class="product-discount">-${discPct}%</div>` : "";
     const unavHtml = unavailable ? `<div class="product-badge-unavail">Немає</div>` : "";
     const catHtml   = p.category  ? `<div class="product-cat">${esc(p.category)}</div>`  : "";
-    const brandHtml = p.brand     ? `<div class="product-brand">${esc(p.brand)}</div>`   : "";
+    const displayName = (p.brand && p.name) ? esc(p.brand) + " " + esc(p.name) : esc(p.name || "");
     const oldHtml   = p.old_price ? `<div class="product-old-price">${esc(String(p.old_price))} грн</div>` : "";
 
     const inC = cart.some(i => i.id === p.id);
@@ -956,8 +987,8 @@ function renderProducts() {
         ${imgHtml}${discHtml}${unavHtml}
       </div>
       <div class="product-body">
-        ${catHtml}${brandHtml}
-        <div class="product-name">${esc(p.name)}</div>
+        ${catHtml}
+        <div class="product-name">${displayName}</div>
         <div class="product-footer">
           <div class="product-price-wrap">
             ${oldHtml}
@@ -993,6 +1024,7 @@ function applyPriceFilter() {
 }
 
 function resetFilters() {
+  selectedGroup = null;
   selectedCat  = null;
   activeBrands = new Set();
   priceMin = priceMax = null;
@@ -1001,6 +1033,7 @@ function resetFilters() {
   $("priceMax").value = "";
   $("searchInput").value = "";
   $("searchDropdown").style.display = "none";
+  buildGroupFilter();
   buildCatNav();
   buildCatFilter();
   buildBrandFilter();
@@ -1220,6 +1253,7 @@ function showToast(msg) {
 }
 
 /* ── Init ──────────────────────────────────────────────────────────────────── */
+buildGroupFilter();
 buildCatNav();
 buildCatFilter();
 buildBrandFilter();

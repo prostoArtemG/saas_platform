@@ -381,12 +381,16 @@
   <!-- Breadcrumb -->
   <nav class="breadcrumb">
     <a href="/site/{{ client.slug }}">Магазин</a>
+    {% if product.group_name %}
+    <span>›</span>
+    <a href="/site/{{ client.slug }}">{{ product.group_name }}</a>
+    {% endif %}
     {% if product.category %}
     <span>›</span>
     <a href="/site/{{ client.slug }}">{{ product.category }}</a>
     {% endif %}
     <span>›</span>
-    <span>{{ product.name }}</span>
+    <span>{% if product.brand %}{{ product.brand }} {% endif %}{{ product.name }}</span>
   </nav>
 
   <!-- Product layout -->
@@ -414,6 +418,10 @@
 
       {% if product.category %}
         <span class="product-category">{{ product.category }}</span>
+      {% endif %}
+
+      {% if product.group_name %}
+        <span class="product-category" style="background:var(--primary-light);color:var(--primary);">{{ product.group_name }}</span>
       {% endif %}
 
       {% if product.brand %}

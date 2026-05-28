@@ -554,6 +554,7 @@ async def dashboard_products_add(
     brand: Optional[str] = Form(None),
     old_price: Optional[str] = Form(None),
     specs: Optional[str] = Form(None),
+    group_name: Optional[str] = Form(None),
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
@@ -577,6 +578,7 @@ async def dashboard_products_add(
             brand=brand.strip() if brand else None,
             old_price=old_price_val,
             specs=specs.strip() if specs else None,
+            group_name=group_name.strip() if group_name else None,
         )
         session.add(product)
         await session.commit()
@@ -630,6 +632,7 @@ async def dashboard_products_edit(
     brand: Optional[str] = Form(None),
     old_price: Optional[str] = Form(None),
     specs: Optional[str] = Form(None),
+    group_name: Optional[str] = Form(None),
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
@@ -653,6 +656,7 @@ async def dashboard_products_edit(
             product.brand = brand.strip() if brand else None
             product.old_price = old_price_val
             product.specs = specs.strip() if specs else None
+            product.group_name = group_name.strip() if group_name else None
             await session.commit()
     return RedirectResponse(f"/dashboard/{slug}/products?success=updated", status_code=303)
 
@@ -855,6 +859,7 @@ async def client_site(
         products = [
             {
                 "id": p.id,
+                "group_name": p.group_name,
                 "category": p.category,
                 "name": p.name,
                 "description": p.description,
@@ -954,6 +959,7 @@ async def client_site_product(
     }
     product_data = {
         "id": product.id,
+        "group_name": _clean(product.group_name),
         "name": _clean(product.name),
         "category": _clean(product.category),
         "description": _clean(product.description),
