@@ -34,8 +34,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 
 async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    pass  # Schema is managed by Alembic (alembic upgrade head in Procfile)
 
 
 async def close_db() -> None:
