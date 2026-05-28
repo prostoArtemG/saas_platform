@@ -918,6 +918,8 @@ function buildFooterCats() {
 /* ── Filtering & sorting ───────────────────────────────────────────────────── */
 function filtered() {
   let list = PRODUCTS.slice();
+  if (selectedGroup)
+    list = list.filter(p => (p.group_name || "") === selectedGroup);
   if (selectedCat)
     list = list.filter(p => (p.category || "Без категорії") === selectedCat);
   if (activeBrands.size > 0)
@@ -932,7 +934,8 @@ function filtered() {
       p.name.toLowerCase().includes(q) ||
       (p.description  || "").toLowerCase().includes(q) ||
       (p.category || "").toLowerCase().includes(q) ||
-      (p.brand    || "").toLowerCase().includes(q)
+      (p.brand    || "").toLowerCase().includes(q) ||
+      (p.group_name || "").toLowerCase().includes(q)
     );
   }
   switch (($("sortSelect") || {}).value) {
