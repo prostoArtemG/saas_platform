@@ -16,6 +16,7 @@ from app.models import Client, Subscription
 
 router = Router(name="admin")
 router.message.filter(AdminFilter())
+router.callback_query.filter(AdminFilter())
 
 
 @router.message(CommandStart())

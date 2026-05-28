@@ -202,15 +202,21 @@ class CmsAddProduct(StatesGroup):
 
 @router.message(CommandStart())
 async def client_start(message: Message, state: FSMContext) -> None:
+    from app.config import settings as app_settings
     user_id = message.from_user.id  # type: ignore[union-attr]
     client = await _get_effective_client(user_id, state)
     if client is None:
         return
+    data = await state.get_data()
+    in_test_mode = (
+        user_id in app_settings.admin_ids
+        and data.get("selected_client_id") is not None
+    )
     await message.answer(
         f"👋 Привет, <b>{client.business_name}</b>!\n"
         "Выбери раздел в меню ниже:",
         parse_mode="HTML",
-        reply_markup=client_main_menu(),
+        reply_markup=client_test_menu() if in_test_mode else client_main_menu(),
     )
 
 

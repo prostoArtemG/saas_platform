@@ -11,8 +11,8 @@ from app.models import Client
 
 
 class AdminFilter(BaseFilter):
-    async def __call__(self, message: Message) -> bool:
-        return bool(message.from_user and message.from_user.id in settings.admin_ids)
+    async def __call__(self, event: Message | CallbackQuery) -> bool:
+        return bool(event.from_user and event.from_user.id in settings.admin_ids)
 
 
 class ClientFilter(BaseFilter):

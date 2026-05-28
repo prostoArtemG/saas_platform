@@ -71,5 +71,11 @@ class MenuInterruptMiddleware(BaseMiddleware):
                             cur,
                             text,
                         )
+                        # Preserve selected_client_id so admin test-mode survives
+                        # menu interrupts during an FSM flow (e.g. mid product-add).
+                        state_data = await state.get_data()
+                        selected_id = state_data.get("selected_client_id")
                         await state.clear()
+                        if selected_id is not None:
+                            await state.update_data(selected_client_id=selected_id)
         return await handler(event, data)
