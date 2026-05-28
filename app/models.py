@@ -268,6 +268,9 @@ class ClientSettings(Base):
     timezone: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="Europe/Kyiv", default="Europe/Kyiv"
     )
+    theme_name: Mapped[str] = mapped_column(
+        String(64), nullable=False, server_default="light_red", default="light_red"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

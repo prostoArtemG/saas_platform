@@ -39,7 +39,7 @@ from app.bot.keyboards import (
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, Product
+from app.models import Client, ClientSettings, Product
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,28 @@ async def _upload_to_cloudinary(bot: Bot, file_id: str) -> str | None:
     except Exception as exc:
         logger.error("Cloudinary upload failed: %s", exc)
         return None
+
+
+THEMES: dict[str, str] = {
+    "light_red":   "🔴 Червоне світло (світла)",
+    "navy_teal":   "🌊 Темно-синя + бірюза",
+    "purple_lime": "🟣 Фіолетова + лайм",
+}
+VALID_THEMES: frozenset[str] = frozenset(THEMES)
+
+
+def _themes_kb(current: str | None) -> InlineKeyboardMarkup:
+    current = current or "light_red"
+    rows = [
+        [
+            InlineKeyboardButton(
+                text=("✅ " if key == current else "") + label,
+                callback_data=f"cms:theme:{key}",
+            )
+        ]
+        for key, label in THEMES.items()
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
@@ -310,20 +332,73 @@ async def cms_orders(message: Message) -> None:
 
 @router.message(F.text == BTN_CMS_SETTINGS)
 async def cms_settings(message: Message, state: FSMContext) -> None:
+    from app.config import settings as app_settings
     user_id = message.from_user.id  # type: ignore[union-attr]
     client = await _get_effective_client(user_id, state)
     if client is None:
         return
 
+    async with AsyncSessionLocal() as session:
+        cs = await session.scalar(
+            select(ClientSettings).where(ClientSettings.client_id == client.id)
+        )
+    theme = (cs.theme_name if cs else None) or "light_red"
+
+    data = await state.get_data()
+    in_test = user_id in app_settings.admin_ids and data.get("selected_client_id") is not None
+
     await message.answer(
         f"⚙️ <b>Настройки магазина</b>\n\n"
-        f"🏪 Название: <b>{client.business_name}</b>\n"
+        f"🏪 Назва: <b>{client.business_name}</b>\n"
         f"🔗 Slug: <code>{client.slug}</code>\n"
         f"📋 Шаблон: <code>{client.template_name}</code>\n"
-        f"📌 Статус: <code>{client.status}</code>",
+        f"📌 Статус: <code>{client.status}</code>\n\n"
+        f"🎨 <b>Колір сайту:</b> {THEMES.get(theme, theme)}\n"
+        f"Виберіть тему:",
         parse_mode="HTML",
-        reply_markup=client_main_menu(),
+        reply_markup=_themes_kb(theme),
     )
+
+
+# ── Settings: set theme ──────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cms:theme:"))
+async def cms_set_theme(cb: CallbackQuery, state: FSMContext) -> None:
+    theme_key = cb.data.split(":", 2)[2]  # cms:theme:<key>
+    if theme_key not in VALID_THEMES:
+        await cb.answer("Невідома тема", show_alert=True)
+        return
+
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as session:
+        cs = await session.scalar(
+            select(ClientSettings).where(ClientSettings.client_id == client.id)
+        )
+        if cs is None:
+            cs = ClientSettings(
+                client_id=client.id,
+                theme_name=theme_key,
+            )
+            session.add(cs)
+        else:
+            cs.theme_name = theme_key
+        await session.commit()
+
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        f"⚙️ <b>Настройки магазина</b>\n\n"
+        f"🏪 Назва: <b>{client.business_name}</b>\n"
+        f"🔗 Slug: <code>{client.slug}</code>\n\n"
+        f"🎨 <b>Колір сайту:</b> {THEMES[theme_key]}\n"
+        f"Виберіть тему:",
+        parse_mode="HTML",
+        reply_markup=_themes_kb(theme_key),
+    )
+    await cb.answer("✅ Тему збережено!")
 
 
 # ── FSM: add product ──────────────────────────────────────────────────────────

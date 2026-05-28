@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, Payment, Plan, Product, SiteRequest, Subscription
+from app.models import Client, ClientSettings, Payment, Plan, Product, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
 from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
@@ -856,6 +856,9 @@ async def client_site(
                 .order_by(Product.is_available.desc(), Product.id.desc())
             )
         ).all()
+        client_settings = await session.scalar(
+            select(ClientSettings).where(ClientSettings.client_id == client.id)
+        )
         products = [
             {
                 "id": p.id,
@@ -878,6 +881,7 @@ async def client_site(
             "slug": client.slug,
             "telegram_id": client.admin_telegram_id,
             "template_name": client.template_name,
+            "theme_name": (client_settings.theme_name if client_settings else None) or "light_red",
         }
 
     template_name = (client_data["template_name"] or "").strip() or "technovlada"
@@ -950,12 +954,16 @@ async def client_site_product(
                  "supported_langs": SUPPORTED_LANGS, "slug": slug},
                 status_code=404,
             )
+        client_settings = await session.scalar(
+            select(ClientSettings).where(ClientSettings.client_id == client.id)
+        )
 
     client_data = {
         "id": client.id,
         "business_name": client.business_name,
         "slug": client.slug,
         "template_name": client.template_name,
+        "theme_name": (client_settings.theme_name if client_settings else None) or "light_red",
     }
     product_data = {
         "id": product.id,

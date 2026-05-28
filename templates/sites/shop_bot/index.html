@@ -569,7 +569,7 @@
     }
   </style>
 </head>
-<body class="theme-light-red">
+<body class="theme-{{ (client.theme_name or 'light_red') | replace('_', '-') }}">
 
 <!-- ═══════════════════════════ HEADER ═══════════════════════════════════════ -->
 <header class="header">

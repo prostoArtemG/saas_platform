@@ -29,6 +29,51 @@
       --shadow-md:      0 4px 24px rgba(0,0,0,.5);
       --transition:     .2s ease;
       --header-h:       64px;
+      --header-bg:      rgba(15,23,42,.92);
+      --on-primary:     #020617;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       COLOUR THEMES  (applied via <body class="theme-...">)
+    ══════════════════════════════════════════════════════════════ */
+
+    /* light_red — warm white + red accent */
+    body.theme-light-red {
+      --primary:        #e63222;
+      --primary-hover:  #c4271a;
+      --primary-light:  rgba(230,50,34,.12);
+      --bg:             #f5f5f5;
+      --surface:        #ffffff;
+      --surface-2:      #f0f0f0;
+      --border:         #e8e8e8;
+      --text:           #1a1a1a;
+      --text-2:         #6b6b6b;
+      --text-3:         #9b9b9b;
+      --header-bg:      rgba(255,255,255,.95);
+      --on-primary:     #ffffff;
+      color-scheme: light;
+    }
+
+    /* navy_teal — dark navy + teal (matches :root defaults) */
+    body.theme-navy-teal {
+      color-scheme: dark;
+    }
+
+    /* purple_lime — deep purple + lime */
+    body.theme-purple-lime {
+      --primary:        #a3e635;
+      --primary-hover:  #84cc16;
+      --primary-light:  rgba(163,230,53,.12);
+      --bg:             #1a0a2e;
+      --surface:        #2d1b4e;
+      --surface-2:      #3d2b5e;
+      --border:         #4c1d95;
+      --text:           #f5f3ff;
+      --text-2:         #c4b5fd;
+      --text-3:         #a78bfa;
+      --header-bg:      rgba(26,10,46,.92);
+      --on-primary:     #1a0a2e;
+      color-scheme: dark;
     }
 
     html { scroll-behavior: smooth; }
@@ -38,7 +83,6 @@
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
-      color-scheme: dark;
     }
     img  { display: block; max-width: 100%; }
     button { cursor: pointer; font-family: inherit; border: none; outline: none; }
@@ -50,8 +94,8 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       height: var(--header-h);
-      background: rgba(15,23,42,.92);
-      border-bottom: 1px solid #1e293b;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
       backdrop-filter: blur(10px);
       z-index: 100;
       display: flex;
@@ -65,17 +109,17 @@
     }
     .header-logo-icon {
       width: 36px; height: 36px;
-      background: linear-gradient(135deg, #14b8a6, #0d9488);
-      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: var(--on-primary);
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
       font-weight: 800; font-size: 17px;
-      box-shadow: 0 0 12px rgba(20,184,166,.4);
+      box-shadow: 0 0 12px var(--primary-light);
     }
     .btn-back {
       display: inline-flex; align-items: center; gap: 6px;
       height: 36px; padding: 0 14px;
-      border: 1.5px solid #1e293b;
+      border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       font-size: 13px; color: var(--text-2);
       transition: border-color var(--transition), color var(--transition);
@@ -111,8 +155,8 @@
 
     /* ── Image ──────────────────────────────────────────────── */
     .product-image-wrap {
-      background: #0f172a;
-      border: 1px solid #1e293b;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
       aspect-ratio: 1;
@@ -125,7 +169,7 @@
     .product-image-placeholder {
       width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 80px; color: #334155;
+      font-size: 80px; color: var(--text-3);
     }
     .product-badge-unavail {
       position: absolute; top: 14px; right: 14px;
@@ -135,7 +179,7 @@
     }
     .discount-badge {
       position: absolute; top: 14px; left: 14px;
-      background: var(--primary); color: #020617;
+      background: var(--primary); color: var(--on-primary);
       font-size: 12px; font-weight: 700;
       padding: 4px 10px; border-radius: 20px;
     }
@@ -148,8 +192,8 @@
       font-size: 11px; font-weight: 700;
       text-transform: uppercase; letter-spacing: .06em;
       color: var(--primary);
-      background: rgba(20,184,166,.1);
-      border: 1px solid rgba(20,184,166,.2);
+      background: var(--primary-light);
+      border: 1px solid var(--primary-light);
       padding: 3px 10px; border-radius: 20px;
     }
     .product-brand {
@@ -166,10 +210,10 @@
     }
     .price-current {
       font-size: 32px; font-weight: 700;
-      color: #2dd4bf;
+      color: var(--primary);
     }
     .price-currency {
-      font-size: 18px; font-weight: 500; color: #5eead4; margin-left: 4px;
+      font-size: 18px; font-weight: 500; color: var(--primary-hover); margin-left: 4px;
     }
     .price-saving {
       font-size: 13px; color: #10b981; font-weight: 600;
@@ -206,21 +250,21 @@
     }
     .btn-order {
       flex: 1; min-width: 160px; height: 50px;
-      background: var(--primary); color: #020617;
+      background: var(--primary); color: var(--on-primary);
       border-radius: var(--radius);
       font-size: 15px; font-weight: 700;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
     }
-    .btn-order:hover { background: var(--primary-hover); box-shadow: 0 0 16px rgba(20,184,166,.4); }
+    .btn-order:hover { background: var(--primary-hover); box-shadow: 0 0 16px var(--primary-light); }
     .btn-order:active { transform: scale(.97); }
     .btn-order:disabled {
-      background: #1e293b; color: var(--text-3); cursor: not-allowed;
+      background: var(--surface-2); color: var(--text-3); cursor: not-allowed;
     }
 
     /* ── Divider ────────────────────────────────────────────── */
     .divider {
-      height: 1px; background: #1e293b;
+      height: 1px; background: var(--border);
     }
 
     /* ── Modal ──────────────────────────────────────────────── */
@@ -235,8 +279,8 @@
     }
     .modal-backdrop.show { display: flex; }
     .modal-box {
-      background: #0f172a;
-      border: 1px solid #1e293b;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 16px;
       width: 100%; max-width: 440px;
       max-height: 90vh; overflow-y: auto;
@@ -245,21 +289,21 @@
       position: relative;
     }
     .modal-box::-webkit-scrollbar { width: 4px; }
-    .modal-box::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    .modal-box::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 4px; }
     .modal-title { font-size: 19px; font-weight: 700; margin-bottom: 20px; }
     .modal-close {
       position: absolute; top: 16px; right: 16px;
       width: 32px; height: 32px;
-      background: #1e293b; border-radius: 50%;
+      background: var(--surface-2); border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       color: var(--text-2); font-size: 16px;
       transition: background var(--transition);
     }
-    .modal-close:hover { background: #334155; color: var(--text); }
+    .modal-close:hover { background: var(--border); color: var(--text); }
 
     .order-summary {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       padding: 14px; margin-bottom: 20px;
     }
@@ -277,9 +321,9 @@
       display: flex; justify-content: space-between;
       font-size: 14px; font-weight: 700;
       padding-top: 10px; margin-top: 8px;
-      border-top: 1px solid #334155;
+      border-top: 1px solid var(--border);
     }
-    .order-summary-total span:last-child { color: #2dd4bf; }
+    .order-summary-total span:last-child { color: var(--primary); }
 
     .form-group { margin-bottom: 14px; }
     .form-label {
@@ -288,15 +332,15 @@
     }
     .form-input {
       width: 100%; height: 42px;
-      border: 1.5px solid #1e293b; border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
       padding: 0 14px; font-size: 14px;
-      color: var(--text); background: #020617;
+      color: var(--text); background: var(--bg);
       transition: border-color var(--transition), background var(--transition);
     }
-    .form-input:focus { outline: none; border-color: var(--primary); background: #0f172a; }
+    .form-input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
     .form-input::placeholder { color: var(--text-3); }
     .form-input.error { border-color: var(--danger); }
-    textarea.form-input { height: 78px; padding: 10px 14px; resize: vertical; color-scheme: dark; }
+    textarea.form-input { height: 78px; padding: 10px 14px; resize: vertical; }
     .form-error {
       font-size: 12px; color: var(--danger); margin-top: 4px; display: none;
     }
@@ -304,14 +348,14 @@
 
     .btn-submit {
       width: 100%; height: 46px;
-      background: var(--primary); color: #020617;
+      background: var(--primary); color: var(--on-primary);
       border-radius: var(--radius);
       font-size: 15px; font-weight: 700;
       margin-top: 4px;
       transition: background var(--transition), box-shadow var(--transition);
     }
-    .btn-submit:hover { background: var(--primary-hover); box-shadow: 0 0 16px rgba(20,184,166,.4); }
-    .btn-submit:disabled { background: #1e293b; color: var(--text-3); cursor: not-allowed; }
+    .btn-submit:hover { background: var(--primary-hover); box-shadow: 0 0 16px var(--primary-light); }
+    .btn-submit:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
 
     .alert-error {
       background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
@@ -330,7 +374,7 @@
     }
     .btn-continue {
       height: 44px; padding: 0 28px;
-      background: var(--primary); color: #020617;
+      background: var(--primary); color: var(--on-primary);
       border-radius: var(--radius);
       font-size: 14px; font-weight: 700;
       transition: background var(--transition);
@@ -340,7 +384,7 @@
     /* ── Footer ─────────────────────────────────────────────── */
     footer {
       margin-top: 64px;
-      border-top: 1px solid #1e293b;
+      border-top: 1px solid var(--border);
       padding: 24px 20px;
       text-align: center;
       font-size: 13px; color: var(--text-3);
@@ -359,7 +403,7 @@
     }
   </style>
 </head>
-<body>
+<body class="theme-{{ (client.theme_name or 'light_red') | replace('_', '-') }}">
 
 <!-- ══════════════ HEADER ══════════════════════════════════════════════════ -->
 <header class="header">
