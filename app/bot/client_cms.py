@@ -168,6 +168,20 @@ def _skip_kb(field: str) -> InlineKeyboardMarkup:
     )
 
 
+def _specs_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="✅ Готово",     callback_data="cms:done:specs"),
+            InlineKeyboardButton(text="⏭ Пропустити", callback_data="cms:skip:specs"),
+        ]]
+    )
+
+
+def _specs_list_text(items: list) -> str:
+    lines = "\n".join(f"• {it}" for it in items)
+    return f"Поточні характеристики:\n{lines}\n\nДодайте ще або натисніть кнопку:"
+
+
 # ── FSM states ────────────────────────────────────────────────────────────────────────────────
 
 class CmsAddProduct(StatesGroup):
@@ -474,11 +488,11 @@ async def cms_add_name(message: Message, state: FSMContext) -> None:
     if not text:
         await message.answer("Назва не може бути порожньою. Введіть назву:")
         return
-    await state.update_data(name=text)
+    await state.update_data(name=text, specs_items=[])
     await state.set_state(CmsAddProduct.specs)
     await message.answer(
-        "Крок 5 — Характеристики товару:",
-        reply_markup=_skip_kb("specs"),
+        "Крок 5 — Характеристики товару:\n\nВводьте по одній (наприклад: Площа: 35 м²).\nКоли закінчите — натисніть ✅ Готово.",
+        reply_markup=_specs_kb(),
     )
 
 
@@ -535,7 +549,18 @@ async def cms_brand_input(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data == "cms:skip:specs", StateFilter(CmsAddProduct.specs))
 async def cms_skip_specs(cb: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(specs=None)
+    await state.update_data(specs=None, specs_items=[])
+    await state.set_state(CmsAddProduct.price)
+    await cb.message.answer("Крок 6 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:done:specs", StateFilter(CmsAddProduct.specs))
+async def cms_done_specs(cb: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    items: list = data.get("specs_items", [])
+    specs_text = "\n".join(items) if items else None
+    await state.update_data(specs=specs_text, specs_items=[])
     await state.set_state(CmsAddProduct.price)
     await cb.message.answer("Крок 6 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
     await cb.answer()
@@ -544,9 +569,17 @@ async def cms_skip_specs(cb: CallbackQuery, state: FSMContext) -> None:
 @router.message(StateFilter(CmsAddProduct.specs))
 async def cms_add_specs(message: Message, state: FSMContext) -> None:
     val = (message.text or "").strip()
-    await state.update_data(specs=val or None)
-    await state.set_state(CmsAddProduct.price)
-    await message.answer("Крок 6 — Ціна (наприклад: 150):")
+    if not val:
+        await message.answer("Введіть характеристику або натисніть кнопку:", reply_markup=_specs_kb())
+        return
+    data = await state.get_data()
+    items: list = list(data.get("specs_items", []))
+    items.append(val)
+    await state.update_data(specs_items=items)
+    await message.answer(
+        _specs_list_text(items),
+        reply_markup=_specs_kb(),
+    )
 
 
 # ── price state ───────────────────────────────────────────────────────────────
