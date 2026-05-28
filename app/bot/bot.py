@@ -45,6 +45,11 @@ async def start_unknown(message: Message) -> None:
 # --------------------------------------------------------------------------
 @router.message()
 async def debug_any_message(message: Message) -> None:
+    user_id = message.from_user.id if message.from_user else None
+    # Unknown users get a clean access-denied response, not debug output.
+    if not (user_id and user_id in settings.admin_ids):
+        await message.answer("⛔ Доступ ограничен.")
+        return
     text = message.text
     if text is not None:
         as_bytes = text.encode("utf-8")

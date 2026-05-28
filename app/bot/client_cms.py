@@ -29,7 +29,7 @@ from aiogram.types import (
 )
 from sqlalchemy import select
 
-from app.bot.filters import ClientFilter
+from app.bot.filters import CMSFilter
 from app.bot.keyboards import (
     BTN_CMS_ORDERS,
     BTN_CMS_PRODUCTS,
@@ -44,8 +44,8 @@ from app.models import Client, Product
 logger = logging.getLogger(__name__)
 
 router = Router(name="client_cms")
-router.message.filter(ClientFilter())
-router.callback_query.filter(ClientFilter())
+router.message.filter(CMSFilter())
+router.callback_query.filter(CMSFilter())
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
