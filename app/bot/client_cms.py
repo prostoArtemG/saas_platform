@@ -36,6 +36,7 @@ from app.bot.keyboards import (
     BTN_CMS_SETTINGS,
     BTN_CMS_SITE,
     client_main_menu,
+    client_test_menu,
 )
 from app.db import AsyncSessionLocal
 from app.models import Client, Product
@@ -190,7 +191,9 @@ async def client_start(message: Message, state: FSMContext) -> None:
 @router.message(StateFilter(CmsAddProduct), Command("cancel"))
 async def cms_cancel(message: Message, state: FSMContext) -> None:
     await _clear_fsm_keep_test(state)
-    await message.answer("Додавання скасовано.", reply_markup=client_main_menu())
+    data_after = await state.get_data()
+    menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
+    await message.answer("Додавання скасовано.", reply_markup=menu)
 
 
 # ── 📦 Товары ─────────────────────────────────────────────────────────────────
@@ -595,6 +598,8 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
         await session.refresh(product)
 
     await _clear_fsm_keep_test(state)
+    data_after = await state.get_data()
+    menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
     cat_label = f" · {data['category']}" if data.get("category") else ""
     brand_label = f" [{data['brand']}]" if data.get("brand") else ""
     old_price_label = f" (знижка з {data['old_price']} грн)" if data.get("old_price") else ""
@@ -602,5 +607,5 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
         f"✅ Товар <b>{data['name']}</b>{brand_label} додано!{cat_label}\n"
         f"Ціна: {data['price']} грн{old_price_label}",
         parse_mode="HTML",
-        reply_markup=client_main_menu(),
+        reply_markup=menu,
     )

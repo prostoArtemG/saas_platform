@@ -14,6 +14,7 @@ BTN_CMS_PRODUCTS = "📦 Товары"
 BTN_CMS_SITE = "🌐 Мой сайт"
 BTN_CMS_ORDERS = "📊 Заказы"
 BTN_CMS_SETTINGS = "⚙️ Настройки"
+BTN_EXIT_TEST = "⬅️ Выйти из тест-режима"
 
 
 def admin_main_menu() -> ReplyKeyboardMarkup:
@@ -37,6 +38,20 @@ def client_main_menu() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=BTN_CMS_PRODUCTS)],
             [KeyboardButton(text=BTN_CMS_SITE), KeyboardButton(text=BTN_CMS_ORDERS)],
             [KeyboardButton(text=BTN_CMS_SETTINGS)],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+def client_test_menu() -> ReplyKeyboardMarkup:
+    """CMS menu shown to platform admins in test mode — includes exit button."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=BTN_CMS_PRODUCTS)],
+            [KeyboardButton(text=BTN_CMS_SITE), KeyboardButton(text=BTN_CMS_ORDERS)],
+            [KeyboardButton(text=BTN_CMS_SETTINGS)],
+            [KeyboardButton(text=BTN_EXIT_TEST)],
         ],
         resize_keyboard=True,
         is_persistent=True,

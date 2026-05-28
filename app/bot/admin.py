@@ -6,9 +6,10 @@ from sqlalchemy import select
 
 from app.bot.filters import AdminFilter
 from app.bot.keyboards import (
+    BTN_EXIT_TEST,
     BTN_SUBSCRIPTIONS,
     admin_main_menu,
-    client_main_menu,
+    client_test_menu,
 )
 from app.db import AsyncSessionLocal
 from app.models import Client, Subscription
@@ -33,13 +34,16 @@ async def admin_start(message: Message, state: FSMContext) -> None:
                 parse_mode="HTML",
             )
             return
-        await state.update_data(selected_client_id=client.id)
+        await state.update_data(
+            selected_client_id=client.id,
+            selected_client_slug=client.slug,
+        )
         await message.answer(
             f"🔧 <b>Тест-режим</b>: {client.business_name}\n"
             f"Slug: <code>{client.slug}</code>\n\n"
-            f"Введіть /start щоб повернутися до панелі адміна.",
+            f"Натисни ⬅️ Выйти из тест-режима щоб повернутися до панелі адміна.",
             parse_mode="HTML",
-            reply_markup=client_main_menu(),
+            reply_markup=client_test_menu(),
         )
         return
 
@@ -47,6 +51,15 @@ async def admin_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
         "Привет, админ платформы! 👋\nВыбери раздел:",
+        reply_markup=admin_main_menu(),
+    )
+
+
+@router.message(F.text == BTN_EXIT_TEST)
+async def exit_test_mode(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(
+        "Вышел из тест-режима. Панель администратора:",
         reply_markup=admin_main_menu(),
     )
 

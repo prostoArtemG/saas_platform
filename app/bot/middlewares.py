@@ -18,6 +18,7 @@ from app.bot.keyboards import (
     BTN_CMS_SITE,
     BTN_CREATE_CLIENT,
     BTN_CREATE_PLAN,
+    BTN_EXIT_TEST,
     BTN_PLANS,
     BTN_PRODUCTS,
     BTN_SUBSCRIPTIONS,
@@ -35,6 +36,7 @@ MENU_BUTTONS: Set[str] = {
     BTN_CMS_SITE,
     BTN_CMS_ORDERS,
     BTN_CMS_SETTINGS,
+    BTN_EXIT_TEST,
 }
 
 

@@ -84,13 +84,14 @@ def create_dispatcher() -> Dispatcher:
     # Platform admin routers (AdminFilter guards each one)
     dp.include_router(plans_admin_router)
     dp.include_router(create_client_router)
+    # Client CMS router before products_router so that admin in test mode
+    # (ClientFilter passes when selected_client_id is set) is handled here first
+    dp.include_router(client_cms_router)
     dp.include_router(products_router)
     dp.include_router(site_request_router)
     dp.include_router(payments_router)
     dp.include_router(clients_admin_router)
     dp.include_router(admin_router)
-    # Client CMS router (ClientFilter guards it; must come before root router)
-    dp.include_router(client_cms_router)
     # Root router: fallback handlers (no role filter)
     dp.include_router(router)
     return dp
