@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import re
+import secrets
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Form, HTTPException, Request
@@ -20,6 +21,14 @@ from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
+
+
+def _check_dashboard_token(client: "Client", token: Optional[str]) -> None:  # noqa: F821
+    """Raise 403 if dashboard_token is set on client but provided token doesn't match."""
+    if not client.dashboard_token:
+        return  # backward compat: old client without token
+    if not secrets.compare_digest(token or "", client.dashboard_token):
+        raise HTTPException(status_code=403, detail="Invalid or missing dashboard token")
 
 
 def _clean(s: Optional[str]) -> Optional[str]:
@@ -233,6 +242,7 @@ async def create_site_submit(
                 domain_status="pending",
                 status="active",
                 admin_telegram_id=int(admin_telegram_id) if admin_telegram_id.isdigit() else None,
+                dashboard_token=secrets.token_urlsafe(24),
             )
             session.add(client)
             try:
@@ -462,7 +472,8 @@ async def onboarding_success(
         railway_url = client.bot_admin_ids if client.bot_admin_ids and client.bot_admin_ids.startswith("http") else None
         site_url = railway_url or (str(request.base_url).rstrip("/") + f"/site/{client.slug}")
 
-    dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}"
+    _token_suffix = f"?token={client.dashboard_token}" if client.dashboard_token else ""
+    dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}{_token_suffix}"
 
     data = {
         "business_name": _clean(client.business_name) or "",
@@ -495,6 +506,7 @@ async def onboarding_success(
 async def dashboard_products(
     request: Request,
     slug: str,
+    token: Optional[str] = None,
     edit_id: Optional[int] = None,
     success: Optional[str] = None,
     lang: Optional[str] = None,
@@ -512,6 +524,8 @@ async def dashboard_products(
                  "supported_langs": SUPPORTED_LANGS, "slug": slug},
                 status_code=404,
             )
+
+        _check_dashboard_token(client, token)
 
         products = (
             await session.execute(
@@ -546,6 +560,7 @@ async def dashboard_products(
 async def dashboard_products_add(
     request: Request,
     slug: str,
+    token: Optional[str] = None,
     name: str = Form(...),
     price: str = Form("0"),
     category: Optional[str] = Form(None),
@@ -560,6 +575,7 @@ async def dashboard_products_add(
         client = await session.scalar(select(Client).where(Client.slug == slug))
         if client is None:
             raise HTTPException(status_code=404)
+        _check_dashboard_token(client, token)
         try:
             price_val = float(price.replace(",", ".")) if price else 0.0
         except ValueError:
@@ -582,7 +598,8 @@ async def dashboard_products_add(
         )
         session.add(product)
         await session.commit()
-    return RedirectResponse(f"/dashboard/{slug}/products?success=added", status_code=303)
+    _tp = f"&token={token}" if token else ""
+    return RedirectResponse(f"/dashboard/{slug}/products?success=added{_tp}", status_code=303)
 
 
 @router.post("/dashboard/{slug}/products/{product_id}/delete")
@@ -590,16 +607,19 @@ async def dashboard_products_delete(
     request: Request,
     slug: str,
     product_id: int,
+    token: Optional[str] = None,
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
         if client is None:
             raise HTTPException(status_code=404)
+        _check_dashboard_token(client, token)
         product = await session.get(Product, product_id)
         if product and product.client_id == client.id:
             await session.delete(product)
             await session.commit()
-    return RedirectResponse(f"/dashboard/{slug}/products?success=deleted", status_code=303)
+    _tp = f"&token={token}" if token else ""
+    return RedirectResponse(f"/dashboard/{slug}/products?success=deleted{_tp}", status_code=303)
 
 
 @router.post("/dashboard/{slug}/products/{product_id}/toggle")
@@ -607,16 +627,19 @@ async def dashboard_products_toggle(
     request: Request,
     slug: str,
     product_id: int,
+    token: Optional[str] = None,
 ) -> RedirectResponse:
     async with AsyncSessionLocal() as session:
         client = await session.scalar(select(Client).where(Client.slug == slug))
         if client is None:
             raise HTTPException(status_code=404)
+        _check_dashboard_token(client, token)
         product = await session.get(Product, product_id)
         if product and product.client_id == client.id:
             product.is_available = not product.is_available
             await session.commit()
-    return RedirectResponse(f"/dashboard/{slug}/products", status_code=303)
+    _tp = f"?token={token}" if token else ""
+    return RedirectResponse(f"/dashboard/{slug}/products{_tp}", status_code=303)
 
 
 @router.post("/dashboard/{slug}/products/{product_id}/edit")
@@ -624,6 +647,7 @@ async def dashboard_products_edit(
     request: Request,
     slug: str,
     product_id: int,
+    token: Optional[str] = None,
     name: str = Form(...),
     price: str = Form("0"),
     category: Optional[str] = Form(None),
@@ -638,6 +662,7 @@ async def dashboard_products_edit(
         client = await session.scalar(select(Client).where(Client.slug == slug))
         if client is None:
             raise HTTPException(status_code=404)
+        _check_dashboard_token(client, token)
         product = await session.get(Product, product_id)
         if product and product.client_id == client.id:
             try:
@@ -658,7 +683,8 @@ async def dashboard_products_edit(
             product.specs = specs.strip() if specs else None
             product.group_name = group_name.strip() if group_name else None
             await session.commit()
-    return RedirectResponse(f"/dashboard/{slug}/products?success=updated", status_code=303)
+    _tp = f"&token={token}" if token else ""
+    return RedirectResponse(f"/dashboard/{slug}/products?success=updated{_tp}", status_code=303)
 
 
 @router.get("/health")
@@ -749,6 +775,7 @@ async def payment_page(
 async def client_dashboard(
     request: Request,
     slug: str,
+    token: Optional[str] = None,
     lang: Optional[str] = None,
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
@@ -774,6 +801,8 @@ async def client_dashboard(
                 },
                 status_code=404,
             )
+
+        _check_dashboard_token(client, token)
 
         # Pick the most relevant subscription: active/trial first, latest by id
         subs = sorted(

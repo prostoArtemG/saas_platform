@@ -484,10 +484,20 @@ async def cms_site(message: Message, state: FSMContext) -> None:
     base = (app_settings.payment_webhook_base_url or "").rstrip("/")
     site_url = f"{base}/site/{client.slug}" if base else f"/site/{client.slug}"
 
+    # Dashboard URL with token (if set)
+    dashboard_url: str | None = None
+    if base:
+        if client.dashboard_token:
+            dashboard_url = f"{base}/dashboard/{client.slug}?token={client.dashboard_token}"
+        else:
+            dashboard_url = f"{base}/dashboard/{client.slug}"
+
+    dashboard_line = f"\n\n🖥 <b>Дашборд:</b>\n<code>{dashboard_url}</code>" if dashboard_url else ""
+
     await message.answer(
         f"🌐 <b>Ваш сайт:</b>\n"
         f"<code>{site_url}</code>\n\n"
-        f"Slug: <code>{client.slug}</code>",
+        f"Slug: <code>{client.slug}</code>{dashboard_line}",
         parse_mode="HTML",
         reply_markup=client_main_menu(),
     )
