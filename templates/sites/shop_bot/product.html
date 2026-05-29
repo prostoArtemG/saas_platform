@@ -116,6 +116,10 @@
       font-weight: 800; font-size: 17px;
       box-shadow: 0 0 12px var(--primary-light);
     }
+    .header-logo-img {
+      width: 36px; height: 36px;
+      object-fit: contain; border-radius: var(--radius-sm);
+    }
     .btn-back {
       display: inline-flex; align-items: center; gap: 6px;
       height: 36px; padding: 0 14px;
@@ -390,6 +394,8 @@
       font-size: 13px; color: var(--text-3);
     }
     footer strong { color: var(--text); }
+    footer a { color: var(--text-2); transition: color var(--transition); }
+    footer a:hover { color: var(--primary); }
 
     /* ── Responsive ─────────────────────────────────────────── */
     @media (max-width: 680px) {
@@ -408,8 +414,12 @@
 <!-- ══════════════ HEADER ══════════════════════════════════════════════════ -->
 <header class="header">
   <div class="header-logo">
-    <div class="header-logo-icon">{{ client.business_name[0] | upper }}</div>
-    <span>{{ client.business_name }}</span>
+    {% if client.logo_url %}
+      <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="header-logo-img">
+    {% else %}
+      <div class="header-logo-icon">{{ client.shop_title[0] | upper }}</div>
+    {% endif %}
+    <span>{{ client.shop_title }}</span>
   </div>
   <a class="btn-back" href="/site/{{ client.slug }}">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -524,7 +534,20 @@
 </div><!-- /page -->
 
 <footer>
-  &copy; <strong>{{ client.business_name }}</strong> &mdash; Powered by SaaS Platform
+  <div>&copy; <strong>{{ client.shop_title }}</strong></div>
+  {% if client.phone or client.address %}
+  <div style="margin-top:6px;font-size:12px;">
+    {% if client.phone %}📞 {{ client.phone }}{% endif %}
+    {% if client.phone and client.address %} · {% endif %}
+    {% if client.address %}📍 {{ client.address }}{% endif %}
+  </div>
+  {% endif %}
+  {% if client.telegram_url or client.instagram_url %}
+  <div style="margin-top:8px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+    {% if client.telegram_url %}<a href="{{ client.telegram_url }}" target="_blank" rel="noopener noreferrer">✈️ Telegram</a>{% endif %}
+    {% if client.instagram_url %}<a href="{{ client.instagram_url }}" target="_blank" rel="noopener noreferrer">📸 Instagram</a>{% endif %}
+  </div>
+  {% endif %}
 </footer>
 
 <!-- ══════════════ ORDER MODAL ═════════════════════════════════════════════ -->

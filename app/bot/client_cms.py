@@ -136,6 +136,86 @@ def _themes_kb(current: str | None) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+# ── Settings helpers ─────────────────────────────────────────────────────────
+
+SETTINGS_PROMPTS: dict[str, str] = {
+    "shop_title":    "🏪 <b>Назва магазину</b>\n\nВведіть назву, яка буде відображатись в шапці сайту:",
+    "phone":         "📞 <b>Телефон</b>\n\nВведіть контактний номер телефону:",
+    "address":       "📍 <b>Адреса</b>\n\nВведіть адресу магазину:",
+    "telegram_url":  "✈️ <b>Telegram</b>\n\nВведіть посилання на Telegram\n(наприклад: <code>https://t.me/myshop</code>):",
+    "instagram_url": "📸 <b>Instagram</b>\n\nВведіть посилання на Instagram\n(наприклад: <code>https://instagram.com/myshop</code>):",
+    "logo":          "🖼 <b>Логотип</b>\n\nНадішліть фото логотипу або URL посилання на зображення:",
+}
+VALID_SETTINGS_FIELDS: frozenset[str] = frozenset(SETTINGS_PROMPTS)
+URL_SETTINGS_FIELDS: frozenset[str] = frozenset({"telegram_url", "instagram_url"})
+FIELD_ATTR: dict[str, str] = {
+    "shop_title":    "shop_title",
+    "phone":         "phone",
+    "address":       "address",
+    "telegram_url":  "telegram_url",
+    "instagram_url": "instagram_url",
+    "logo":          "logo_url",
+}
+
+
+def _settings_text(client: Client, cs: ClientSettings | None) -> str:
+    def _v(val: str | None) -> str:
+        return val if val else "<i>не вказано</i>"
+
+    theme = (cs.theme_name if cs else None) or "light_red"
+    return (
+        f"⚙️ <b>Налаштування магазину</b>\n\n"
+        f"🏪 Назва на сайті: <b>{_v(cs.shop_title if cs else None)}</b>\n"
+        f"📞 Телефон: {_v(cs.phone if cs else None)}\n"
+        f"📍 Адреса: {_v(cs.address if cs else None)}\n"
+        f"✈️ Telegram: {_v(cs.telegram_url if cs else None)}\n"
+        f"📸 Instagram: {_v(cs.instagram_url if cs else None)}\n"
+        f"🖼 Логотип: {'✅ є' if (cs and cs.logo_url) else '<i>немає</i>'}\n"
+        f"🎨 Тема: {THEMES.get(theme, theme)}\n\n"
+        f"Натисніть кнопку, щоб змінити:"
+    )
+
+
+def _settings_overview_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🏪 Назва магазину",  callback_data="cms:set:shop_title")],
+            [InlineKeyboardButton(text="📞 Телефон",          callback_data="cms:set:phone")],
+            [InlineKeyboardButton(text="📍 Адреса",           callback_data="cms:set:address")],
+            [InlineKeyboardButton(text="✈️ Telegram",         callback_data="cms:set:telegram_url")],
+            [InlineKeyboardButton(text="📸 Instagram",        callback_data="cms:set:instagram_url")],
+            [InlineKeyboardButton(text="🖼 Логотип",          callback_data="cms:set:logo")],
+            [InlineKeyboardButton(text="🎨 Тема сайту",       callback_data="cms:set:theme")],
+        ]
+    )
+
+
+def _cancel_input_kb(field: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="🗑 Очистити",  callback_data=f"cms:clr:{field}"),
+            InlineKeyboardButton(text="❌ Скасувати", callback_data="cms:set:cancel"),
+        ]]
+    )
+
+
+async def _save_settings_field(
+    client_id: int, field: str, value: str | None
+) -> ClientSettings:
+    attr = FIELD_ATTR.get(field, field)
+    async with AsyncSessionLocal() as session:
+        cs = await session.scalar(
+            select(ClientSettings).where(ClientSettings.client_id == client_id)
+        )
+        if cs is None:
+            cs = ClientSettings(client_id=client_id)
+            session.add(cs)
+        setattr(cs, attr, value)
+        await session.commit()
+        await session.refresh(cs)
+        return cs
+
+
 def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -220,6 +300,15 @@ class CmsAddProduct(StatesGroup):
     image_url      = State()  # text input or skip: photo URL → saves product
 
 
+class CmsSettings(StatesGroup):
+    shop_title    = State()
+    phone         = State()
+    address       = State()
+    telegram_url  = State()
+    instagram_url = State()
+    logo          = State()
+
+
 # ── /start ───────────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
@@ -244,12 +333,12 @@ async def client_start(message: Message, state: FSMContext) -> None:
 
 # ── /cancel (FSM) ────────────────────────────────────────────────────────────
 
-@router.message(StateFilter(CmsAddProduct), Command("cancel"))
+@router.message(StateFilter(CmsAddProduct, CmsSettings), Command("cancel"))
 async def cms_cancel(message: Message, state: FSMContext) -> None:
     await _clear_fsm_keep_test(state)
     data_after = await state.get_data()
     menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
-    await message.answer("Додавання скасовано.", reply_markup=menu)
+    await message.answer("Скасовано.", reply_markup=menu)
 
 
 # ── 📦 Товары ─────────────────────────────────────────────────────────────────
@@ -332,7 +421,7 @@ async def cms_orders(message: Message) -> None:
 
 @router.message(F.text == BTN_CMS_SETTINGS)
 async def cms_settings(message: Message, state: FSMContext) -> None:
-    from app.config import settings as app_settings
+    await _clear_fsm_keep_test(state)
     user_id = message.from_user.id  # type: ignore[union-attr]
     client = await _get_effective_client(user_id, state)
     if client is None:
@@ -342,29 +431,70 @@ async def cms_settings(message: Message, state: FSMContext) -> None:
         cs = await session.scalar(
             select(ClientSettings).where(ClientSettings.client_id == client.id)
         )
-    theme = (cs.theme_name if cs else None) or "light_red"
-
-    data = await state.get_data()
-    in_test = user_id in app_settings.admin_ids and data.get("selected_client_id") is not None
-
     await message.answer(
-        f"⚙️ <b>Настройки магазина</b>\n\n"
-        f"🏪 Назва: <b>{client.business_name}</b>\n"
-        f"🔗 Slug: <code>{client.slug}</code>\n"
-        f"📋 Шаблон: <code>{client.template_name}</code>\n"
-        f"📌 Статус: <code>{client.status}</code>\n\n"
-        f"🎨 <b>Колір сайту:</b> {THEMES.get(theme, theme)}\n"
-        f"Виберіть тему:",
+        _settings_text(client, cs),
         parse_mode="HTML",
-        reply_markup=_themes_kb(theme),
+        reply_markup=_settings_overview_kb(),
     )
 
 
-# ── Settings: set theme ──────────────────────────────────────────────────────
+# ── Settings: callbacks ──────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cms:set:"))
+async def cms_settings_start_edit(cb: CallbackQuery, state: FSMContext) -> None:
+    field = cb.data[len("cms:set:"):]
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+
+    # ── Cancel: clear FSM, show overview ──
+    if field == "cancel":
+        await _clear_fsm_keep_test(state)
+        async with AsyncSessionLocal() as session:
+            cs = await session.scalar(
+                select(ClientSettings).where(ClientSettings.client_id == client.id)
+            )
+        await cb.message.answer(  # type: ignore[union-attr]
+            _settings_text(client, cs),
+            parse_mode="HTML",
+            reply_markup=_settings_overview_kb(),
+        )
+        await cb.answer()
+        return
+
+    # ── Theme: inline edit, no FSM ──
+    if field == "theme":
+        async with AsyncSessionLocal() as session:
+            cs = await session.scalar(
+                select(ClientSettings).where(ClientSettings.client_id == client.id)
+            )
+        theme = (cs.theme_name if cs else None) or "light_red"
+        await cb.message.edit_text(  # type: ignore[union-attr]
+            f"🎨 <b>Тема сайту</b>\n\nПоточна: {THEMES.get(theme, theme)}\nОберіть:",
+            parse_mode="HTML",
+            reply_markup=_themes_kb(theme),
+        )
+        await cb.answer()
+        return
+
+    if field not in VALID_SETTINGS_FIELDS:
+        await cb.answer("Невідома дія", show_alert=True)
+        return
+
+    await state.set_state(getattr(CmsSettings, field))
+    await cb.message.answer(  # type: ignore[union-attr]
+        SETTINGS_PROMPTS[field],
+        parse_mode="HTML",
+        reply_markup=_cancel_input_kb(field),
+    )
+    await cb.answer()
+
 
 @router.callback_query(F.data.startswith("cms:theme:"))
 async def cms_set_theme(cb: CallbackQuery, state: FSMContext) -> None:
-    theme_key = cb.data.split(":", 2)[2]  # cms:theme:<key>
+    theme_key = cb.data.split(":", 2)[2]
     if theme_key not in VALID_THEMES:
         await cb.answer("Невідома тема", show_alert=True)
         return
@@ -380,25 +510,152 @@ async def cms_set_theme(cb: CallbackQuery, state: FSMContext) -> None:
             select(ClientSettings).where(ClientSettings.client_id == client.id)
         )
         if cs is None:
-            cs = ClientSettings(
-                client_id=client.id,
-                theme_name=theme_key,
-            )
+            cs = ClientSettings(client_id=client.id, theme_name=theme_key)
             session.add(cs)
         else:
             cs.theme_name = theme_key
         await session.commit()
+        await session.refresh(cs)
 
     await cb.message.edit_text(  # type: ignore[union-attr]
-        f"⚙️ <b>Настройки магазина</b>\n\n"
-        f"🏪 Назва: <b>{client.business_name}</b>\n"
-        f"🔗 Slug: <code>{client.slug}</code>\n\n"
-        f"🎨 <b>Колір сайту:</b> {THEMES[theme_key]}\n"
-        f"Виберіть тему:",
+        _settings_text(client, cs),
         parse_mode="HTML",
-        reply_markup=_themes_kb(theme_key),
+        reply_markup=_settings_overview_kb(),
     )
     await cb.answer("✅ Тему збережено!")
+
+
+@router.callback_query(F.data.startswith("cms:clr:"))
+async def cms_settings_clear_field(cb: CallbackQuery, state: FSMContext) -> None:
+    field = cb.data[len("cms:clr:"):]
+    if field not in VALID_SETTINGS_FIELDS:
+        await cb.answer("Невідома дія", show_alert=True)
+        return
+
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+
+    cs = await _save_settings_field(client.id, field, None)
+    await _clear_fsm_keep_test(state)
+    await cb.message.answer(  # type: ignore[union-attr]
+        _settings_text(client, cs),
+        parse_mode="HTML",
+        reply_markup=_settings_overview_kb(),
+    )
+    await cb.answer("🗑 Очищено")
+
+
+@router.message(
+    StateFilter(
+        CmsSettings.shop_title,
+        CmsSettings.phone,
+        CmsSettings.address,
+        CmsSettings.telegram_url,
+        CmsSettings.instagram_url,
+    )
+)
+async def cms_settings_text_input(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    if not val:
+        await message.answer("Значення не може бути порожнім. Спробуйте ще раз або скасуйте:")
+        return
+
+    current = await state.get_state()
+    field = current.split(":")[-1] if current else ""
+
+    if field in URL_SETTINGS_FIELDS:
+        if not (val.startswith("https://") or val.startswith("http://")):
+            await message.answer(
+                "❌ Некоректний URL. Має починатись з <code>https://</code>",
+                parse_mode="HTML",
+                reply_markup=_cancel_input_kb(field),
+            )
+            return
+
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+
+    cs = await _save_settings_field(client.id, field, val)
+    await _clear_fsm_keep_test(state)
+    await message.answer(
+        _settings_text(client, cs),
+        parse_mode="HTML",
+        reply_markup=_settings_overview_kb(),
+    )
+
+
+@router.message(StateFilter(CmsSettings.logo), F.photo)
+async def cms_logo_photo(message: Message, state: FSMContext) -> None:
+    from app.config import settings as app_settings
+    if not (
+        app_settings.cloudinary_cloud_name
+        and app_settings.cloudinary_api_key
+        and app_settings.cloudinary_api_secret
+    ):
+        await message.answer(
+            "📷 Cloudinary не налаштований.\n"
+            "Надішліть URL посилання на логотип або натисніть «Скасувати»:",
+            reply_markup=_cancel_input_kb("logo"),
+        )
+        return
+
+    photo = message.photo[-1]
+    url = await _upload_to_cloudinary(message.bot, photo.file_id)  # type: ignore[arg-type]
+    if not url:
+        await message.answer(
+            "⚠️ Не вдалось завантажити фото. Спробуйте URL або скасуйте:",
+            reply_markup=_cancel_input_kb("logo"),
+        )
+        return
+
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+
+    cs = await _save_settings_field(client.id, "logo", url)
+    await _clear_fsm_keep_test(state)
+    await message.answer(
+        _settings_text(client, cs),
+        parse_mode="HTML",
+        reply_markup=_settings_overview_kb(),
+    )
+
+
+@router.message(StateFilter(CmsSettings.logo))
+async def cms_logo_url_input(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    if not val:
+        await message.answer("Введіть URL або надішліть фото:")
+        return
+    if not (val.startswith("https://") or val.startswith("http://")):
+        await message.answer(
+            "❌ URL має починатись з <code>https://</code> або <code>http://</code>",
+            parse_mode="HTML",
+            reply_markup=_cancel_input_kb("logo"),
+        )
+        return
+
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+
+    cs = await _save_settings_field(client.id, "logo", val)
+    await _clear_fsm_keep_test(state)
+    await message.answer(
+        _settings_text(client, cs),
+        parse_mode="HTML",
+        reply_markup=_settings_overview_kb(),
+    )
 
 
 # ── FSM: add product ──────────────────────────────────────────────────────────

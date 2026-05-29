@@ -271,6 +271,12 @@ class ClientSettings(Base):
     theme_name: Mapped[str] = mapped_column(
         String(64), nullable=False, server_default="light_red", default="light_red"
     )
+    shop_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    telegram_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    instagram_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    logo_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

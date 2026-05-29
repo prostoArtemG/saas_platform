@@ -882,6 +882,12 @@ async def client_site(
             "telegram_id": client.admin_telegram_id,
             "template_name": client.template_name,
             "theme_name": (client_settings.theme_name if client_settings else None) or "light_red",
+            "shop_title": (client_settings.shop_title if client_settings else None) or client.business_name,
+            "phone": client_settings.phone if client_settings else None,
+            "address": client_settings.address if client_settings else None,
+            "telegram_url": client_settings.telegram_url if client_settings else None,
+            "instagram_url": client_settings.instagram_url if client_settings else None,
+            "logo_url": client_settings.logo_url if client_settings else None,
         }
 
     template_name = (client_data["template_name"] or "").strip() or "technovlada"
@@ -964,6 +970,12 @@ async def client_site_product(
         "slug": client.slug,
         "template_name": client.template_name,
         "theme_name": (client_settings.theme_name if client_settings else None) or "light_red",
+        "shop_title": (client_settings.shop_title if client_settings else None) or client.business_name,
+        "phone": client_settings.phone if client_settings else None,
+        "address": client_settings.address if client_settings else None,
+        "telegram_url": client_settings.telegram_url if client_settings else None,
+        "instagram_url": client_settings.instagram_url if client_settings else None,
+        "logo_url": client_settings.logo_url if client_settings else None,
     }
     product_data = {
         "id": product.id,

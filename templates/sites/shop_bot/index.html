@@ -151,6 +151,7 @@
     }
     .logo { display: flex; align-items: center; flex-shrink: 0; }
     .logo-text { font-size: 20px; font-weight: 800; color: var(--accent); letter-spacing: -.5px; }
+    .logo-img { height: 32px; width: 32px; object-fit: contain; border-radius: 6px; margin-right: 4px; }
     .header-search { flex: 1; max-width: 480px; min-width: 0; position: relative; }
     .header-search form {
       display: flex; width: 100%;
@@ -378,6 +379,7 @@
       gap: 40px; padding: 48px 16px 40px;
     }
     .footer-logo-text { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .footer-logo-img { height: 40px; object-fit: contain; border-radius: 6px; margin-bottom: 4px; }
     .footer-subtitle { font-size: 13px; color: rgba(255,255,255,.5); }
     .footer-title {
       font-size: 11px; font-weight: 700;
@@ -576,7 +578,10 @@
   <div class="container header-inner">
 
     <a href="/site/{{ client.slug }}" class="logo">
-      <span class="logo-text">{{ client.business_name }}</span>
+      {% if client.logo_url %}
+        <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="logo-img">
+      {% endif %}
+      <span class="logo-text">{{ client.shop_title }}</span>
     </a>
 
     <div class="header-search">
@@ -675,8 +680,13 @@
   <div class="container footer-inner">
 
     <div class="footer-col">
-      <div class="footer-logo-text">{{ client.business_name }}</div>
+      {% if client.logo_url %}
+        <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="footer-logo-img">
+      {% endif %}
+      <div class="footer-logo-text">{{ client.shop_title }}</div>
       <p class="footer-subtitle">Ваш надійний інтернет-магазин</p>
+      {% if client.phone %}<p>📞 {{ client.phone }}</p>{% endif %}
+      {% if client.address %}<p>📍 {{ client.address }}</p>{% endif %}
     </div>
 
     <div class="footer-col">
@@ -688,11 +698,17 @@
       <div class="footer-title">Замовлення</div>
       <p>Оформлення замовлення через сайт</p>
       <p>Доставка по Україні</p>
+      {% if client.telegram_url %}
+        <a href="{{ client.telegram_url }}" target="_blank" rel="noopener noreferrer">✈️ Telegram</a>
+      {% endif %}
+      {% if client.instagram_url %}
+        <a href="{{ client.instagram_url }}" target="_blank" rel="noopener noreferrer">📸 Instagram</a>
+      {% endif %}
     </div>
 
   </div>
   <div class="footer-bottom">
-    <div class="container">&copy; {{ client.business_name }}</div>
+    <div class="container">&copy; {{ client.shop_title }}</div>
   </div>
 </footer>
 
