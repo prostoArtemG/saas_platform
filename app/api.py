@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.bot.payments import format_payment_message, payment_actions_kb
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, Payment, PaymentRequest, Plan, Subscription
+from app.models import Client, Payment, PaymentRequest, Plan, Subscription, SiteEvent
 from app.payments import PROVIDERS, get_provider, get_provider_strict
 from app.services.client_domain import get_client_domain
 from app.services.client_limits import get_client_limits
@@ -606,3 +606,36 @@ async def payment_webhook_generic(
     }
     result.update(extra or {})
     return result
+
+
+# ---------------------------------------------------------------------------
+# Site analytics — event tracking
+# ---------------------------------------------------------------------------
+
+_ALLOWED_EVENT_TYPES = frozenset({"site_view", "product_view", "add_to_cart", "order"})
+
+
+class SiteEventIn(BaseModel):
+    event_type: str
+    product_id: Optional[int] = None
+
+
+@router.post("/event/{slug}")
+async def track_site_event(slug: str, data: SiteEventIn) -> dict:
+    """Record a site analytics event.  Called from JS (add_to_cart) and server-side."""
+    if data.event_type not in _ALLOWED_EVENT_TYPES:
+        raise HTTPException(status_code=400, detail="invalid event_type")
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404, detail="client not found")
+        session.add(
+            SiteEvent(
+                client_id=client.id,
+                event_type=data.event_type,
+                product_id=data.product_id,
+            )
+        )
+        await session.commit()
+    return {"ok": True}
+

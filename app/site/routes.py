@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Order, Payment, Plan, Product, SiteRequest, Subscription
+from app.models import Client, ClientSettings, Order, Payment, Plan, Product, SiteEvent, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
 from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
@@ -37,6 +37,15 @@ def _clean(s: Optional[str]) -> Optional[str]:
         return s
     return s.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
 
+
+async def _record_event(client_id: int, event_type: str, product_id: Optional[int] = None) -> None:
+    """Fire-and-forget: persist a site analytics event; never raises."""
+    try:
+        async with AsyncSessionLocal() as session:
+            session.add(SiteEvent(client_id=client_id, event_type=event_type, product_id=product_id))
+            await session.commit()
+    except Exception:  # noqa: BLE001
+        pass
 
 def get_client_slug_from_host(host: str, platform_domain: str) -> Optional[str]:
     """Return the client slug if *host* is a client subdomain of *platform_domain*.
@@ -945,6 +954,8 @@ async def client_site(
             "logo_url": client_settings.logo_url if client_settings else None,
         }
 
+    asyncio.create_task(_record_event(client_data["id"], "site_view"))
+
     template_name = (client_data["template_name"] or "").strip() or "technovlada"
 
     # Validate template exists on disk and is whitelisted
@@ -973,6 +984,7 @@ async def client_site(
             "lang": chosen,
             "client": client_data,
             "products": products,
+            "event_url": f"/api/event/{slug}",
         },
     )
 
@@ -1055,6 +1067,8 @@ async def client_site_product(
     if not os.path.exists(os.path.join("templates", product_tpl)):
         return RedirectResponse(url=f"/site/{slug}")
 
+    asyncio.create_task(_record_event(client_data["id"], "product_view", product_id))
+
     return templates.TemplateResponse(
         product_tpl,
         {
@@ -1111,6 +1125,8 @@ async def site_order(
         )
         session.add(order_obj)
         await session.commit()
+
+    asyncio.create_task(_record_event(client.id, "order"))
 
     # Notify client admin via Telegram
     bot = getattr(request.app.state, "bot", None)

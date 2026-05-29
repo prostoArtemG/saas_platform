@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
@@ -35,11 +36,12 @@ from app.bot.keyboards import (
     BTN_CMS_PRODUCTS,
     BTN_CMS_SETTINGS,
     BTN_CMS_SITE,
+    BTN_CMS_STATS,
     client_main_menu,
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Order, Product
+from app.models import Client, ClientSettings, Order, Product, SiteEvent
 
 logger = logging.getLogger(__name__)
 
@@ -1183,7 +1185,54 @@ async def cms_site(message: Message, state: FSMContext) -> None:
     )
 
 
-# ── 📊 Замовлення ────────────────────────────────────────────────────────────
+# ── � Статистика ─────────────────────────────────────────────────────────────
+
+async def _site_stats(client_id: int) -> dict[str, dict[str, int]]:
+    """Return event counts per period: today / 7 days / 30 days."""
+    now = datetime.now(timezone.utc)
+    result: dict[str, dict[str, int]] = {}
+    async with AsyncSessionLocal() as session:
+        for key, days in [("today", 1), ("week", 7), ("month", 30)]:
+            since = now - timedelta(days=days)
+            rows = (
+                await session.execute(
+                    select(SiteEvent.event_type, func.count(SiteEvent.id).label("cnt"))
+                    .where(SiteEvent.client_id == client_id, SiteEvent.created_at >= since)
+                    .group_by(SiteEvent.event_type)
+                )
+            ).all()
+            result[key] = {et: cnt for et, cnt in rows}
+    return result
+
+
+def _stats_text(stats: dict[str, dict[str, int]]) -> str:
+    def _c(period: str, et: str) -> int:
+        return stats.get(period, {}).get(et, 0)
+
+    lines = ["📈 <b>Статистика сайту</b>\n"]
+    for label, key in [("Сьогодні", "today"), ("7 днів", "week"), ("30 днів", "month")]:
+        lines.append(f"<b>{label}:</b>")
+        lines.append(f"  👁 Відвідувань сайту: {_c(key, 'site_view')}")
+        lines.append(f"  🔍 Переглядів товарів: {_c(key, 'product_view')}")
+        lines.append(f"  🛒 Додано в корзину: {_c(key, 'add_to_cart')}")
+        lines.append(f"  📦 Замовлень: {_c(key, 'order')}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+@router.message(F.text == BTN_CMS_STATS)
+async def cms_stats(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        return
+    stats = await _site_stats(client.id)
+    data = await state.get_data()
+    menu = client_test_menu() if data.get("selected_client_id") else client_main_menu()
+    await message.answer(_stats_text(stats), parse_mode="HTML", reply_markup=menu)
+
+
+# ── �📊 Замовлення ────────────────────────────────────────────────────────────
 
 @router.message(F.text == BTN_CMS_ORDERS)
 async def cms_orders(message: Message, state: FSMContext) -> None:

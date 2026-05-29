@@ -339,6 +339,19 @@ END $$;
 
 COMMIT;
 
+-- ---------------------------------------------------------------------------
+-- site_events
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS site_events (
+    id          SERIAL PRIMARY KEY,
+    client_id   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    event_type  VARCHAR(32) NOT NULL,
+    product_id  INTEGER,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_site_events_client_id  ON site_events (client_id);
+CREATE INDEX IF NOT EXISTS ix_site_events_created_at ON site_events (created_at);
+
 -- =============================================================================
 -- HOW TO RUN ON RAILWAY
 -- =============================================================================

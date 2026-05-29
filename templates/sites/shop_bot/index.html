@@ -814,6 +814,7 @@
 /* ── Data from server ──────────────────────────────────────────────────────── */
 const PRODUCTS    = {{ products | tojson }};
 const CLIENT_SLUG = {{ client.slug | tojson }};
+const EVENT_URL   = {{ event_url | tojson }};
 
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let cart         = [];
@@ -1094,6 +1095,11 @@ function addToCart(id) {
   else cart.push({ id: p.id, name: p.name, price: p.price, image_url: p.image_url || null, qty: 1 });
   syncCart();
   showToast("&#x2705; Додано: " + p.name);
+  fetch(EVENT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_type: "add_to_cart", product_id: id }),
+  }).catch(() => {});
 }
 
 function removeFromCart(id) {

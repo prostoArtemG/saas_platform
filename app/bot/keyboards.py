@@ -13,6 +13,7 @@ BTN_PRODUCTS = "📦 Товары"
 BTN_CMS_PRODUCTS = "📦 Товары"
 BTN_CMS_SITE = "🌐 Мой сайт"
 BTN_CMS_ORDERS = "📊 Заказы"
+BTN_CMS_STATS = "📈 Статистика"
 BTN_CMS_SETTINGS = "⚙️ Настройки"
 BTN_EXIT_TEST = "⬅️ Выйти из тест-режима"
 
@@ -37,7 +38,7 @@ def client_main_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_CMS_PRODUCTS)],
             [KeyboardButton(text=BTN_CMS_SITE), KeyboardButton(text=BTN_CMS_ORDERS)],
-            [KeyboardButton(text=BTN_CMS_SETTINGS)],
+            [KeyboardButton(text=BTN_CMS_STATS), KeyboardButton(text=BTN_CMS_SETTINGS)],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -50,7 +51,7 @@ def client_test_menu() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_CMS_PRODUCTS)],
             [KeyboardButton(text=BTN_CMS_SITE), KeyboardButton(text=BTN_CMS_ORDERS)],
-            [KeyboardButton(text=BTN_CMS_SETTINGS)],
+            [KeyboardButton(text=BTN_CMS_STATS), KeyboardButton(text=BTN_CMS_SETTINGS)],
             [KeyboardButton(text=BTN_EXIT_TEST)],
         ],
         resize_keyboard=True,
