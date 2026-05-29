@@ -27,7 +27,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     Message,
 )
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.bot.filters import CMSFilter
 from app.bot.keyboards import (
@@ -373,6 +373,139 @@ def _specs_list_text(items: list) -> str:
     return f"Поточні характеристики:\n{lines}\n\nДодайте ще або натисніть кнопку:"
 
 
+# ── Products: paginated list helpers ─────────────────────────────────────────
+
+PROD_PAGE_SIZE = 10
+
+_PROD_EDIT_PROMPTS: dict[str, str] = {
+    "name":       "✏️ Введіть нову назву/модель товару:",
+    "brand":      "🏢 Введіть новий бренд (або «-» щоб очистити):",
+    "category":   "📂 Введіть нову категорію (або «-» щоб очистити):",
+    "group_name": "📁 Введіть нову групу (або «-» щоб очистити):",
+    "price":      "💰 Введіть нову ціну (наприклад: 150):",
+    "old_price":  "🏷 Введіть стару ціну (або «-» щоб очистити):",
+    "specs":      "📋 Введіть нові характеристики (або «-» щоб очистити):",
+}
+_PROD_EDIT_VALID: frozenset[str] = frozenset(_PROD_EDIT_PROMPTS) | {"image"}
+
+
+def _pfmt(price: object) -> str:
+    """Format Decimal/float → '1 500' or '150'."""
+    try:
+        return f"{float(price):,.0f}".replace(",", "\u00a0")
+    except Exception:
+        return str(price)
+
+
+async def _prod_page_data(client_id: int, page: int) -> tuple[list, int, int]:
+    """Return (products_on_page, clamped_page, total_pages)."""
+    async with AsyncSessionLocal() as session:
+        total: int = await session.scalar(
+            select(func.count(Product.id)).where(Product.client_id == client_id)
+        ) or 0
+        total_pages = max(1, (total + PROD_PAGE_SIZE - 1) // PROD_PAGE_SIZE)
+        page = max(0, min(page, total_pages - 1))
+        prods = list(await session.scalars(
+            select(Product)
+            .where(Product.client_id == client_id)
+            .order_by(Product.id.desc())
+            .offset(page * PROD_PAGE_SIZE)
+            .limit(PROD_PAGE_SIZE)
+        ))
+    return prods, page, total_pages
+
+
+def _prod_row_btn(p: "Product") -> str:
+    brand = f"{p.brand} " if p.brand else ""
+    flag = "✅" if p.is_available else "❌"
+    return f"#{p.id} · {brand}{p.name} · {_pfmt(p.price)} грн · {flag}"
+
+
+def _prod_list_text_header(page: int, total_pages: int, count: int, biz: str) -> str:
+    if count == 0:
+        return (
+            f"📦 <b>{biz}</b> — Товари\n\n"
+            "<i>Товарів поки немає. Додайте перший!</i>"
+        )
+    return f"📦 <b>{biz}</b> — Товари\nСторінка {page + 1} / {total_pages} · Показано {count}"
+
+
+def _prod_list_kb(
+    prods: list, page: int, total_pages: int, client_id: int
+) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    for p in prods:
+        rows.append([InlineKeyboardButton(
+            text=_prod_row_btn(p),
+            callback_data=f"cms:pv:{p.id}:{page}",
+        )])
+    nav: list[InlineKeyboardButton] = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀️", callback_data=f"cms:pl:{page - 1}"))
+    nav.append(InlineKeyboardButton(text=f"{page + 1}/{total_pages}", callback_data="cms:noop"))
+    if page + 1 < total_pages:
+        nav.append(InlineKeyboardButton(text="▶️", callback_data=f"cms:pl:{page + 1}"))
+    rows.append(nav)
+    rows.append([
+        InlineKeyboardButton(text="🔍 Пошук",  callback_data="cms:psearch"),
+        InlineKeyboardButton(text="➕ Додати", callback_data=f"cms:prod:add:{client_id}"),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _prod_card_text(p: "Product") -> str:
+    def _v(val: object) -> str:
+        s = str(val) if val is not None else ""
+        return s if s else "<i>—</i>"
+
+    lines = [f"<b>#{p.id} · {p.name}</b>", ""]
+    lines.append(f"📁 Група:      {_v(p.group_name)}")
+    lines.append(f"📂 Категорія:  {_v(p.category)}")
+    lines.append(f"🏢 Бренд:      {_v(p.brand)}")
+    lines.append(f"💰 Ціна:       <b>{_pfmt(p.price)} грн</b>")
+    if p.old_price:
+        lines.append(f"🏷 Стара ціна: {_pfmt(p.old_price)} грн")
+    if p.specs:
+        lines.append(f"\n📋 <b>Характеристики:</b>\n{p.specs}")
+    lines.append("")
+    lines.append(f"👁 Статус: {'✅ В наявності' if p.is_available else '❌ Прихований'}")
+    lines.append(f"🖼 Фото:   {'✅ є' if p.image_url else '<i>немає</i>'}")
+    return "\n".join(lines)
+
+
+def _prod_card_kb(
+    p: "Product", page: int = 0, site_url: str = ""
+) -> InlineKeyboardMarkup:
+    toggle_text = "👁 Приховати" if p.is_available else "👁 Показати"
+    pid = p.id
+    rows: list[list[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text="✏️ Назва/модель",   callback_data=f"cms:pe:{pid}:name:{page}"),
+            InlineKeyboardButton(text="🏢 Бренд",          callback_data=f"cms:pe:{pid}:brand:{page}"),
+        ],
+        [
+            InlineKeyboardButton(text="📂 Категорія",      callback_data=f"cms:pe:{pid}:category:{page}"),
+            InlineKeyboardButton(text="📁 Група",          callback_data=f"cms:pe:{pid}:group_name:{page}"),
+        ],
+        [
+            InlineKeyboardButton(text="💰 Ціна",           callback_data=f"cms:pe:{pid}:price:{page}"),
+            InlineKeyboardButton(text="🏷 Стара ціна",     callback_data=f"cms:pe:{pid}:old_price:{page}"),
+        ],
+        [
+            InlineKeyboardButton(text="📋 Характеристики", callback_data=f"cms:pe:{pid}:specs:{page}"),
+            InlineKeyboardButton(text="🖼 Фото",           callback_data=f"cms:pe:{pid}:image:{page}"),
+        ],
+        [
+            InlineKeyboardButton(text=toggle_text,         callback_data=f"cms:ptog:{pid}:{page}"),
+            InlineKeyboardButton(text="🗑 Видалити товар", callback_data=f"cms:pdc:{pid}:{page}"),
+        ],
+    ]
+    if site_url:
+        rows.append([InlineKeyboardButton(text="🌐 Відкрити на сайті", url=site_url)])
+    rows.append([InlineKeyboardButton(text="← Список", callback_data=f"cms:pl:{page}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 # ── FSM states ────────────────────────────────────────────────────────────────────────────────
 
 class CmsAddProduct(StatesGroup):
@@ -396,6 +529,15 @@ class CmsSettings(StatesGroup):
     telegram_url  = State()
     instagram_url = State()
     logo          = State()
+
+
+class CmsEditProduct(StatesGroup):
+    edit_field = State()   # text / numeric field
+    edit_image = State()   # photo or URL
+
+
+class CmsProductSearch(StatesGroup):
+    query = State()
 
 
 # ── /start ───────────────────────────────────────────────────────────────────
@@ -422,7 +564,7 @@ async def client_start(message: Message, state: FSMContext) -> None:
 
 # ── /cancel (FSM) ────────────────────────────────────────────────────────────
 
-@router.message(StateFilter(CmsAddProduct, CmsSettings), Command("cancel"))
+@router.message(StateFilter(CmsAddProduct, CmsSettings, CmsEditProduct, CmsProductSearch), Command("cancel"))
 async def cms_cancel(message: Message, state: FSMContext) -> None:
     await _clear_fsm_keep_test(state)
     data_after = await state.get_data()
@@ -430,7 +572,7 @@ async def cms_cancel(message: Message, state: FSMContext) -> None:
     await message.answer("Скасовано.", reply_markup=menu)
 
 
-# ── 📦 Товары ─────────────────────────────────────────────────────────────────
+# ── 📦 Товары (paginated) ────────────────────────────────────────────────────
 
 @router.message(F.text == BTN_CMS_PRODUCTS)
 async def cms_products(message: Message, state: FSMContext) -> None:
@@ -439,32 +581,406 @@ async def cms_products(message: Message, state: FSMContext) -> None:
     client = await _get_effective_client(user_id, state)
     if client is None:
         return
-
-    async with AsyncSessionLocal() as session:
-        products = (
-            await session.scalars(
-                select(Product)
-                .where(Product.client_id == client.id)
-                .order_by(Product.id.desc())
-            )
-        ).all()
-
-    lines = [f"📦 <b>{client.business_name}</b> — Товары\n"]
-    if products:
-        for p in products:
-            mark = "✅" if p.is_available else "❌"
-            cat = f" · {p.category}" if p.category else ""
-            brand = f" [{p.brand}]" if p.brand else ""
-            lines.append(
-                f"{mark} #{p.id} <b>{p.name}</b>{brand} — {p.price} грн{cat}"
-            )
-    else:
-        lines.append("<i>Товаров пока нет. Добавьте первый!</i>")
-
+    prods, page, total_pages = await _prod_page_data(client.id, 0)
     await message.answer(
-        "\n".join(lines),
+        _prod_list_text_header(page, total_pages, len(prods), client.business_name),
         parse_mode="HTML",
-        reply_markup=_products_actions_kb(client.id),
+        reply_markup=_prod_list_kb(prods, page, total_pages, client.id),
+    )
+
+
+@router.callback_query(F.data.startswith("cms:pl:"))
+async def cms_prod_page(cb: CallbackQuery, state: FSMContext) -> None:
+    try:
+        page = int(cb.data[len("cms:pl:"):])
+    except ValueError:
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    prods, page, total_pages = await _prod_page_data(client.id, page)
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _prod_list_text_header(page, total_pages, len(prods), client.business_name),
+        parse_mode="HTML",
+        reply_markup=_prod_list_kb(prods, page, total_pages, client.id),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data == "cms:noop")
+async def cms_noop(cb: CallbackQuery) -> None:
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("cms:pv:"))
+async def cms_prod_view(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:pv:{id}:{page}
+    parts = cb.data.split(":")
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3]) if len(parts) > 3 else 0
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+    if product is None or product.client_id != client.id:
+        await cb.answer("Товар не знайдено", show_alert=True)
+        return
+    from app.config import settings as app_settings
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+    site_url = f"{base}/site/{client.slug}/product/{product.id}" if base else ""
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _prod_card_text(product),
+        parse_mode="HTML",
+        reply_markup=_prod_card_kb(product, page, site_url),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("cms:pe:"))
+async def cms_prod_edit_start(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:pe:{id}:{field}:{page}
+    parts = cb.data.split(":")
+    try:
+        prod_id = int(parts[2])
+        field = parts[3]
+        page = int(parts[4]) if len(parts) > 4 else 0
+    except (ValueError, IndexError):
+        await cb.answer("Помилка", show_alert=True)
+        return
+    if field not in _PROD_EDIT_VALID:
+        await cb.answer("Невідоме поле", show_alert=True)
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+    if product is None or product.client_id != client.id:
+        await cb.answer("Товар не знайдено", show_alert=True)
+        return
+    await state.update_data(edit_prod_id=prod_id, edit_prod_page=page)
+    if field == "image":
+        await state.set_state(CmsEditProduct.edit_image)
+        await cb.message.answer(  # type: ignore[union-attr]
+            "🖼 Надішліть нове фото або URL зображення. «-» щоб очистити.\n"
+            "<i>/cancel для скасування</i>",
+            parse_mode="HTML",
+        )
+    else:
+        await state.update_data(edit_prod_field=field)
+        await state.set_state(CmsEditProduct.edit_field)
+        prompt = _PROD_EDIT_PROMPTS.get(field, f"Введіть нове значення для «{field}»:")
+        await cb.message.answer(  # type: ignore[union-attr]
+            prompt + "\n<i>/cancel для скасування</i>",
+            parse_mode="HTML",
+        )
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsEditProduct.edit_field))
+async def cms_prod_edit_field_input(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    data = await state.get_data()
+    prod_id: int = data["edit_prod_id"]
+    field: str = data["edit_prod_field"]
+    page: int = data.get("edit_prod_page", 0)
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+        if product is None or product.client_id != client.id:
+            await _clear_fsm_keep_test(state)
+            await message.answer("Товар не знайдено.")
+            return
+        clear = (val == "-")
+        if field == "name":
+            if not val or clear:
+                await message.answer("Назва не може бути порожньою або «-». Введіть ще раз:")
+                return
+            product.name = val
+        elif field in ("price", "old_price"):
+            if clear and field == "old_price":
+                product.old_price = None
+            else:
+                try:
+                    parsed = Decimal(val.replace(",", "."))
+                    if parsed < 0:
+                        raise ValueError("negative")
+                    setattr(product, field, parsed)
+                except (InvalidOperation, ValueError):
+                    await message.answer("❌ Некоректна ціна. Введіть число або «-»:")
+                    return
+        else:
+            setattr(product, field, None if clear else (val or None))
+        await session.commit()
+        await session.refresh(product)
+        fresh = product
+    await _clear_fsm_keep_test(state)
+    from app.config import settings as app_settings
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    await message.answer(
+        "✅ Збережено\n\n" + _prod_card_text(fresh),
+        parse_mode="HTML",
+        reply_markup=_prod_card_kb(fresh, page, site_url),
+    )
+
+
+@router.message(StateFilter(CmsEditProduct.edit_image), F.photo)
+async def cms_prod_edit_photo(message: Message, state: FSMContext) -> None:
+    from app.config import settings as app_settings
+    if not (
+        app_settings.cloudinary_cloud_name
+        and app_settings.cloudinary_api_key
+        and app_settings.cloudinary_api_secret
+    ):
+        await message.answer(
+            "📷 Cloudinary не налаштований.\n"
+            "Надішліть URL або «-» щоб очистити:",
+        )
+        return
+    photo = message.photo[-1]
+    url = await _upload_to_cloudinary(message.bot, photo.file_id)  # type: ignore[arg-type]
+    if not url:
+        await message.answer("⚠️ Не вдалось завантажити фото. Спробуйте URL:")
+        return
+    await _save_prod_photo(message, state, url)
+
+
+@router.message(StateFilter(CmsEditProduct.edit_image))
+async def cms_prod_edit_image_url(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    if val == "-":
+        await _save_prod_photo(message, state, None)
+        return
+    if not (val.startswith("https://") or val.startswith("http://")):
+        await message.answer("❌ URL має починатись з https:// або http://:")
+        return
+    await _save_prod_photo(message, state, val)
+
+
+async def _save_prod_photo(message: Message, state: FSMContext, url: str | None) -> None:
+    data = await state.get_data()
+    prod_id: int = data["edit_prod_id"]
+    page: int = data.get("edit_prod_page", 0)
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+        if product is None or product.client_id != client.id:
+            await _clear_fsm_keep_test(state)
+            await message.answer("Товар не знайдено.")
+            return
+        product.image_url = url
+        await session.commit()
+        await session.refresh(product)
+        fresh = product
+    await _clear_fsm_keep_test(state)
+    from app.config import settings as app_settings
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    await message.answer(
+        "✅ Фото оновлено\n\n" + _prod_card_text(fresh),
+        parse_mode="HTML",
+        reply_markup=_prod_card_kb(fresh, page, site_url),
+    )
+
+
+@router.callback_query(F.data.startswith("cms:ptog:"))
+async def cms_prod_toggle(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:ptog:{id}:{page}
+    parts = cb.data.split(":")
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3]) if len(parts) > 3 else 0
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+        if product is None or product.client_id != client.id:
+            await cb.answer("Товар не знайдено", show_alert=True)
+            return
+        product.is_available = not product.is_available
+        await session.commit()
+        await session.refresh(product)
+        fresh = product
+    from app.config import settings as app_settings
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _prod_card_text(fresh),
+        parse_mode="HTML",
+        reply_markup=_prod_card_kb(fresh, page, site_url),
+    )
+    await cb.answer("✅ Показано" if fresh.is_available else "❌ Приховано")
+
+
+@router.callback_query(F.data.startswith("cms:pdc:"))
+async def cms_prod_del_confirm(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:pdc:{id}:{page}
+    parts = cb.data.split(":")
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3]) if len(parts) > 3 else 0
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+    if product is None or product.client_id != client.id:
+        await cb.answer("Товар не знайдено", show_alert=True)
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(
+            text="✅ Так, видалити",
+            callback_data=f"cms:pdo:{prod_id}:{page}",
+        ),
+        InlineKeyboardButton(
+            text="❌ Скасувати",
+            callback_data=f"cms:pv:{prod_id}:{page}",
+        ),
+    ]])
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        f"🗑 Видалити товар <b>#{product.id} · {product.name}</b>?\n\n"
+        f"<i>Товар буде видалено назавжди.</i>",
+        parse_mode="HTML",
+        reply_markup=kb,
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("cms:pdo:"))
+async def cms_prod_del_do(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:pdo:{id}:{page}
+    parts = cb.data.split(":")
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3]) if len(parts) > 3 else 0
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+        if product is None or product.client_id != client.id:
+            await cb.answer("Товар не знайдено", show_alert=True)
+            return
+        prod_name = product.name
+        await session.delete(product)
+        await session.commit()
+    prods, page, total_pages = await _prod_page_data(client.id, page)
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        f"🗑 Товар <b>{prod_name}</b> видалено.\n\n"
+        + _prod_list_text_header(page, total_pages, len(prods), client.business_name),
+        parse_mode="HTML",
+        reply_markup=_prod_list_kb(prods, page, total_pages, client.id),
+    )
+    await cb.answer("✅ Видалено")
+
+
+@router.callback_query(F.data == "cms:psearch")
+async def cms_prod_search_start(cb: CallbackQuery, state: FSMContext) -> None:
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    await state.set_state(CmsProductSearch.query)
+    await cb.message.answer(  # type: ignore[union-attr]
+        "🔍 <b>Пошук товарів</b>\n\n"
+        "Введіть ID (або #ID), назву, бренд або категорію:\n"
+        "<i>/cancel для скасування</i>",
+        parse_mode="HTML",
+    )
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsProductSearch.query))
+async def cms_prod_search_input(message: Message, state: FSMContext) -> None:
+    query = (message.text or "").strip()
+    if not query:
+        await message.answer("Введіть пошуковий запит:")
+        return
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await _clear_fsm_keep_test(state)
+        return
+    raw = query.lstrip("#")
+    async with AsyncSessionLocal() as session:
+        if raw.isdigit():
+            results = list(await session.scalars(
+                select(Product)
+                .where(Product.client_id == client.id, Product.id == int(raw))
+                .limit(20)
+            ))
+        else:
+            q = f"%{query}%"
+            results = list(await session.scalars(
+                select(Product)
+                .where(
+                    Product.client_id == client.id,
+                    or_(
+                        Product.name.ilike(q),
+                        Product.brand.ilike(q),
+                        Product.category.ilike(q),
+                        Product.group_name.ilike(q),
+                    ),
+                )
+                .order_by(Product.id.desc())
+                .limit(20)
+            ))
+    await _clear_fsm_keep_test(state)
+    if not results:
+        await message.answer(
+            f"🔍 За запитом «{query}» нічого не знайдено.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="← Список товарів", callback_data="cms:pl:0"),
+            ]]),
+        )
+        return
+    rows = [[InlineKeyboardButton(
+        text=_prod_row_btn(p),
+        callback_data=f"cms:pv:{p.id}:0",
+    )] for p in results]
+    rows.append([InlineKeyboardButton(text="← Список товарів", callback_data="cms:pl:0")])
+    await message.answer(
+        f"🔍 Знайдено за «{query}»: {len(results)} товар(ів)",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
     )
 
 
