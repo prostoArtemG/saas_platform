@@ -1035,7 +1035,7 @@ async def cms_prod_search_input(message: Message, state: FSMContext) -> None:
 
 # ── Products: badge picker ────────────────────────────────────────────────────
 
-@router.callback_query(F.data.regexp(r"^cms:bview:\d+:\d+$"))
+@router.callback_query(F.data.startswith("cms:bview:"))
 async def cms_prod_badge_show(cb: CallbackQuery, state: FSMContext) -> None:
     # Format: cms:bview:{id}:{page}
     parts = cb.data.split(":")  # type: ignore[union-attr]
@@ -1064,7 +1064,7 @@ async def cms_prod_badge_show(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.answer()
 
 
-@router.callback_query(F.data.regexp(r"^cms:bset:\d+:\d+:\d+$"))
+@router.callback_query(F.data.startswith("cms:bset:"))
 async def cms_prod_badge_set(cb: CallbackQuery, state: FSMContext) -> None:
     # Format: cms:bset:{id}:{page}:{idx}
     parts = cb.data.split(":")  # type: ignore[union-attr]
@@ -1106,7 +1106,7 @@ async def cms_prod_badge_set(cb: CallbackQuery, state: FSMContext) -> None:
 
 # ── Products: SEO sub-menu ────────────────────────────────────────────────────
 
-@router.callback_query(F.data.regexp(r"^cms:seo:\d+:\d+$"))
+@router.callback_query(F.data.startswith("cms:seo:"))
 async def cms_prod_seo_show(cb: CallbackQuery, state: FSMContext) -> None:
     # Format: cms:seo:{id}:{page}
     parts = cb.data.split(":")  # type: ignore[union-attr]
