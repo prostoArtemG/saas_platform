@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Payment, Plan, Product, SiteRequest, Subscription
+from app.models import Client, ClientSettings, Order, Payment, Plan, Product, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
 from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
@@ -1032,6 +1032,26 @@ async def site_order(
         )
         if client is None:
             raise HTTPException(status_code=404, detail="client not found")
+
+    # Save order to database
+    import json as _json
+    async with AsyncSessionLocal() as session:
+        _total = sum(
+            float(item.get("price", 0)) * int(item.get("qty", 1))
+            for item in data.items
+        )
+        order_obj = Order(
+            client_id=client.id,
+            customer_name=(_clean(data.name) or "")[:255],
+            customer_phone=data.phone[:64],
+            customer_city=(data.city[:255] if data.city else None),
+            comment=(data.comment or None),
+            items_json=_json.dumps(data.items, ensure_ascii=False),
+            total=_total,
+            status="new",
+        )
+        session.add(order_obj)
+        await session.commit()
 
     # Notify client admin via Telegram
     bot = getattr(request.app.state, "bot", None)

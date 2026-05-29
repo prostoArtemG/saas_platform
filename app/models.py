@@ -316,3 +316,24 @@ class LimitsSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    customer_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    customer_phone: Mapped[str] = mapped_column(String(64), nullable=False)
+    customer_city: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    items_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    total: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="new", default="new", index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

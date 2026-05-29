@@ -27,7 +27,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     Message,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.bot.filters import CMSFilter
 from app.bot.keyboards import (
@@ -39,7 +39,7 @@ from app.bot.keyboards import (
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Product
+from app.models import Client, ClientSettings, Order, Product
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +214,95 @@ async def _save_settings_field(
         await session.commit()
         await session.refresh(cs)
         return cs
+
+
+# ── Orders: constants & helpers ───────────────────────────────────────────────
+
+ORDER_STATUS_LABELS: dict[str, str] = {
+    "new":         "🆕 Нові",
+    "in_progress": "🔄 В роботі",
+    "done":        "✅ Виконані",
+}
+_ORDER_NEXT_STATUS: dict[str, str] = {"new": "in_progress", "in_progress": "done"}
+_ORDER_BTN_LABEL:   dict[str, str] = {"new": "✅ В роботу",  "in_progress": "✅ Виконано"}
+
+
+def _order_card(order: Order) -> str:
+    import json as _json
+    dt = order.created_at.strftime("%d.%m %H:%M") if order.created_at else "?"
+    try:
+        items = _json.loads(order.items_json or "[]")
+        parts = [f"{i.get('name', '?')} × {i.get('qty', 1)}" for i in items[:3]]
+        items_str = ", ".join(parts)
+        if len(items) > 3:
+            items_str += f" (+{len(items) - 3})"
+    except Exception:
+        items_str = "—"
+    city_part = f" · 🏙 {order.customer_city}" if order.customer_city else ""
+    comment_part = f"\n💬 {order.comment}" if order.comment else ""
+    return (
+        f"<b>#{order.id}</b> · {dt}\n"
+        f"👤 {order.customer_name} · 📞 {order.customer_phone}{city_part}\n"
+        f"📦 {items_str} · 💰 {int(order.total):,} грн{comment_part}"
+    )
+
+
+def _order_list_text(orders: list, status: str) -> str:
+    label = ORDER_STATUS_LABELS.get(status, status)
+    if not orders:
+        return f"📋 <b>{label}</b>\n\nЗамовлень немає."
+    parts = [f"📋 <b>{label}</b> ({len(orders)})"]
+    for order in orders:
+        parts.append("")
+        parts.append(_order_card(order))
+    if len(orders) >= 10:
+        parts.append("\n<i>Показано перші 10</i>")
+    return "\n".join(parts)
+
+
+def _order_list_kb(orders: list, status: str) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    ns = _ORDER_NEXT_STATUS.get(status)
+    lbl = _ORDER_BTN_LABEL.get(status)
+    if ns and lbl:
+        for order in orders:
+            rows.append([InlineKeyboardButton(
+                text=f"{lbl} #{order.id}",
+                callback_data=f"cms:ord:status:{order.id}:{ns}",
+            )])
+    rows.append([InlineKeyboardButton(text="← Зведення", callback_data="cms:ord:back")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def _order_counts(client_id: int) -> tuple[int, int, int]:
+    async with AsyncSessionLocal() as session:
+        new_cnt = await session.scalar(
+            select(func.count(Order.id)).where(Order.client_id == client_id, Order.status == "new")
+        ) or 0
+        ip_cnt = await session.scalar(
+            select(func.count(Order.id)).where(Order.client_id == client_id, Order.status == "in_progress")
+        ) or 0
+        done_cnt = await session.scalar(
+            select(func.count(Order.id)).where(Order.client_id == client_id, Order.status == "done")
+        ) or 0
+    return new_cnt, ip_cnt, done_cnt
+
+
+def _order_summary_text(new: int, ip: int, done: int) -> str:
+    return (
+        f"📊 <b>Замовлення</b>\n\n"
+        f"🆕 Нові: <b>{new}</b>\n"
+        f"🔄 В роботі: <b>{ip}</b>\n"
+        f"✅ Виконані: <b>{done}</b>"
+    )
+
+
+def _order_summary_kb(new: int, ip: int, done: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=f"🆕 Нові ({new})",       callback_data="cms:ord:list:new"),
+        InlineKeyboardButton(text=f"🔄 В роботі ({ip})",   callback_data="cms:ord:list:in_progress"),
+        InlineKeyboardButton(text=f"✅ Виконані ({done})",  callback_data="cms:ord:list:done"),
+    ]])
 
 
 def _products_actions_kb(client_id: int) -> InlineKeyboardMarkup:
@@ -404,17 +493,105 @@ async def cms_site(message: Message, state: FSMContext) -> None:
     )
 
 
-# ── 📊 Заказы ─────────────────────────────────────────────────────────────────
+# ── 📊 Замовлення ────────────────────────────────────────────────────────────
 
 @router.message(F.text == BTN_CMS_ORDERS)
-async def cms_orders(message: Message) -> None:
+async def cms_orders(message: Message, state: FSMContext) -> None:
+    user_id = message.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        return
+    new, ip, done = await _order_counts(client.id)
     await message.answer(
-        "📊 <b>Заказы</b>\n\n"
-        "Уведомления о новых заказах приходят прямо в этот чат.\n"
-        "Полноценный раздел заказов скоро появится.",
+        _order_summary_text(new, ip, done),
         parse_mode="HTML",
-        reply_markup=client_main_menu(),
+        reply_markup=_order_summary_kb(new, ip, done),
     )
+
+
+@router.callback_query(F.data.startswith("cms:ord:list:"))
+async def cms_orders_list(cb: CallbackQuery, state: FSMContext) -> None:
+    status = cb.data[len("cms:ord:list:"):]
+    if status not in ORDER_STATUS_LABELS:
+        await cb.answer("Невідомий статус", show_alert=True)
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        orders = list(await session.scalars(
+            select(Order)
+            .where(Order.client_id == client.id, Order.status == status)
+            .order_by(Order.id.desc())
+            .limit(10)
+        ))
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _order_list_text(orders, status),
+        parse_mode="HTML",
+        reply_markup=_order_list_kb(orders, status),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("cms:ord:status:"))
+async def cms_ord_set_status(cb: CallbackQuery, state: FSMContext) -> None:
+    parts = cb.data.split(":")  # cms:ord:status:{id}:{new_status}
+    if len(parts) != 5:
+        await cb.answer("Помилка", show_alert=True)
+        return
+    try:
+        order_id = int(parts[3])
+    except ValueError:
+        await cb.answer("Помилка", show_alert=True)
+        return
+    new_status = parts[4]
+    if new_status not in ("in_progress", "done"):
+        await cb.answer("Невідомий статус", show_alert=True)
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        order = await session.get(Order, order_id)
+        if order is None or order.client_id != client.id:
+            await cb.answer("Замовлення не знайдено", show_alert=True)
+            return
+        old_status = order.status
+        order.status = new_status
+        await session.commit()
+    async with AsyncSessionLocal() as session:
+        orders = list(await session.scalars(
+            select(Order)
+            .where(Order.client_id == client.id, Order.status == old_status)
+            .order_by(Order.id.desc())
+            .limit(10)
+        ))
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _order_list_text(orders, old_status),
+        parse_mode="HTML",
+        reply_markup=_order_list_kb(orders, old_status),
+    )
+    await cb.answer("✅ Статус змінено")
+
+
+@router.callback_query(F.data == "cms:ord:back")
+async def cms_ord_back(cb: CallbackQuery, state: FSMContext) -> None:
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    new, ip, done = await _order_counts(client.id)
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _order_summary_text(new, ip, done),
+        parse_mode="HTML",
+        reply_markup=_order_summary_kb(new, ip, done),
+    )
+    await cb.answer()
 
 
 # ── ⚙️ Настройки ──────────────────────────────────────────────────────────────

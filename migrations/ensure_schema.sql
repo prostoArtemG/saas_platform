@@ -261,7 +261,27 @@ ALTER TABLE client_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT 
 
 
 -- ---------------------------------------------------------------------------
--- 10. billing_state
+-- 10. orders
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS orders (
+    id             SERIAL PRIMARY KEY,
+    client_id      INTEGER        NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    customer_name  VARCHAR(255)   NOT NULL,
+    customer_phone VARCHAR(64)    NOT NULL,
+    customer_city  VARCHAR(255),
+    comment        TEXT,
+    items_json     TEXT           NOT NULL DEFAULT '[]',
+    total          NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    status         VARCHAR(32)    NOT NULL DEFAULT 'new',
+    created_at     TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_orders_client_id ON orders (client_id);
+CREATE INDEX IF NOT EXISTS ix_orders_status    ON orders (status);
+
+
+-- ---------------------------------------------------------------------------
+-- 11. billing_state
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS billing_state (
     client_id        INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
@@ -276,7 +296,7 @@ ALTER TABLE billing_state ADD COLUMN IF NOT EXISTS updated_at      TIMESTAMPTZ N
 
 
 -- ---------------------------------------------------------------------------
--- 11. limits_snapshots
+-- 12. limits_snapshots
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS limits_snapshots (
     id                       SERIAL PRIMARY KEY,
