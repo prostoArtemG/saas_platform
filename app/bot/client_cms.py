@@ -1154,13 +1154,18 @@ async def cms_site(message: Message, state: FSMContext) -> None:
 
     from app.config import settings as app_settings
 
-    # Derive base URL from payment_webhook_base_url if configured,
-    # otherwise fall back to showing the relative path.
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}" if base else f"/site/{client.slug}"
+    # Subdomain URL: https://{slug}.{platform_domain}
+    # Fallback to /site/{slug} if platform_domain is not configured.
+    domain = (app_settings.platform_domain or "").strip()
+    if domain:
+        site_url = f"https://{client.slug}.{domain}"
+    else:
+        base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{base}/site/{client.slug}" if base else f"/site/{client.slug}"
 
     # Dashboard URL with token (if set)
     dashboard_url: str | None = None
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
     if base:
         if client.dashboard_token:
             dashboard_url = f"{base}/dashboard/{client.slug}?token={client.dashboard_token}"
