@@ -320,6 +320,13 @@
       font-size: 11px; font-weight: 700;
       padding: 3px 8px; border-radius: 4px;
     }
+    .product-badge {
+      position: absolute; top: 8px; left: 8px;
+      background: #ff6b35; color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px;
+      white-space: nowrap;
+    }
     .product-body {
       padding: 12px; flex: 1;
       display: flex; flex-direction: column; gap: 5px;
@@ -1004,8 +1011,10 @@ function renderProducts() {
     const imgHtml  = p.image_url
       ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">`
       : `<div class="product-img-placeholder">&#x1F4E6;</div>`;
-    const discHtml = discPct ? `<div class="product-discount">-${discPct}%</div>` : "";
-    const unavHtml = unavailable ? `<div class="product-badge-unavail">Немає</div>` : "";
+    const discHtml  = discPct ? `<div class="product-discount">-${discPct}%</div>` : "";
+    const badgeHtml = unavailable
+      ? `<div class="product-badge-unavail">Немає</div>`
+      : (p.badge ? `<div class="product-badge">${esc(p.badge)}</div>` : "");
     const catHtml   = p.category  ? `<div class="product-cat">${esc(p.category)}</div>`  : "";
     const displayName = (p.brand && p.name) ? esc(p.brand) + " " + esc(p.name) : esc(p.name || "");
     const oldHtml   = p.old_price ? `<div class="product-old-price">${esc(String(p.old_price))} грн</div>` : "";
@@ -1020,7 +1029,7 @@ function renderProducts() {
     return `
     <div class="product-card${unavailable ? " unavailable" : ""}" onclick="goToProduct(${p.id})">
       <div class="product-img-wrap">
-        ${imgHtml}${discHtml}${unavHtml}
+        ${imgHtml}${discHtml}${badgeHtml}
       </div>
       <div class="product-body">
         ${catHtml}

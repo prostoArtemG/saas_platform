@@ -158,6 +158,10 @@ class Product(Base):
     is_available: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="true", default=True
     )
+    badge: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    seo_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    seo_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    seo_keywords: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

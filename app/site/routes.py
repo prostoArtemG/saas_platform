@@ -926,6 +926,7 @@ async def client_site(
                 "specs": p.specs,
                 "image_url": p.image_url,
                 "is_available": p.is_available,
+                "badge": p.badge,
             }
             for p in products_rows
         ]
@@ -1043,6 +1044,10 @@ async def client_site_product(
         "specs": _clean(product.specs),
         "image_url": product.image_url,
         "is_available": product.is_available,
+        "badge": _clean(product.badge),
+        "seo_title": _clean(product.seo_title),
+        "seo_description": _clean(product.seo_description),
+        "seo_keywords": _clean(product.seo_keywords),
     }
 
     template_name = (client_data["template_name"] or "").strip() or "technovlada"

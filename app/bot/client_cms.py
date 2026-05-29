@@ -378,15 +378,35 @@ def _specs_list_text(items: list) -> str:
 PROD_PAGE_SIZE = 10
 
 _PROD_EDIT_PROMPTS: dict[str, str] = {
-    "name":       "✏️ Введіть нову назву/модель товару:",
-    "brand":      "🏢 Введіть новий бренд (або «-» щоб очистити):",
-    "category":   "📂 Введіть нову категорію (або «-» щоб очистити):",
-    "group_name": "📁 Введіть нову групу (або «-» щоб очистити):",
-    "price":      "💰 Введіть нову ціну (наприклад: 150):",
-    "old_price":  "🏷 Введіть стару ціну (або «-» щоб очистити):",
-    "specs":      "📋 Введіть нові характеристики (або «-» щоб очистити):",
+    "name":            "✏️ Введіть нову назву/модель товару:",
+    "brand":           "🏢 Введіть новий бренд (або «-» щоб очистити):",
+    "category":        "📂 Введіть нову категорію (або «-» щоб очистити):",
+    "group_name":      "📁 Введіть нову групу (або «-» щоб очистити):",
+    "price":           "💰 Введіть нову ціну (наприклад: 150):",
+    "old_price":       "🏷 Введіть стару ціну (або «-» щоб очистити):",
+    "specs":           "📋 Введіть нові характеристики (або «-» щоб очистити):",
+    "seo_title":       "📝 SEO Title — назва у браузері та пошукових системах.\nВведіть або «-» щоб очистити:",
+    "seo_description": "📄 SEO Description — опис для пошукових систем.\nВведіть або «-» щоб очистити:",
+    "seo_keywords":    "🔑 SEO Keywords — ключові слова через кому.\nВведіть або «-» щоб очистити:",
 }
 _PROD_EDIT_VALID: frozenset[str] = frozenset(_PROD_EDIT_PROMPTS) | {"image"}
+
+BADGE_OPTIONS: list[str | None] = [
+    None,
+    "🔥 Акція",
+    "🏆 Топ продаж",
+    "🆕 Новинка",
+    "💰 Супер ціна",
+    "⚡ Хіт",
+]
+_BADGE_LABELS: list[str] = [
+    "❌ Без плашки",
+    "🔥 Акція",
+    "🏆 Топ продаж",
+    "🆕 Новинка",
+    "💰 Супер ціна",
+    "⚡ Хіт",
+]
 
 
 def _pfmt(price: object) -> str:
@@ -470,6 +490,10 @@ def _prod_card_text(p: "Product") -> str:
     lines.append("")
     lines.append(f"👁 Статус: {'✅ В наявності' if p.is_available else '❌ Прихований'}")
     lines.append(f"🖼 Фото:   {'✅ є' if p.image_url else '<i>немає</i>'}")
+    badge_val = getattr(p, "badge", None)
+    lines.append(f"⭐ Плашка: {badge_val if badge_val else '<i>—</i>'}")
+    seo_val = getattr(p, "seo_title", None)
+    lines.append(f"🔍 SEO:    {'✅' if seo_val else '<i>—</i>'}")
     return "\n".join(lines)
 
 
@@ -496,6 +520,10 @@ def _prod_card_kb(
             InlineKeyboardButton(text="🖼 Фото",           callback_data=f"cms:pe:{pid}:image:{page}"),
         ],
         [
+            InlineKeyboardButton(text="⭐ Плашка",         callback_data=f"cms:bview:{pid}:{page}"),
+            InlineKeyboardButton(text="🔍 SEO товару",     callback_data=f"cms:seo:{pid}:{page}"),
+        ],
+        [
             InlineKeyboardButton(text=toggle_text,         callback_data=f"cms:ptog:{pid}:{page}"),
             InlineKeyboardButton(text="🗑 Видалити товар", callback_data=f"cms:pdc:{pid}:{page}"),
         ],
@@ -504,6 +532,27 @@ def _prod_card_kb(
         rows.append([InlineKeyboardButton(text="🌐 Відкрити на сайті", url=site_url)])
     rows.append([InlineKeyboardButton(text="← Список", callback_data=f"cms:pl:{page}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _badge_picker_kb(prod_id: int, page: int, current: str | None) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    for idx, (val, label) in enumerate(zip(BADGE_OPTIONS, _BADGE_LABELS)):
+        mark = "✅ " if val == current else ""
+        rows.append([InlineKeyboardButton(
+            text=mark + label,
+            callback_data=f"cms:bset:{prod_id}:{page}:{idx}",
+        )])
+    rows.append([InlineKeyboardButton(text="← Назад", callback_data=f"cms:pv:{prod_id}:{page}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _seo_kb(prod_id: int, page: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📝 SEO Title",       callback_data=f"cms:pe:{prod_id}:seo_title:{page}")],
+        [InlineKeyboardButton(text="📄 SEO Description", callback_data=f"cms:pe:{prod_id}:seo_description:{page}")],
+        [InlineKeyboardButton(text="🔑 Keywords",        callback_data=f"cms:pe:{prod_id}:seo_keywords:{page}")],
+        [InlineKeyboardButton(text="← Назад",            callback_data=f"cms:pv:{prod_id}:{page}")],
+    ])
 
 
 # ── FSM states ────────────────────────────────────────────────────────────────────────────────
@@ -982,6 +1031,116 @@ async def cms_prod_search_input(message: Message, state: FSMContext) -> None:
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
     )
+
+
+# ── Products: badge picker ────────────────────────────────────────────────────
+
+@router.callback_query(F.data.regexp(r"^cms:bview:\d+:\d+$"))
+async def cms_prod_badge_show(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:bview:{id}:{page}
+    parts = cb.data.split(":")  # type: ignore[union-attr]
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3])
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+    if product is None or product.client_id != client.id:
+        await cb.answer("Товар не знайдено", show_alert=True)
+        return
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        f"⭐ <b>Плашка товару #{product.id}</b>\n\n"
+        f"Поточна: <b>{product.badge or '—'}</b>\n\nВиберіть плашку:",
+        parse_mode="HTML",
+        reply_markup=_badge_picker_kb(prod_id, page, product.badge),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.regexp(r"^cms:bset:\d+:\d+:\d+$"))
+async def cms_prod_badge_set(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:bset:{id}:{page}:{idx}
+    parts = cb.data.split(":")  # type: ignore[union-attr]
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3])
+        idx = int(parts[4])
+    except (ValueError, IndexError):
+        await cb.answer("Помилка", show_alert=True)
+        return
+    if not (0 <= idx < len(BADGE_OPTIONS)):
+        await cb.answer("Невідома плашка", show_alert=True)
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+        if product is None or product.client_id != client.id:
+            await cb.answer("Товар не знайдено", show_alert=True)
+            return
+        product.badge = BADGE_OPTIONS[idx]
+        await session.commit()
+        await session.refresh(product)
+        fresh = product
+    from app.config import settings as app_settings
+    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        _prod_card_text(fresh),
+        parse_mode="HTML",
+        reply_markup=_prod_card_kb(fresh, page, site_url),
+    )
+    lbl = BADGE_OPTIONS[idx] or "видалено"
+    await cb.answer(f"✅ Плашка: {lbl}")
+
+
+# ── Products: SEO sub-menu ────────────────────────────────────────────────────
+
+@router.callback_query(F.data.regexp(r"^cms:seo:\d+:\d+$"))
+async def cms_prod_seo_show(cb: CallbackQuery, state: FSMContext) -> None:
+    # Format: cms:seo:{id}:{page}
+    parts = cb.data.split(":")  # type: ignore[union-attr]
+    try:
+        prod_id = int(parts[2])
+        page = int(parts[3])
+    except (ValueError, IndexError):
+        await cb.answer()
+        return
+    user_id = cb.from_user.id  # type: ignore[union-attr]
+    client = await _get_effective_client(user_id, state)
+    if client is None:
+        await cb.answer("Немає доступу", show_alert=True)
+        return
+    async with AsyncSessionLocal() as session:
+        product = await session.get(Product, prod_id)
+    if product is None or product.client_id != client.id:
+        await cb.answer("Товар не знайдено", show_alert=True)
+        return
+
+    def _v(val: object) -> str:
+        return str(val) if val else "<i>—</i>"
+
+    fallback = f"{product.brand} {product.name}" if product.brand else product.name
+    await cb.message.edit_text(  # type: ignore[union-attr]
+        f"🔍 <b>SEO товару #{product.id}</b>\n\n"
+        f"📝 Title:       {_v(product.seo_title)}\n"
+        f"📄 Description: {_v(product.seo_description)}\n"
+        f"🔑 Keywords:    {_v(product.seo_keywords)}\n\n"
+        f"<i>Якщо SEO не заповнено — fallback: «{fallback} — {client.business_name}»</i>",
+        parse_mode="HTML",
+        reply_markup=_seo_kb(prod_id, page),
+    )
+    await cb.answer()
 
 
 # ── 🌐 Мой сайт ──────────────────────────────────────────────────────────────
