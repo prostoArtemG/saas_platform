@@ -38,6 +38,31 @@ def _clean(s: Optional[str]) -> Optional[str]:
     return s.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
 
 
+def get_client_slug_from_host(host: str, platform_domain: str) -> Optional[str]:
+    """Return the client slug if *host* is a client subdomain of *platform_domain*.
+
+    Examples (platform_domain = "shopplatform.app"):
+        apelsin.shopplatform.app        → "apelsin"
+        shopplatform.app                → None  (root platform)
+        www.shopplatform.app            → None  (reserved)
+        127.0.0.1 / localhost           → None  (local dev)
+        some-other-domain.com           → None  (not our platform)
+        apelsin.shopplatform.app:443    → "apelsin"  (port stripped)
+    """
+    if not host or not platform_domain:
+        return None
+    host = host.split(":")[0].lower()
+    platform_domain = platform_domain.lower()
+    suffix = f".{platform_domain}"
+    if not host.endswith(suffix):
+        return None
+    subdomain = host[: -len(suffix)]
+    # Must be a single-level subdomain, non-empty, not a reserved word
+    if not subdomain or "." in subdomain or subdomain in ("www", "api", "static", "mail"):
+        return None
+    return subdomain
+
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 

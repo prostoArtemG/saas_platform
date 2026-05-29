@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     payment_return_url: str = Field("", alias="PAYMENT_RETURN_URL")
     payment_webhook_base_url: str = Field("", alias="PAYMENT_WEBHOOK_BASE_URL")
 
+    # Platform domain used to detect client subdomains (e.g. slug.shopplatform.app).
+    # Override via PLATFORM_DOMAIN env var.
+    platform_domain: str = Field("shopplatform.app", alias="PLATFORM_DOMAIN")
+
     mono_token: str = Field("", alias="MONO_TOKEN")
 
     liqpay_public_key: str = Field("", alias="LIQPAY_PUBLIC_KEY")
