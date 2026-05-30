@@ -131,36 +131,8 @@
           <small class="block mt-1 text-white/40 text-xs">Для зворотного зв'язку. Telegram CMS буде підключено пізніше.</small>
         </div>
 
-        <!-- Site type -->
-        <div class="form-group">
-          <label>Шаблон сайту</label>
-          <div class="template-grid">
-            <label class="template-option">
-              <input type="radio" name="site_type" value="technovlada" required {% if form.site_type == 'technovlada' %}checked{% endif %}>
-              <div class="template-card">
-                <div class="template-icon">&#x1F310;</div>
-                <div class="template-name">Technovlada</div>
-                <div class="template-desc">Бізнес-сайт з каталогом послуг</div>
-              </div>
-            </label>
-            <label class="template-option">
-              <input type="radio" name="site_type" value="shop_bot" {% if form.site_type == 'shop_bot' %}checked{% endif %}>
-              <div class="template-card">
-                <div class="template-icon">&#128717;</div>
-                <div class="template-name">ТехноМаркет</div>
-                <div class="template-desc">Інтернет-магазин з кошиком та фільтрами</div>
-              </div>
-            </label>
-            <label class="template-option">
-              <input type="radio" name="site_type" value="premium_store" {% if form.site_type == 'premium_store' %}checked{% endif %}>
-              <div class="template-card">
-                <div class="template-icon">⭐</div>
-                <div class="template-name">Premium Store</div>
-                <div class="template-desc">Преміум магазин з сучасним дизайном</div>
-              </div>
-            </label>
-          </div>
-        </div>
+        <!-- site_type is fixed to shop_bot for Start plan -->
+        <input type="hidden" name="site_type" value="shop_bot" />
 
         <!-- Plan -->
         <div class="mb-5">

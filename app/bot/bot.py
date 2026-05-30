@@ -29,13 +29,80 @@ async def global_cancel(message: Message, state: FSMContext) -> None:
 
 
 @router.message(CommandStart())
-async def start_unknown(message: Message) -> None:
-    """Catch-all /start for users who are neither platform admins nor clients."""
+async def connect_or_start(message: Message, state: FSMContext) -> None:
+    """Handle /start [connect_{slug}] for unauthenticated users.
+
+    If the payload starts with ``connect_``, attempt to link this user as the
+    admin of the requested client shop.  Otherwise fall through to the generic
+    access-denied message.
+    """
+    from sqlalchemy import select as sa_select
+
+    from app.bot.keyboards import client_main_menu
+    from app.db import AsyncSessionLocal
+    from app.models import Client
+
     user_id = message.from_user.id if message.from_user else None
-    if user_id and user_id in settings.admin_ids:
-        # Safety net — should be handled by admin_router first.
+    if user_id is None:
+        await message.answer("⛔ Доступ обмежено.")
         return
-    await message.answer("⛔ Доступ ограничен.")
+
+    # Don't auto-connect platform admins — they must go through the admin flow
+    if user_id in settings.admin_ids:
+        await message.answer("⛔ Доступ обмежено.")
+        return
+
+    text = message.text or ""
+    parts = text.split(maxsplit=1)
+    arg = parts[1].strip() if len(parts) > 1 else ""
+
+    if not arg.startswith("connect_"):
+        await message.answer("⛔ Доступ обмежено.")
+        return
+
+    slug = arg[len("connect_"):]
+    if not slug:
+        await message.answer("⛔ Некоректне посилання.")
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(
+            sa_select(Client).where(Client.slug == slug)
+        )
+        if client is None:
+            await message.answer(
+                "❌ Магазин не знайдено. Перевірте посилання.",
+            )
+            return
+
+        if client.admin_telegram_id is not None and client.admin_telegram_id != user_id:
+            await message.answer(
+                "⛔ Цей магазин вже прив'язаний до іншого Telegram-акаунту.\n"
+                "Зверніться до підтримки, якщо це помилка.",
+            )
+            return
+
+        if client.admin_telegram_id == user_id:
+            # Already linked — just open the menu
+            await message.answer(
+                f"👋 З поверненням, <b>{client.business_name}</b>!\n"
+                "Telegram CMS вже підключено.",
+                parse_mode="HTML",
+                reply_markup=client_main_menu(),
+            )
+            return
+
+        # Link this user as the admin
+        client.admin_telegram_id = user_id
+        await session.commit()
+
+    await message.answer(
+        f"✅ <b>Telegram CMS підключено!</b>\n\n"
+        f"🏪 Магазин: <b>{client.business_name}</b>\n\n"
+        "Тепер ти можеш управляти товарами, налаштуваннями та статистикою прямо з Telegram.",
+        parse_mode="HTML",
+        reply_markup=client_main_menu(),
+    )
 
 
 # --------------------------------------------------------------------------

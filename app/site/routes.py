@@ -490,15 +490,24 @@ async def onboarding_success(
             if (sub and sub.expires_at) else "—"
         )
 
-        # Use client's own bot if available
-        if client.bot_username:
-            cms_url = f"https://t.me/{client.bot_username}"
+        platform_bot_username = getattr(
+            request.app.state, "platform_bot_username", None
+        )
+
+        # cms_url: shown when client already has admin connected (their own bot or platform bot)
+        # connect_cms_url: shown when admin_telegram_id is not yet set → deep link to connect
+        if client.admin_telegram_id is not None:
+            # Already connected — link to their bot or platform bot
+            if client.bot_username:
+                cms_url: str | None = f"https://t.me/{client.bot_username}"
+            else:
+                cms_url = f"https://t.me/{platform_bot_username}" if platform_bot_username else None
+            connect_cms_url: str | None = None
         else:
-            platform_bot_username = getattr(
-                request.app.state, "platform_bot_username", None
-            )
-            cms_url = (
-                f"https://t.me/{platform_bot_username}"
+            # Not connected yet — provide a deep-link to connect
+            cms_url = None
+            connect_cms_url = (
+                f"https://t.me/{platform_bot_username}?start=connect_{client.slug}"
                 if platform_bot_username else None
             )
 
@@ -519,6 +528,7 @@ async def onboarding_success(
         "plan": _clean(plan_name) or "",
         "trial_expires_at": _clean(trial_expires) or "",
         "cms_url": _clean(cms_url) if cms_url else None,
+        "connect_cms_url": _clean(connect_cms_url) if connect_cms_url else None,
         "dashboard_url": dashboard_url,
     }
 
