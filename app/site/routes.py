@@ -216,6 +216,14 @@ async def create_site_submit(
     if not business_name or not site_type or not plan:
         return _form_error(t["create_site"]["error_required"])
 
+    # Quick template/plan compatibility check (before DB hit)
+    _plan_lower = plan.lower()
+    if site_type == "technomarket_premium" and _plan_lower.startswith("starter"):
+        return _form_error(
+            "Шаблон TechnoMarket Premium недоступний для тарифу Starter. "
+            "Оберіть Business або вищий тариф."
+        )
+
     # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
     try:
         async with AsyncSessionLocal() as session:
@@ -264,6 +272,15 @@ async def create_site_submit(
                 plan_row = (await session.execute(stmt_any)).scalar_one_or_none()
             if plan_row is None:
                 return _form_error(t["create_site"]["error_no_plan"])
+
+            # Guard: verify template is allowed for this plan (defence-in-depth)
+            if template_name == "technomarket_premium":
+                _pname = (plan_row.slug or plan_row.name or "").lower()
+                if _pname.startswith("starter"):
+                    return _form_error(
+                        "Шаблон TechnoMarket Premium недоступний для тарифу Starter. "
+                        "Оберіть Business або вищий тариф."
+                    )
 
             # 2. Generate unique slug from business_name
             slug = await _allocate_slug(session, business_name)

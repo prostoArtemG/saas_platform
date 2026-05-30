@@ -131,6 +131,20 @@
           <small class="block mt-1 text-white/40 text-xs">Для зворотного зв'язку. Telegram CMS буде підключено пізніше.</small>
         </div>
 
+        <!-- Plan (first — determines which templates are available) -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            {{ t.create_site.f_plan }} <span class="text-brand-lime">*</span>
+          </label>
+          <select id="plan-select" name="plan" required
+                  class="form-input w-full px-4 py-3 rounded-xl text-base appearance-none cursor-pointer">
+            <option value="" disabled {% if not form.plan %}selected{% endif %}>—</option>
+            {% for opt in t.create_site.plan_options %}
+            <option value="{{ opt }}" {% if form.plan == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
         <!-- Site template -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-white/70 mb-3">
@@ -138,7 +152,7 @@
           </label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label class="cursor-pointer">
-              <input type="radio" name="site_type" value="shop_bot" class="sr-only peer"
+              <input type="radio" name="site_type" value="shop_bot" id="tpl-shop-bot" class="sr-only peer"
                      {% if form.site_type == 'shop_bot' or not form.site_type %}checked{% endif %} required>
               <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
                           border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
@@ -147,8 +161,9 @@
                 <div class="text-xs text-white/40 mt-0.5">Інтернет-магазин з корзиною та фільтрами</div>
               </div>
             </label>
-            <label class="cursor-pointer">
-              <input type="radio" name="site_type" value="technomarket_premium" class="sr-only peer"
+            <label id="tpl-premium-label" class="cursor-pointer relative">
+              <input type="radio" name="site_type" value="technomarket_premium" id="tpl-premium"
+                     class="sr-only peer"
                      {% if form.site_type == 'technomarket_premium' %}checked{% endif %}>
               <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
                           border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
@@ -156,21 +171,20 @@
                 <div class="font-semibold text-sm text-white">TechnoMarket Premium</div>
                 <div class="text-xs text-white/40 mt-0.5">Техніка з фільтрами, брендами та SEO</div>
               </div>
+              <!-- Lock badge — shown when Starter plan is selected -->
+              <span id="tpl-premium-lock"
+                    class="hidden absolute top-2 right-2 flex items-center gap-1
+                           text-[10px] font-semibold text-amber-400 bg-amber-400/10
+                           border border-amber-400/30 rounded-full px-2 py-0.5">
+                🔒 Business+
+              </span>
             </label>
           </div>
-        </div>
-
-        <!-- Plan -->
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-white/70 mb-2">
-            {{ t.create_site.f_plan }} <span class="text-brand-lime">*</span>
-          </label>
-          <select name="plan" required class="form-input w-full px-4 py-3 rounded-xl text-base appearance-none cursor-pointer">
-            <option value="" disabled {% if not form.plan %}selected{% endif %}>—</option>
-            {% for opt in t.create_site.plan_options %}
-            <option value="{{ opt }}" {% if form.plan == opt %}selected{% endif %}>{{ opt }}</option>
-            {% endfor %}
-          </select>
+          <!-- Warning shown when Starter + premium combo attempted -->
+          <p id="tpl-starter-warn"
+             class="hidden mt-2 text-xs text-amber-400">
+            TechnoMarket Premium доступний лише для тарифів Business і вище.
+          </p>
         </div>
 
         <!-- Comment -->
@@ -193,6 +207,46 @@
 
     </div>
   </main>
+  <script>
+    (function () {
+      var planSel   = document.getElementById('plan-select');
+      var premRadio = document.getElementById('tpl-premium');
+      var premLabel = document.getElementById('tpl-premium-label');
+      var premLock  = document.getElementById('tpl-premium-lock');
+      var warn      = document.getElementById('tpl-starter-warn');
+      var shopRadio = document.getElementById('tpl-shop-bot');
+      if (!planSel || !premRadio) return;
 
+      function isStarter(val) {
+        return (val || '').toLowerCase().startsWith('starter');
+      }
+
+      function sync() {
+        var starter = isStarter(planSel.value);
+        if (starter) {
+          // Disable Premium option
+          premRadio.disabled = true;
+          if (premRadio.checked) {
+            premRadio.checked = false;
+            shopRadio.checked = true;
+          }
+          premLabel.classList.add('opacity-50', 'cursor-not-allowed');
+          premLabel.classList.remove('cursor-pointer');
+          premLock.classList.remove('hidden');
+          warn.classList.remove('hidden');
+        } else {
+          premRadio.disabled = false;
+          premLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+          premLabel.classList.add('cursor-pointer');
+          premLock.classList.add('hidden');
+          warn.classList.add('hidden');
+        }
+      }
+
+      planSel.addEventListener('change', sync);
+      // Run on page load to handle server-side form repopulation (validation errors)
+      sync();
+    })();
+  </script>
 </body>
 </html>
