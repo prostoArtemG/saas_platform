@@ -77,7 +77,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Whitelist of installed site templates. Each must have an `index.html`
 # at templates/sites/{name}/index.html
-AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "technomarket_premium"}
+AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "red_market", "technomarket_premium"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
@@ -218,10 +218,14 @@ async def create_site_submit(
 
     # Quick template/plan compatibility check (before DB hit)
     _plan_lower = plan.lower()
-    if site_type == "technomarket_premium" and _plan_lower.startswith("starter"):
+    if site_type == "red_market" and _plan_lower.startswith("starter"):
         return _form_error(
-            "Шаблон TechnoMarket Premium недоступний для тарифу Starter. "
+            "Шаблон Red Market недоступний для тарифу Starter. "
             "Оберіть Business або вищий тариф."
+        )
+    if site_type == "technomarket_premium" and not _plan_lower.startswith("premium"):
+        return _form_error(
+            "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
         )
 
     # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
@@ -241,7 +245,7 @@ async def create_site_submit(
         logger.warning("SiteRequest audit log failed: %s", exc)
 
     # Atomic self-service onboarding ------------------------------------------
-    template_name = site_type if site_type in {"technovlada", "shop_bot", "premium_store", "technomarket_premium"} else "technovlada"
+    template_name = site_type if site_type in {"technovlada", "shop_bot", "red_market", "premium_store", "technomarket_premium"} else "technovlada"
 
     logger.info(
         "create_site_submit: business_name=%s site_type=%r template_name=%r bot_token_len=%s",
@@ -274,12 +278,18 @@ async def create_site_submit(
                 return _form_error(t["create_site"]["error_no_plan"])
 
             # Guard: verify template is allowed for this plan (defence-in-depth)
-            if template_name == "technomarket_premium":
+            if template_name == "red_market":
                 _pname = (plan_row.slug or plan_row.name or "").lower()
                 if _pname.startswith("starter"):
                     return _form_error(
-                        "Шаблон TechnoMarket Premium недоступний для тарифу Starter. "
+                        "Шаблон Red Market недоступний для тарифу Starter. "
                         "Оберіть Business або вищий тариф."
+                    )
+            if template_name == "technomarket_premium":
+                _pname = (plan_row.slug or plan_row.name or "").lower()
+                if not _pname.startswith("premium"):
+                    return _form_error(
+                        "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
                     )
 
             # 2. Generate unique slug from business_name

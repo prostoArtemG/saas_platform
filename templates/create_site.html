@@ -161,6 +161,23 @@
                 <div class="text-xs text-white/40 mt-0.5">Інтернет-магазин з корзиною та фільтрами</div>
               </div>
             </label>
+            <label id="tpl-red-label" class="cursor-pointer relative">
+              <input type="radio" name="site_type" value="red_market" id="tpl-red"
+                     class="sr-only peer"
+                     {% if form.site_type == 'red_market' %}checked{% endif %}>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">🔴</div>
+                <div class="font-semibold text-sm text-white">Red Market</div>
+                <div class="text-xs text-white/40 mt-0.5">Сучасний магазин з червоною кольоровою схемою</div>
+              </div>
+              <span id="tpl-red-lock"
+                    class="hidden absolute top-2 right-2 flex items-center gap-1
+                           text-[10px] font-semibold text-amber-400 bg-amber-400/10
+                           border border-amber-400/30 rounded-full px-2 py-0.5">
+                🔒 Business+
+              </span>
+            </label>
             <label id="tpl-premium-label" class="cursor-pointer relative">
               <input type="radio" name="site_type" value="technomarket_premium" id="tpl-premium"
                      class="sr-only peer"
@@ -171,19 +188,19 @@
                 <div class="font-semibold text-sm text-white">TechnoMarket Premium</div>
                 <div class="text-xs text-white/40 mt-0.5">Техніка з фільтрами, брендами та SEO</div>
               </div>
-              <!-- Lock badge — shown when Starter plan is selected -->
+              <!-- Lock badge — shown when plan is not Premium -->
               <span id="tpl-premium-lock"
                     class="hidden absolute top-2 right-2 flex items-center gap-1
                            text-[10px] font-semibold text-amber-400 bg-amber-400/10
                            border border-amber-400/30 rounded-full px-2 py-0.5">
-                🔒 Business+
+                🔒 Premium
               </span>
             </label>
           </div>
-          <!-- Warning shown when Starter + premium combo attempted -->
+          <!-- Warning shown when plan restricts template choice -->
           <p id="tpl-starter-warn"
              class="hidden mt-2 text-xs text-amber-400">
-            TechnoMarket Premium доступний лише для тарифів Business і вище.
+            Red Market доступний з Business. TechnoMarket Premium — лише для Premium.
           </p>
         </div>
 
@@ -209,42 +226,66 @@
   </main>
   <script>
     (function () {
-      var planSel   = document.getElementById('plan-select');
-      var premRadio = document.getElementById('tpl-premium');
-      var premLabel = document.getElementById('tpl-premium-label');
-      var premLock  = document.getElementById('tpl-premium-lock');
-      var warn      = document.getElementById('tpl-starter-warn');
-      var shopRadio = document.getElementById('tpl-shop-bot');
-      if (!planSel || !premRadio) return;
+      var planSel    = document.getElementById('plan-select');
+      var shopRadio  = document.getElementById('tpl-shop-bot');
+      var redRadio   = document.getElementById('tpl-red');
+      var redLabel   = document.getElementById('tpl-red-label');
+      var redLock    = document.getElementById('tpl-red-lock');
+      var premRadio  = document.getElementById('tpl-premium');
+      var premLabel  = document.getElementById('tpl-premium-label');
+      var premLock   = document.getElementById('tpl-premium-lock');
+      var warn       = document.getElementById('tpl-starter-warn');
+      if (!planSel) return;
 
-      function isStarter(val) {
-        return (val || '').toLowerCase().startsWith('starter');
+      function tierOf(val) {
+        var v = (val || '').toLowerCase();
+        if (v.startsWith('premium')) return 'premium';
+        if (v.startsWith('business')) return 'business';
+        return 'starter'; // default / empty
+      }
+
+      function lockRadio(radio, label, lock) {
+        radio.disabled = true;
+        label.classList.add('opacity-50', 'cursor-not-allowed');
+        label.classList.remove('cursor-pointer');
+        lock.classList.remove('hidden');
+      }
+
+      function unlockRadio(radio, label, lock) {
+        radio.disabled = false;
+        label.classList.remove('opacity-50', 'cursor-not-allowed');
+        label.classList.add('cursor-pointer');
+        lock.classList.add('hidden');
       }
 
       function sync() {
-        var starter = isStarter(planSel.value);
-        if (starter) {
-          // Disable Premium option
-          premRadio.disabled = true;
-          if (premRadio.checked) {
+        var tier = tierOf(planSel.value);
+
+        if (tier === 'premium') {
+          // All templates available
+          unlockRadio(redRadio, redLabel, redLock);
+          unlockRadio(premRadio, premLabel, premLock);
+          warn.classList.add('hidden');
+        } else if (tier === 'business') {
+          // red_market OK, technomarket_premium locked
+          unlockRadio(redRadio, redLabel, redLock);
+          lockRadio(premRadio, premLabel, premLock);
+          if (premRadio.checked) { premRadio.checked = false; shopRadio.checked = true; }
+          warn.classList.remove('hidden');
+        } else {
+          // Starter: only shop_bot
+          lockRadio(redRadio, redLabel, redLock);
+          lockRadio(premRadio, premLabel, premLock);
+          if (redRadio.checked || premRadio.checked) {
+            redRadio.checked = false;
             premRadio.checked = false;
             shopRadio.checked = true;
           }
-          premLabel.classList.add('opacity-50', 'cursor-not-allowed');
-          premLabel.classList.remove('cursor-pointer');
-          premLock.classList.remove('hidden');
           warn.classList.remove('hidden');
-        } else {
-          premRadio.disabled = false;
-          premLabel.classList.remove('opacity-50', 'cursor-not-allowed');
-          premLabel.classList.add('cursor-pointer');
-          premLock.classList.add('hidden');
-          warn.classList.add('hidden');
         }
       }
 
       planSel.addEventListener('change', sync);
-      // Run on page load to handle server-side form repopulation (validation errors)
       sync();
     })();
   </script>
