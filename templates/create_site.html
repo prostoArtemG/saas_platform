@@ -123,19 +123,19 @@
           <input type="text" name="business_name" required maxlength="255"
                  value="{{ form.business_name | default('') }}"
                  class="form-input w-full px-4 py-3 rounded-xl text-base"
-                 placeholder="TechnoVlada" />
+                 placeholder="Наприклад: Мій магазин" />
         </div>
 
         <!-- Telegram username / phone (optional) -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-white/70 mb-2">
-            Telegram або телефон
+            Telegram ID
           </label>
           <input type="text" name="telegram" maxlength="128"
                  value="{{ form.telegram or '' }}"
                  class="form-input w-full px-4 py-3 rounded-xl text-base"
-                 placeholder="@username або +380XXXXXXXXX (необов'язково)" />
-          <small class="block mt-1 text-white/40 text-xs">Для зворотного зв'язку. Telegram CMS буде підключено пізніше.</small>
+                 placeholder="Наприклад: 500134490" />
+          <small class="block mt-1 text-white/40 text-xs">Потрібен для підключення Telegram CMS. ID можна дізнатись через @userinfobot.</small>
         </div>
 
         <!-- Plan (first — determines which templates are available) -->
