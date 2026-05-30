@@ -131,8 +131,34 @@
           <small class="block mt-1 text-white/40 text-xs">Для зворотного зв'язку. Telegram CMS буде підключено пізніше.</small>
         </div>
 
-        <!-- site_type is fixed to shop_bot for Start plan -->
-        <input type="hidden" name="site_type" value="shop_bot" />
+        <!-- Site template -->
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-white/70 mb-3">
+            Шаблон сайту <span class="text-brand-lime">*</span>
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="site_type" value="shop_bot" class="sr-only peer"
+                     {% if form.site_type == 'shop_bot' or not form.site_type %}checked{% endif %} required>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">🏪</div>
+                <div class="font-semibold text-sm text-white">TechnoMarket</div>
+                <div class="text-xs text-white/40 mt-0.5">Інтернет-магазин з корзиною та фільтрами</div>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="site_type" value="technomarket_premium" class="sr-only peer"
+                     {% if form.site_type == 'technomarket_premium' %}checked{% endif %}>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">⭐</div>
+                <div class="font-semibold text-sm text-white">TechnoMarket Premium</div>
+                <div class="text-xs text-white/40 mt-0.5">Техніка з фільтрами, брендами та SEO</div>
+              </div>
+            </label>
+          </div>
+        </div>
 
         <!-- Plan -->
         <div class="mb-5">

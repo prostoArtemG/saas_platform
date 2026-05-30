@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if product.seo_title %}{{ product.seo_title }}{% else %}{% if product.brand %}{{ product.brand }} {% endif %}{{ product.name }}{% endif %} — {{ client.business_name }}</title>
+  <meta name="description" content="{% if product.seo_description %}{{ product.seo_description }}{% else %}{{ product.name }}{% if product.brand %} {{ product.brand }}{% endif %} — {{ client.business_name }}{% endif %}">
+  {% if product.seo_keywords %}<meta name="keywords" content="{{ product.seo_keywords }}">{% endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:        #14b8a6;
+      --primary-hover:  #0d9488;
+      --primary-light:  rgba(20,184,166,.12);
+      --bg:             #020617;
+      --surface:        #0f172a;
+      --surface-2:      #1e293b;
+      --border:         #1e293b;
+      --text:           #f1f5f9;
+      --text-2:         #94a3b8;
+      --text-3:         #64748b;
+      --danger:         #ef4444;
+      --radius:         12px;
+      --radius-sm:      8px;
+      --shadow:         0 1px 3px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+      --shadow-md:      0 4px 24px rgba(0,0,0,.5);
+      --transition:     .2s ease;
+      --header-h:       64px;
+      --header-bg:      rgba(15,23,42,.92);
+      --on-primary:     #020617;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       COLOUR THEMES  (applied via <body class="theme-...">)
+    ══════════════════════════════════════════════════════════════ */
+
+    /* light_red — warm white + red accent */
+    body.theme-light-red {
+      --primary:        #e63222;
+      --primary-hover:  #c4271a;
+      --primary-light:  rgba(230,50,34,.12);
+      --bg:             #f5f5f5;
+      --surface:        #ffffff;
+      --surface-2:      #f0f0f0;
+      --border:         #e8e8e8;
+      --text:           #1a1a1a;
+      --text-2:         #6b6b6b;
+      --text-3:         #9b9b9b;
+      --header-bg:      rgba(255,255,255,.95);
+      --on-primary:     #ffffff;
+      color-scheme: light;
+    }
+
+    /* navy_teal — dark navy + teal (matches :root defaults) */
+    body.theme-navy-teal {
+      color-scheme: dark;
+    }
+
+    /* purple_lime — deep purple + lime */
+    body.theme-purple-lime {
+      --primary:        #a3e635;
+      --primary-hover:  #84cc16;
+      --primary-light:  rgba(163,230,53,.12);
+      --bg:             #1a0a2e;
+      --surface:        #2d1b4e;
+      --surface-2:      #3d2b5e;
+      --border:         #4c1d95;
+      --text:           #f5f3ff;
+      --text-2:         #c4b5fd;
+      --text-3:         #a78bfa;
+      --header-bg:      rgba(26,10,46,.92);
+      --on-primary:     #1a0a2e;
+      color-scheme: dark;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    img  { display: block; max-width: 100%; }
+    button { cursor: pointer; font-family: inherit; border: none; outline: none; }
+    input, textarea { font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 16px;
+    }
+    .header-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 17px;
+    }
+    .header-logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: var(--on-primary);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 17px;
+      box-shadow: 0 0 12px var(--primary-light);
+    }
+    .header-logo-img {
+      width: 36px; height: 36px;
+      object-fit: contain; border-radius: var(--radius-sm);
+    }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 36px; padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px; color: var(--text-2);
+      transition: border-color var(--transition), color var(--transition);
+      background: none;
+      margin-left: auto;
+    }
+    .btn-back:hover { border-color: var(--primary); color: var(--primary); }
+    .header-phone {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-2); text-decoration: none;
+      white-space: nowrap; flex-shrink: 0;
+      transition: color var(--transition);
+    }
+    .header-phone:hover { color: var(--primary); }
+    .header-phone-mobile { display: none; }
+
+    /* ── Page ───────────────────────────────────────────────── */
+    .page {
+      max-width: 1024px;
+      margin: 0 auto;
+      padding: calc(var(--header-h) + 32px) 20px 48px;
+    }
+
+    /* ── Breadcrumb ─────────────────────────────────────────── */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-3);
+      margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .breadcrumb a { color: var(--text-2); }
+    .breadcrumb a:hover { color: var(--primary); }
+    .breadcrumb span { color: var(--text-3); }
+
+    /* ── Product layout ─────────────────────────────────────── */
+    .product-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    /* ── Image ──────────────────────────────────────────────── */
+    .product-image-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .product-image-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .product-image-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 80px; color: var(--text-3);
+    }
+    .product-badge-unavail {
+      position: absolute; top: 14px; right: 14px;
+      background: var(--danger); color: #fff;
+      font-size: 12px; font-weight: 600;
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .discount-badge {
+      position: absolute; top: 14px; left: 14px;
+      background: var(--primary); color: var(--on-primary);
+      font-size: 12px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .product-badge-custom {
+      position: absolute; top: 14px; right: 14px;
+      background: #ff9800; color: #fff;
+      font-size: 12px; font-weight: 600;
+      padding: 4px 10px; border-radius: 20px;
+    }
+
+    /* ── Info ───────────────────────────────────────────────── */
+    .product-info { display: flex; flex-direction: column; gap: 16px; }
+
+    .product-category {
+      display: inline-block;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--primary);
+      background: var(--primary-light);
+      border: 1px solid var(--primary-light);
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .product-brand {
+      font-size: 13px; font-weight: 500; color: var(--text-2);
+    }
+    .product-name {
+      font-size: 24px; font-weight: 700; line-height: 1.35;
+    }
+
+    .price-block { display: flex; flex-direction: column; gap: 4px; }
+    .price-old {
+      font-size: 14px; color: var(--text-3);
+      text-decoration: line-through;
+    }
+    .price-current {
+      font-size: 32px; font-weight: 700;
+      color: var(--primary);
+    }
+    .price-currency {
+      font-size: 18px; font-weight: 500; color: var(--primary-hover); margin-left: 4px;
+    }
+    .price-saving {
+      font-size: 13px; color: #10b981; font-weight: 600;
+    }
+
+    /* ── Specs ──────────────────────────────────────────────── */
+    .specs-block { display: flex; flex-direction: column; gap: 6px; }
+    .specs-title {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-3);
+      margin-bottom: 4px;
+    }
+    .specs-text {
+      font-size: 14px; color: var(--text-2); line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    /* ── Description ────────────────────────────────────────── */
+    .desc-block { display: flex; flex-direction: column; gap: 6px; }
+    .desc-title {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-3);
+    }
+    .desc-text {
+      font-size: 14px; color: var(--text-2); line-height: 1.7;
+    }
+
+    /* ── Action buttons ─────────────────────────────────────── */
+    .action-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      padding-top: 6px;
+    }
+    .btn-order {
+      flex: 1; min-width: 160px; height: 50px;
+      background: var(--primary); color: var(--on-primary);
+      border-radius: var(--radius);
+      font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+    }
+    .btn-order:hover { background: var(--primary-hover); box-shadow: 0 0 16px var(--primary-light); }
+    .btn-order:active { transform: scale(.97); }
+    .btn-order:disabled {
+      background: var(--surface-2); color: var(--text-3); cursor: not-allowed;
+    }
+
+    /* ── Divider ────────────────────────────────────────────── */
+    .divider {
+      height: 1px; background: var(--border);
+    }
+
+    /* ── Modal ──────────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(2,6,23,.75);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%; max-width: 440px;
+      max-height: 90vh; overflow-y: auto;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      position: relative;
+    }
+    .modal-box::-webkit-scrollbar { width: 4px; }
+    .modal-box::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 4px; }
+    .modal-title { font-size: 19px; font-weight: 700; margin-bottom: 20px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px;
+      background: var(--surface-2); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-2); font-size: 16px;
+      transition: background var(--transition);
+    }
+    .modal-close:hover { background: var(--border); color: var(--text); }
+
+    .order-summary {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px; margin-bottom: 20px;
+    }
+    .order-summary-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-3); margin-bottom: 8px;
+    }
+    .order-summary-row {
+      display: flex; justify-content: space-between;
+      font-size: 13px; padding: 3px 0;
+    }
+    .order-summary-row span:last-child { font-weight: 600; }
+    .order-summary-total {
+      display: flex; justify-content: space-between;
+      font-size: 14px; font-weight: 700;
+      padding-top: 10px; margin-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .order-summary-total span:last-child { color: var(--primary); }
+
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--text-2); margin-bottom: 5px;
+    }
+    .form-input {
+      width: 100%; height: 42px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 0 14px; font-size: 14px;
+      color: var(--text); background: var(--bg);
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .form-input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
+    .form-input::placeholder { color: var(--text-3); }
+    .form-input.error { border-color: var(--danger); }
+    textarea.form-input { height: 78px; padding: 10px 14px; resize: vertical; }
+    .form-error {
+      font-size: 12px; color: var(--danger); margin-top: 4px; display: none;
+    }
+    .form-error.show { display: block; }
+
+    .btn-submit {
+      width: 100%; height: 46px;
+      background: var(--primary); color: var(--on-primary);
+      border-radius: var(--radius);
+      font-size: 15px; font-weight: 700;
+      margin-top: 4px;
+      transition: background var(--transition), box-shadow var(--transition);
+    }
+    .btn-submit:hover { background: var(--primary-hover); box-shadow: 0 0 16px var(--primary-light); }
+    .btn-submit:disabled { background: var(--surface-2); color: var(--text-3); cursor: not-allowed; }
+
+    .alert-error {
+      background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+      color: #fca5a5; border-radius: var(--radius-sm);
+      padding: 10px 14px; font-size: 13px;
+      margin-bottom: 12px; display: none;
+    }
+    .alert-error.show { display: block; }
+
+    /* ── Success modal ──────────────────────────────────────── */
+    .success-body { text-align: center; padding: 8px 0; }
+    .success-icon { font-size: 54px; margin-bottom: 10px; }
+    .success-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .success-text {
+      font-size: 15px; color: var(--text-2); line-height: 1.6; margin-bottom: 24px;
+    }
+    .btn-continue {
+      height: 44px; padding: 0 28px;
+      background: var(--primary); color: var(--on-primary);
+      border-radius: var(--radius);
+      font-size: 14px; font-weight: 700;
+      transition: background var(--transition);
+    }
+    .btn-continue:hover { background: var(--primary-hover); }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      margin-top: 64px;
+      border-top: 1px solid var(--border);
+      padding: 24px 20px;
+      text-align: center;
+      font-size: 13px; color: var(--text-3);
+    }
+    footer strong { color: var(--text); }
+    footer a { color: var(--text-2); transition: color var(--transition); }
+    footer a:hover { color: var(--primary); }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 680px) {
+      .product-layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .product-name { font-size: 20px; }
+      .price-current { font-size: 26px; }
+      .btn-back span { display: none; }
+      .header-phone-text { display: none; }
+      .header-phone-mobile { display: inline; }
+    }
+  </style>
+</head>
+<body class="theme-{{ (client.theme_name or 'light_red') | replace('_', '-') }}">
+
+<!-- ══════════════ HEADER ══════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-logo">
+    {% if client.logo_url %}
+      <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="header-logo-img">
+    {% else %}
+      <div class="header-logo-icon">{{ client.shop_title[0] | upper }}</div>
+    {% endif %}
+    <span>{{ client.shop_title }}</span>
+  </div>
+  {% if client.phone %}
+  <a class="header-phone" href="tel:{{ client.phone }}">
+    <span class="header-phone-text">📞 {{ client.phone }}</span>
+    <span class="header-phone-mobile">📞 Позвонити</span>
+  </a>
+  {% endif %}
+  <a class="btn-back" href="/site/{{ client.slug }}">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
+    </svg>
+    <span>До магазину</span>
+  </a>
+</header>
+
+<!-- ══════════════ PAGE ════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a href="/site/{{ client.slug }}">Магазин</a>
+    {% if product.group_name %}
+    <span>›</span>
+    <a href="/site/{{ client.slug }}">{{ product.group_name }}</a>
+    {% endif %}
+    {% if product.category %}
+    <span>›</span>
+    <a href="/site/{{ client.slug }}">{{ product.category }}</a>
+    {% endif %}
+    <span>›</span>
+    <span>{% if product.brand %}{{ product.brand }} {% endif %}{{ product.name }}</span>
+  </nav>
+
+  <!-- Product layout -->
+  <div class="product-layout">
+
+    <!-- Image -->
+    <div class="product-image-wrap">
+      {% if product.image_url %}
+        <img src="{{ product.image_url }}" alt="{{ product.name }}"
+             onerror="this.parentNode.innerHTML='<div class=\'product-image-placeholder\'>&#x1F4E6;</div>'">
+      {% else %}
+        <div class="product-image-placeholder">&#x1F4E6;</div>
+      {% endif %}
+
+      {% if not product.is_available %}
+        <div class="product-badge-unavail">Немає в наявності</div>
+      {% elif product.old_price and product.old_price > product.price %}
+        {% set disc = ((product.old_price - product.price) / product.old_price * 100) | round | int %}
+        <div class="discount-badge">−{{ disc }}%</div>
+      {% endif %}
+      {% if product.badge and product.is_available %}
+        <div class="product-badge-custom">{{ product.badge }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Info -->
+    <div class="product-info">
+
+      {% if product.category %}
+        <span class="product-category">{{ product.category }}</span>
+      {% endif %}
+
+      {% if product.group_name %}
+        <span class="product-category" style="background:var(--primary-light);color:var(--primary);">{{ product.group_name }}</span>
+      {% endif %}
+
+      {% if product.brand %}
+        <div class="product-brand">{{ product.brand }}</div>
+      {% endif %}
+
+      <h1 class="product-name">{{ product.name }}</h1>
+
+      <!-- Pricing -->
+      <div class="price-block">
+        {% if product.old_price and product.old_price > product.price %}
+          <div class="price-old">{{ product.old_price | int }} грн</div>
+          <div>
+            <span class="price-current">{{ product.price | int }}<span class="price-currency">грн</span></span>
+          </div>
+          <div class="price-saving">Економія {{ (product.old_price - product.price) | int }} грн</div>
+        {% else %}
+          <div>
+            <span class="price-current">{{ product.price | int }}<span class="price-currency">грн</span></span>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Specs -->
+      {% if product.specs %}
+        <div class="specs-block">
+          <div class="specs-title">&#x1F4CB; Характеристики</div>
+          <div class="specs-text">{{ product.specs }}</div>
+        </div>
+      {% endif %}
+
+      <!-- Description -->
+      {% if product.description %}
+        <div class="desc-block">
+          <div class="desc-title">Опис</div>
+          <div class="desc-text">{{ product.description }}</div>
+        </div>
+      {% endif %}
+
+      <!-- Action -->
+      <div class="action-row">
+        <button class="btn-order" id="btn-order" {% if not product.is_available %}disabled{% endif %}>
+          {% if product.is_available %}
+            &#x26A1; Замовити зараз
+          {% else %}
+            Немає в наявності
+          {% endif %}
+        </button>
+      </div>
+
+    </div><!-- /product-info -->
+  </div><!-- /product-layout -->
+
+</div><!-- /page -->
+
+<footer>
+  <div>&copy; <strong>{{ client.shop_title }}</strong></div>
+  {% if client.phone or client.address %}
+  <div style="margin-top:6px;font-size:12px;">
+    {% if client.phone %}📞 {{ client.phone }}{% endif %}
+    {% if client.phone and client.address %} · {% endif %}
+    {% if client.address %}📍 {{ client.address }}{% endif %}
+  </div>
+  {% endif %}
+  {% if client.telegram_url or client.instagram_url %}
+  <div style="margin-top:8px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+    {% if client.telegram_url %}<a href="{{ client.telegram_url }}" target="_blank" rel="noopener noreferrer">✈️ Telegram</a>{% endif %}
+    {% if client.instagram_url %}<a href="{{ client.instagram_url }}" target="_blank" rel="noopener noreferrer">📸 Instagram</a>{% endif %}
+  </div>
+  {% endif %}
+</footer>
+
+<!-- ══════════════ ORDER MODAL ═════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="order-backdrop">
+  <div class="modal-box">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="modal-title">&#x1F6D2; Оформлення замовлення</div>
+
+    <div class="order-summary">
+      <div class="order-summary-label">Ваше замовлення</div>
+      <div class="order-summary-row">
+        <span>{{ product.name }}{% if product.brand %} ({{ product.brand }}){% endif %} × 1</span>
+        <span id="summary-price">{{ product.price | int }} грн</span>
+      </div>
+      <div class="order-summary-total">
+        <span>Разом</span>
+        <span id="summary-total">{{ product.price | int }} грн</span>
+      </div>
+    </div>
+
+    <form id="order-form" novalidate>
+      <div class="form-group">
+        <label class="form-label">Ім'я та прізвище *</label>
+        <input class="form-input" type="text" id="f-name" placeholder="Іван Іваненко" autocomplete="name">
+        <div class="form-error" id="e-name">Будь ласка, введіть ваше ім'я</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Телефон *</label>
+        <input class="form-input" type="tel" id="f-phone" placeholder="+380 XX XXX XX XX" autocomplete="tel">
+        <div class="form-error" id="e-phone">Будь ласка, введіть номер телефону</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Місто *</label>
+        <input class="form-input" type="text" id="f-city" placeholder="Київ" autocomplete="address-level2">
+        <div class="form-error" id="e-city">Будь ласка, введіть місто</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Коментар</label>
+        <textarea class="form-input" id="f-comment" placeholder="Спосіб доставки, побажання..."></textarea>
+      </div>
+      <div class="alert-error" id="submit-error"></div>
+      <button type="submit" class="btn-submit" id="submit-btn">Підтвердити замовлення</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ SUCCESS MODAL ══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="success-backdrop">
+  <div class="modal-box" style="max-width:400px;">
+    <div class="success-body">
+      <div class="success-icon">&#x1F389;</div>
+      <div class="success-title">Замовлення прийнято!</div>
+      <p class="success-text">Дякуємо за ваше замовлення.<br>Ми зв'яжемося з вами найближчим часом.</p>
+      <button class="btn-continue" id="btn-continue">Продовжити покупки</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SCRIPT ══════════════════════════════════════════════════ -->
+<script>
+(function () {
+  "use strict";
+
+  const SLUG       = {{ client.slug | tojson }};
+  const PRODUCT_ID = {{ product.id }};
+  const PRICE      = {{ product.price }};
+  const NAME       = {{ product.name | tojson }};
+
+  function $(id) { return document.getElementById(id); }
+
+  function setFieldError(fid, eid, show) {
+    $(fid).classList.toggle("error", show);
+    $(eid).classList.toggle("show", show);
+  }
+
+  function validateForm() {
+    const name  = $("f-name").value.trim();
+    const phone = $("f-phone").value.trim();
+    const city  = $("f-city").value.trim();
+    setFieldError("f-name",  "e-name",  !name);
+    setFieldError("f-phone", "e-phone", !phone);
+    setFieldError("f-city",  "e-city",  !city);
+    return !!(name && phone && city);
+  }
+
+  function openModal() {
+    $("order-backdrop").classList.add("show");
+    document.body.style.overflow = "hidden";
+  }
+  function closeModal() {
+    $("order-backdrop").classList.remove("show");
+    document.body.style.overflow = "";
+  }
+  function openSuccess() {
+    $("order-backdrop").classList.remove("show");
+    $("success-backdrop").classList.add("show");
+    document.body.style.overflow = "hidden";
+  }
+  function closeSuccess() {
+    $("success-backdrop").classList.remove("show");
+    document.body.style.overflow = "";
+  }
+
+  $("btn-order").addEventListener("click", openModal);
+  $("modal-close").addEventListener("click", closeModal);
+  $("order-backdrop").addEventListener("click", function(e) {
+    if (e.target === this) closeModal();
+  });
+  $("success-backdrop").addEventListener("click", function(e) {
+    if (e.target === this) closeSuccess();
+  });
+  $("btn-continue").addEventListener("click", function() {
+    window.location.href = "/site/" + SLUG;
+  });
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key !== "Escape") return;
+    if ($("success-backdrop").classList.contains("show")) closeSuccess();
+    else if ($("order-backdrop").classList.contains("show")) closeModal();
+  });
+
+  $("order-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const btn = $("submit-btn");
+    const errEl = $("submit-error");
+    errEl.classList.remove("show");
+    btn.disabled = true;
+    btn.textContent = "Відправляємо…";
+
+    const payload = {
+      name:    $("f-name").value.trim(),
+      phone:   $("f-phone").value.trim(),
+      city:    $("f-city").value.trim(),
+      comment: $("f-comment").value.trim(),
+      items: [{ product_id: PRODUCT_ID, name: NAME, price: PRICE, qty: 1 }],
+      total: PRICE,
+    };
+
+    try {
+      const res = await fetch("/site/" + SLUG + "/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        $("order-form").reset();
+        openSuccess();
+      } else {
+        let msg = "Сталася помилка. Будь ласка, спробуй ще раз.";
+        try {
+          const d = await res.json();
+          if (d && d.detail) msg = String(d.detail);
+        } catch (_) { /* ignore */ }
+        errEl.textContent = msg;
+        errEl.classList.add("show");
+      }
+    } catch (_) {
+      errEl.textContent = "Немає зв'язку з сервером. Перевір інтернет і спробуй ще раз.";
+      errEl.classList.add("show");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Підтвердити замовлення";
+    }
+  });
+})();
+</script>
+</body>
+</html>

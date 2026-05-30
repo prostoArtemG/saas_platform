@@ -163,7 +163,17 @@
 
           <div class="info-row">
             <span class="info-label">{{ t.create_site.onb_template }}</span>
-            <span class="info-value"><code>{{ data.template }}</code></span>
+            <span class="info-value">
+              {% if data.template == 'technomarket_premium' %}
+                ⭐ TechnoMarket Premium
+              {% elif data.template == 'shop_bot' %}
+                🏪 TechnoMarket
+              {% elif data.template == 'technovlada' %}
+                🌐 TechnoVlada
+              {% else %}
+                <code>{{ data.template }}</code>
+              {% endif %}
+            </span>
           </div>
 
           <div class="info-row">

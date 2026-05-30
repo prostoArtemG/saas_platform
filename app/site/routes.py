@@ -77,7 +77,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Whitelist of installed site templates. Each must have an `index.html`
 # at templates/sites/{name}/index.html
-AVAILABLE_TEMPLATES = {"technovlada", "shop_bot"}
+AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "technomarket_premium"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
@@ -233,7 +233,7 @@ async def create_site_submit(
         logger.warning("SiteRequest audit log failed: %s", exc)
 
     # Atomic self-service onboarding ------------------------------------------
-    template_name = site_type if site_type in {"technovlada", "shop_bot", "premium_store"} else "technovlada"
+    template_name = site_type if site_type in {"technovlada", "shop_bot", "premium_store", "technomarket_premium"} else "technovlada"
 
     logger.info(
         "create_site_submit: business_name=%s site_type=%r template_name=%r bot_token_len=%s",
@@ -873,6 +873,7 @@ async def client_dashboard(
                 "bot_connected": bool(client.telegram_bot_token),
                 "admin_telegram_id": client.admin_telegram_id,
                 "created_at": client.created_at,
+                "template_name": client.template_name or "technovlada",
             },
             "subscription": {
                 "status": sub.status if sub else None,

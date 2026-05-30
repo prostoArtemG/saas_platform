@@ -167,6 +167,19 @@
               No admin linked
             {% endif %}
           </div>
+          <!-- Template label -->
+          <div class="text-xs text-white/30 mt-2 pt-2 border-t border-white/5">
+            Шаблон:&nbsp;
+            {% if client.template_name == 'technomarket_premium' %}
+              ⭐ TechnoMarket Premium
+            {% elif client.template_name == 'shop_bot' %}
+              🏪 TechnoMarket
+            {% elif client.template_name == 'technovlada' %}
+              🌐 TechnoVlada
+            {% else %}
+              {{ client.template_name }}
+            {% endif %}
+          </div>
         </div>
       </div>
 
