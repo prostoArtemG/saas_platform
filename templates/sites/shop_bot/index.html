@@ -813,8 +813,27 @@
 
 /* ── Data from server ──────────────────────────────────────────────────────── */
 const PRODUCTS    = {{ products | tojson }};
-const CLIENT_SLUG = {{ client.slug | tojson }};
-const EVENT_URL   = {{ event_url | tojson }};
+const CLIENT_SLUG     = {{ client.slug | tojson }};
+const EVENT_URL       = {{ event_url | tojson }};
+const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
+
+/* ── Subdomain routing helpers ─────────────────────────────────────────────── */
+// True when opened via {slug}.shopplatform.app (or custom domain via proxy)
+// In that case the middleware already stripped /site/{slug}, so paths are shorter.
+const isSubdomainMode = !!PLATFORM_DOMAIN
+  && location.hostname !== PLATFORM_DOMAIN
+  && location.hostname.endsWith("." + PLATFORM_DOMAIN);
+
+function productUrl(id) {
+  return isSubdomainMode
+    ? "/product/" + id
+    : "/site/" + CLIENT_SLUG + "/product/" + id;
+}
+function orderUrl() {
+  return isSubdomainMode
+    ? "/order"
+    : "/site/" + CLIENT_SLUG + "/order";
+}
 
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let cart         = [];
@@ -1055,7 +1074,7 @@ function renderProducts() {
 
 /* ── Navigation ────────────────────────────────────────────────────────────── */
 function goToProduct(id) {
-  window.location = "/site/" + CLIENT_SLUG + "/product/" + id;
+  window.location = productUrl(id);
 }
 
 /* ── Filters ───────────────────────────────────────────────────────────────── */
@@ -1214,7 +1233,7 @@ async function submitOrder() {
   btn.textContent = "Надсилаємо\u2026";
 
   try {
-    const res = await fetch("/site/" + CLIENT_SLUG + "/order", {
+    const res = await fetch(orderUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

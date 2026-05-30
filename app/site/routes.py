@@ -873,7 +873,7 @@ async def client_dashboard(
                 "buyout_months": plan.buyout_months,
             } if plan else None,
             "domain": {
-                "host": f"{client.slug}.shopplatform.app",
+                "host": f"{client.slug}.{settings.platform_domain}",
                 "status": "pending",
             },
         }
@@ -882,6 +882,12 @@ async def client_dashboard(
             select(func.count()).where(Product.client_id == client.id)
         ) or 0
         ctx["products_count"] = products_count
+
+    # Bot link: use client's own bot if available, else platform bot
+    _platform_bot = getattr(request.app.state, "platform_bot_username", None)
+    _bot_name = client.bot_username or _platform_bot
+    ctx["bot_link"] = f"https://t.me/{_bot_name}" if _bot_name else None
+    ctx["dashboard_token"] = client.dashboard_token
 
     return templates.TemplateResponse("dashboard.html", ctx)
 
@@ -985,13 +991,9 @@ async def client_site(
             "client": client_data,
             "products": products,
             "event_url": f"/api/event/{slug}",
+            "platform_domain": settings.platform_domain,
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Product detail page
-# ---------------------------------------------------------------------------
 
 
 @router.get("/site/{slug}/product/{product_id}", response_class=HTMLResponse)

@@ -79,16 +79,18 @@
             {% endif %}
           </div>
         </div>
-        <a href="https://t.me/" target="_blank" rel="noopener" class="cta-btn px-5 py-2.5 rounded-xl text-sm self-start md:self-auto">
+        {% if bot_link %}
+        <a href="{{ bot_link }}" target="_blank" rel="noopener" class="cta-btn px-5 py-2.5 rounded-xl text-sm self-start md:self-auto">
           Open Telegram bot →
         </a>
+        {% endif %}
       </div>
 
       <!-- Top stats grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
         <!-- Products -->
-        <a href="/dashboard/{{ client.slug }}/products"
+        <a href="/dashboard/{{ client.slug }}/products{% if dashboard_token %}?token={{ dashboard_token }}{% endif %}"
            class="stat-card glass-card rounded-2xl p-5 animate-fade-up block group">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Товари</span>
