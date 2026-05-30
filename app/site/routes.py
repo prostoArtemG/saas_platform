@@ -5,7 +5,7 @@ import re
 import secrets
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Form, HTTPException, Request
+from fastapi import APIRouter, Cookie, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -137,6 +137,7 @@ async def create_site_form(
     template: Optional[str] = None,
     lang: Optional[str] = None,
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
+    admin_preview: bool = Query(default=False),
 ) -> HTMLResponse:
     chosen = _resolve_lang(lang, lang_cookie)
     t = get_t(chosen)
@@ -157,6 +158,7 @@ async def create_site_form(
             "supported_langs": SUPPORTED_LANGS,
             "submitted": False,
             "error": None,
+            "admin_preview": admin_preview,
             "form": {
                 "plan": plan_matched,
                 "site_type": template or "",
@@ -177,6 +179,7 @@ async def create_site_submit(
     comment: str = Form(""),
     bot_token: str = Form(""),
     admin_telegram_id: str = Form(""),
+    admin_preview: str = Form(""),
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
     chosen = _resolve_lang(None, lang_cookie)
@@ -189,6 +192,10 @@ async def create_site_submit(
     site_type = site_type.strip()[:64]
     plan = plan.strip()[:64]
     comment = (comment or "").strip()[:2000] or None
+    _is_admin_preview = admin_preview.strip() == "1" and (
+        admin_telegram_id.isdigit()
+        and int(admin_telegram_id) in settings.admin_ids
+    )
 
     def _form_error(message: str, status: int = 400) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -200,6 +207,7 @@ async def create_site_submit(
                 "supported_langs": SUPPORTED_LANGS,
                 "submitted": False,
                 "error": message,
+                "admin_preview": _is_admin_preview,
                 "form": {
                     "business_name": business_name,
                     "telegram": telegram,
@@ -218,15 +226,16 @@ async def create_site_submit(
 
     # Quick template/plan compatibility check (before DB hit)
     _plan_lower = plan.lower()
-    if site_type == "red_market" and _plan_lower.startswith("starter"):
-        return _form_error(
-            "Шаблон Red Market недоступний для тарифу Starter. "
-            "Оберіть Business або вищий тариф."
-        )
-    if site_type == "technomarket_premium" and not _plan_lower.startswith("premium"):
-        return _form_error(
-            "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
-        )
+    if not _is_admin_preview:
+        if site_type == "red_market" and _plan_lower.startswith("starter"):
+            return _form_error(
+                "Шаблон Red Market недоступний для тарифу Starter. "
+                "Оберіть Business або вищий тариф."
+            )
+        if site_type == "technomarket_premium" and not _plan_lower.startswith("premium"):
+            return _form_error(
+                "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
+            )
 
     # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
     try:
@@ -278,19 +287,21 @@ async def create_site_submit(
                 return _form_error(t["create_site"]["error_no_plan"])
 
             # Guard: verify template is allowed for this plan (defence-in-depth)
-            if template_name == "red_market":
-                _pname = (plan_row.slug or plan_row.name or "").lower()
-                if _pname.startswith("starter"):
-                    return _form_error(
-                        "Шаблон Red Market недоступний для тарифу Starter. "
-                        "Оберіть Business або вищий тариф."
-                    )
-            if template_name == "technomarket_premium":
-                _pname = (plan_row.slug or plan_row.name or "").lower()
-                if not _pname.startswith("premium"):
-                    return _form_error(
-                        "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
-                    )
+            # Skipped when _is_admin_preview is True (admin testing only)
+            if not _is_admin_preview:
+                if template_name == "red_market":
+                    _pname = (plan_row.slug or plan_row.name or "").lower()
+                    if _pname.startswith("starter"):
+                        return _form_error(
+                            "Шаблон Red Market недоступний для тарифу Starter. "
+                            "Оберіть Business або вищий тариф."
+                        )
+                if template_name == "technomarket_premium":
+                    _pname = (plan_row.slug or plan_row.name or "").lower()
+                    if not _pname.startswith("premium"):
+                        return _form_error(
+                            "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
+                        )
 
             # 2. Generate unique slug from business_name
             slug = await _allocate_slug(session, business_name)

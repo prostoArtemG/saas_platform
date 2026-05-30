@@ -100,6 +100,13 @@
         <p class="text-white/50 max-w-md mx-auto">{{ t.create_site.subtitle }}</p>
       </div>
 
+      {% if admin_preview %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2">
+        <span class="text-base">🔓</span>
+        <span>Admin preview: всі шаблони доступні — обмеження тарифів вимкнено</span>
+      </div>
+      {% endif %}
+
       <form method="post" action="/create-site" class="glass-card rounded-3xl p-8 lg:p-10 animate-fade-up">
 
         {% if error %}
@@ -215,6 +222,9 @@
         <button type="submit" class="cta-btn w-full py-4 rounded-2xl text-base animate-glow">
           {{ t.create_site.submit }}
         </button>
+        {% if admin_preview %}
+        <input type="hidden" name="admin_preview" value="1">
+        {% endif %}
       </form>
 
       <div class="text-center mt-6">
@@ -226,6 +236,7 @@
   </main>
   <script>
     (function () {
+      var ADMIN_PREVIEW = {{ 'true' if admin_preview else 'false' }};
       var planSel    = document.getElementById('plan-select');
       var shopRadio  = document.getElementById('tpl-shop-bot');
       var redRadio   = document.getElementById('tpl-red');
@@ -259,6 +270,13 @@
       }
 
       function sync() {
+        if (ADMIN_PREVIEW) {
+          // Admin: unlock all templates regardless of plan
+          unlockRadio(redRadio, redLabel, redLock);
+          unlockRadio(premRadio, premLabel, premLock);
+          warn.classList.add('hidden');
+          return;
+        }
         var tier = tierOf(planSel.value);
 
         if (tier === 'premium') {
