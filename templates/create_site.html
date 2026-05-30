@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SaaSPlatform — {{ t.create_site.title }}</title>
+  <title>ShopPlatform — {{ t.create_site.title }}</title>
   <meta name="description" content="{{ t.create_site.subtitle }}" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/static/css/custom.css" />
@@ -53,7 +53,7 @@
         <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
           <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </span>
-        <span>SaaSPlatform</span>
+        <span>ShopPlatform</span>
       </a>
       <div class="flex items-center gap-3">
         <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
@@ -93,7 +93,7 @@
       {% else %}
       <!-- FORM -->
       <div class="text-center mb-10 animate-fade-up">
-        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">SaaSPlatform</div>
+        <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">ShopPlatform</div>
         <h1 class="text-4xl lg:text-5xl font-black mb-3">
           <span class="gradient-text">{{ t.create_site.title }}</span>
         </h1>
@@ -119,39 +119,16 @@
                  placeholder="TechnoVlada" />
         </div>
 
-        <!-- Telegram -->
+        <!-- Telegram username / phone (optional) -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-white/70 mb-2">
-            Telegram (@username) — необов'язко
+            Telegram або телефон
           </label>
           <input type="text" name="telegram" maxlength="128"
                  value="{{ form.telegram or '' }}"
                  class="form-input w-full px-4 py-3 rounded-xl text-base"
-                 placeholder="@username (необов'язково)" />
-        </div>
-
-        <!-- Telegram ID -->
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-white/70 mb-2">
-            Ваш Telegram ID <span class="text-brand-lime">*</span>
-          </label>
-          <input type="text" name="admin_telegram_id" required maxlength="20"
-                 value="{{ form.admin_telegram_id or '' }}"
-                 class="form-input w-full px-4 py-3 rounded-xl text-base"
-                 placeholder="500134490" />
-          <small class="block mt-1 text-white/40 text-xs">Дізнайтесь свій ID у <a href="https://t.me/userinfobot" target="_blank" class="underline">@userinfobot</a></small>
-        </div>
-
-        <!-- Bot Token -->
-        <div class="mb-5">
-          <label class="block text-sm font-medium text-white/70 mb-2">
-            Telegram Bot Token *
-          </label>
-          <input type="text" name="bot_token" maxlength="255"
-                 value="{{ form.bot_token or '' }}"
-                 class="form-input w-full px-4 py-3 rounded-xl text-base"
-                 placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
-          <small class="block mt-1 text-white/40 text-xs">Створіть бота у @BotFather та вставте токен</small>
+                 placeholder="@username або +380XXXXXXXXX (необов'язково)" />
+          <small class="block mt-1 text-white/40 text-xs">Для зворотного зв'язку. Telegram CMS буде підключено пізніше.</small>
         </div>
 
         <!-- Site type -->

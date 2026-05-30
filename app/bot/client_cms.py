@@ -698,8 +698,12 @@ async def cms_prod_view(cb: CallbackQuery, state: FSMContext) -> None:
         await cb.answer("Товар не знайдено", show_alert=True)
         return
     from app.config import settings as app_settings
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}/product/{product.id}" if base else ""
+    _domain = (app_settings.platform_domain or "").strip()
+    if _domain:
+        site_url = f"https://{client.slug}.{_domain}/product/{product.id}"
+    else:
+        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{_base}/site/{client.slug}/product/{product.id}" if _base else ""
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(product),
         parse_mode="HTML",
@@ -794,8 +798,12 @@ async def cms_prod_edit_field_input(message: Message, state: FSMContext) -> None
         fresh = product
     await _clear_fsm_keep_test(state)
     from app.config import settings as app_settings
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    _domain = (app_settings.platform_domain or "").strip()
+    if _domain:
+        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
+    else:
+        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
     await message.answer(
         "✅ Збережено\n\n" + _prod_card_text(fresh),
         parse_mode="HTML",
@@ -857,8 +865,12 @@ async def _save_prod_photo(message: Message, state: FSMContext, url: str | None)
         fresh = product
     await _clear_fsm_keep_test(state)
     from app.config import settings as app_settings
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    _domain = (app_settings.platform_domain or "").strip()
+    if _domain:
+        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
+    else:
+        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
     await message.answer(
         "✅ Фото оновлено\n\n" + _prod_card_text(fresh),
         parse_mode="HTML",
@@ -891,8 +903,12 @@ async def cms_prod_toggle(cb: CallbackQuery, state: FSMContext) -> None:
         await session.refresh(product)
         fresh = product
     from app.config import settings as app_settings
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    _domain = (app_settings.platform_domain or "").strip()
+    if _domain:
+        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
+    else:
+        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(fresh),
         parse_mode="HTML",
@@ -1106,8 +1122,12 @@ async def cms_prod_badge_set(cb: CallbackQuery, state: FSMContext) -> None:
         await session.refresh(product)
         fresh = product
     from app.config import settings as app_settings
-    base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-    site_url = f"{base}/site/{client.slug}/product/{fresh.id}" if base else ""
+    _domain = (app_settings.platform_domain or "").strip()
+    if _domain:
+        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
+    else:
+        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
+        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(fresh),
         parse_mode="HTML",

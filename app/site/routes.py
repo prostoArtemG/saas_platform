@@ -502,9 +502,11 @@ async def onboarding_success(
                 if platform_bot_username else None
             )
 
-        # Use Railway URL if available, otherwise fallback to platform URL
-        railway_url = client.bot_admin_ids if client.bot_admin_ids and client.bot_admin_ids.startswith("http") else None
-        site_url = railway_url or (str(request.base_url).rstrip("/") + f"/site/{client.slug}")
+        # Build public site URL: prefer subdomain, fallback to /site/{slug}
+        if settings.platform_domain:
+            site_url = f"https://{client.slug}.{settings.platform_domain}"
+        else:
+            site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
 
     _token_suffix = f"?token={client.dashboard_token}" if client.dashboard_token else ""
     dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}{_token_suffix}"
