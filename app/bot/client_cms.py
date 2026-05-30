@@ -381,6 +381,7 @@ PROD_PAGE_SIZE = 10
 
 _PROD_EDIT_PROMPTS: dict[str, str] = {
     "name":            "✏️ Введіть нову назву/модель товару:",
+    "description":     "📝 Введіть короткий опис товару (або «-» щоб очистити):",
     "brand":           "🏢 Введіть новий бренд (або «-» щоб очистити):",
     "category":        "📂 Введіть нову категорію (або «-» щоб очистити):",
     "group_name":      "📁 Введіть нову групу (або «-» щоб очистити):",
@@ -492,6 +493,12 @@ def _prod_card_text(p: "Product") -> str:
     lines.append("")
     lines.append(f"👁 Статус: {'✅ В наявності' if p.is_available else '❌ Прихований'}")
     lines.append(f"🖼 Фото:   {'✅ є' if p.image_url else '<i>немає</i>'}")
+    desc_val = p.description
+    if desc_val:
+        preview = desc_val[:200] + ("…" if len(desc_val) > 200 else "")
+        lines.append(f"📝 Опис:   {preview}")
+    else:
+        lines.append("📝 Опис:   <i>—</i>")
     badge_val = getattr(p, "badge", None)
     lines.append(f"⭐ Плашка: {badge_val if badge_val else '<i>—</i>'}")
     seo_val = getattr(p, "seo_title", None)
@@ -518,11 +525,14 @@ def _prod_card_kb(
             InlineKeyboardButton(text="🏷 Стара ціна",     callback_data=f"cms:pe:{pid}:old_price:{page}"),
         ],
         [
+            InlineKeyboardButton(text="� Опис",           callback_data=f"cms:pe:{pid}:description:{page}"),
             InlineKeyboardButton(text="📋 Характеристики", callback_data=f"cms:pe:{pid}:specs:{page}"),
-            InlineKeyboardButton(text="🖼 Фото",           callback_data=f"cms:pe:{pid}:image:{page}"),
         ],
         [
+            InlineKeyboardButton(text="🖼 Фото",           callback_data=f"cms:pe:{pid}:image:{page}"),
             InlineKeyboardButton(text="⭐ Плашка",         callback_data=f"cms:bview:{pid}:{page}"),
+        ],
+        [
             InlineKeyboardButton(text="🔍 SEO товару",     callback_data=f"cms:seo:{pid}:{page}"),
         ],
         [
@@ -567,6 +577,7 @@ class CmsAddProduct(StatesGroup):
     brand          = State()  # inline KB: pick existing, new, or skip
     brand_input    = State()  # text input: new brand name
     name           = State()  # text input: model / product name
+    description    = State()  # text input or skip: short product description
     specs          = State()  # text input or skip: tech specs
     price          = State()  # text input: price
     old_price      = State()  # text input or skip: original price (for discount display)
@@ -1743,9 +1754,33 @@ async def cms_add_name(message: Message, state: FSMContext) -> None:
         await message.answer("Назва не може бути порожньою. Введіть назву:")
         return
     await state.update_data(name=text, specs_items=[])
+    await state.set_state(CmsAddProduct.description)
+    await message.answer(
+        "Крок 5 — Короткий опис товару (відображається на сторінці товару):",
+        reply_markup=_skip_kb("description"),
+    )
+
+
+# ── description state ────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "cms:skip:description", StateFilter(CmsAddProduct.description))
+async def cms_skip_description(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(description=None)
+    await state.set_state(CmsAddProduct.specs)
+    await cb.message.answer(  # type: ignore[union-attr]
+        "Крок 6 — Характеристики товару:\n\nВводьте по одній (наприклад: Площа: 35 м²).\nКоли закінчите — натисніть ✅ Готово.",
+        reply_markup=_specs_kb(),
+    )
+    await cb.answer()
+
+
+@router.message(StateFilter(CmsAddProduct.description))
+async def cms_add_description(message: Message, state: FSMContext) -> None:
+    val = (message.text or "").strip()
+    await state.update_data(description=val if val and val != "-" else None)
     await state.set_state(CmsAddProduct.specs)
     await message.answer(
-        "Крок 5 — Характеристики товару:\n\nВводьте по одній (наприклад: Площа: 35 м²).\nКоли закінчите — натисніть ✅ Готово.",
+        "Крок 6 — Характеристики товару:\n\nВводьте по одній (наприклад: Площа: 35 м²).\nКоли закінчите — натисніть ✅ Готово.",
         reply_markup=_specs_kb(),
     )
 
@@ -1805,7 +1840,7 @@ async def cms_brand_input(message: Message, state: FSMContext) -> None:
 async def cms_skip_specs(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(specs=None, specs_items=[])
     await state.set_state(CmsAddProduct.price)
-    await cb.message.answer("Крок 6 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
+    await cb.message.answer("Крок 7 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
     await cb.answer()
 
 
@@ -1816,7 +1851,7 @@ async def cms_done_specs(cb: CallbackQuery, state: FSMContext) -> None:
     specs_text = "\n".join(items) if items else None
     await state.update_data(specs=specs_text, specs_items=[])
     await state.set_state(CmsAddProduct.price)
-    await cb.message.answer("Крок 6 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
+    await cb.message.answer("Крок 7 — Ціна (наприклад: 150):")  # type: ignore[union-attr]
     await cb.answer()
 
 
@@ -1851,7 +1886,7 @@ async def cms_add_price(message: Message, state: FSMContext) -> None:
     await state.update_data(price=str(price))
     await state.set_state(CmsAddProduct.old_price)
     await message.answer(
-        "Крок 7 — Стара ціна (для відображення знижки):",
+        "Крок 8 — Стара ціна (для відображення знижки):",
         reply_markup=_skip_kb("old_price"),
     )
 
@@ -1863,7 +1898,7 @@ async def cms_skip_old_price(cb: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(old_price=None)
     await state.set_state(CmsAddProduct.image_url)
     await cb.message.answer(  # type: ignore[union-attr]
-        "Крок 8 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
+        "Крок 9 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
         reply_markup=_skip_kb("image_url"),
     )
     await cb.answer()
@@ -1882,7 +1917,7 @@ async def cms_add_old_price(message: Message, state: FSMContext) -> None:
     await state.update_data(old_price=str(old_price))
     await state.set_state(CmsAddProduct.image_url)
     await message.answer(
-        "Крок 8 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
+        "Крок 9 — Надішліть фото товару, URL посилання або ‘-’ щоб пропустити:",
         reply_markup=_skip_kb("image_url"),
     )
 
@@ -1943,6 +1978,7 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
             group_name=data.get("group_name"),
             category=data.get("category"),
             brand=data.get("brand"),
+            description=data.get("description"),
             specs=data.get("specs"),
             price=Decimal(data["price"]),
             old_price=old_price_val,
