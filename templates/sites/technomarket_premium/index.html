@@ -1,953 +1,674 @@
 <!DOCTYPE html>
-<html lang="{{ lang | default('uk') }}">
+<html lang="uk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ client.shop_title }} — Інтернет-магазин</title>
-  <meta name="description" content="{{ client.shop_title }} — широкий вибір техніки. Доставка по Україні.">
+  <title>{{ client.shop_title }}</title>
+  <meta name="description" content="{{ client.shop_title }} — інтернет-магазин побутової техніки">
+  <link rel="stylesheet" href="/static/css/technomarket_premium.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg); color: var(--text); line-height: 1.6;
-      min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
-    }
-    a { color: inherit; text-decoration: none; }
-    img { max-width: 100%; display: block; }
-    button { cursor: pointer; font-family: inherit; }
-    .container { max-width: 1260px; margin: 0 auto; padding: 0 20px; }
-
-    /* ── Themes ── */
-    body.theme-light-red {
-      --accent: #e63222; --accent-hover: #c4271a; --accent-10: rgba(230,50,34,.10);
-      --bg: #f5f5f5; --surface: #ffffff; --surface-2: #fafafa;
-      --text: #1a1a1a; --muted: #6b6b6b; --border: #e8e8e8; --footer-bg: #1a1a1a;
-      color-scheme: light;
-    }
-    body.theme-navy-teal {
-      --accent: #14b8a6; --accent-hover: #0d9488; --accent-10: rgba(20,184,166,.10);
-      --bg: #0f172a; --surface: #1e293b; --surface-2: #162032;
-      --text: #f1f5f9; --muted: #94a3b8; --border: #334155; --footer-bg: #0a1120;
-      color-scheme: dark;
-    }
-    body.theme-purple-lime {
-      --accent: #a3e635; --accent-hover: #84cc16; --accent-10: rgba(163,230,53,.10);
-      --bg: #1a0a2e; --surface: #2d1b4e; --surface-2: #231543;
-      --text: #f5f3ff; --muted: #c4b5fd; --border: #4c1d95; --footer-bg: #100620;
-      color-scheme: dark;
-    }
-
-    /* ── Marquee ── */
-    .marquee-strip {
-      background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
-      padding: 7px 0; overflow: hidden; white-space: nowrap;
-    }
-    .marquee-inner { display: inline-block; animation: marquee 32s linear infinite; padding-left: 100%; }
-    .marquee-inner span { margin-right: 56px; }
-    @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
-
-    /* ── Header ── */
-    .header {
-      background: var(--surface); border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .header-top {
-      padding: 12px 0; display: flex; align-items: center; gap: 20px;
-    }
-    .logo {
-      display: flex; align-items: center; gap: 10px;
-      flex-shrink: 0; min-width: 150px; text-decoration: none; color: inherit;
-    }
-    .logo-img { height: 38px; width: 38px; object-fit: contain; border-radius: 8px; }
-    .logo-icon {
-      width: 38px; height: 38px; border-radius: 8px; background: var(--accent);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 17px; flex-shrink: 0;
-    }
-    .logo-name { font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -.4px; }
-    .logo-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; }
-
-    /* Search */
-    .header-search { flex: 1; max-width: 520px; min-width: 0; position: relative; }
-    .search-wrap {
-      display: flex; border: 1.5px solid var(--border); border-radius: 10px;
-      overflow: visible; background: var(--surface); transition: border-color .2s; position: relative;
-    }
-    .search-wrap:focus-within { border-color: var(--accent); }
-    .search-wrap input {
-      flex: 1; border: none; background: transparent; padding: 10px 14px;
-      font-size: 14px; outline: none; color: var(--text); min-width: 0; border-radius: 10px 0 0 10px;
-    }
-    .search-wrap input::placeholder { color: var(--muted); }
-    .search-wrap button {
-      background: var(--accent); border: none; padding: 10px 18px; color: #fff;
-      font-size: 14px; border-radius: 0 8px 8px 0; flex-shrink: 0; transition: background .2s;
-    }
-    .search-wrap button:hover { background: var(--accent-hover); }
-    .search-dropdown {
-      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      box-shadow: 0 8px 28px rgba(0,0,0,.13); z-index: 500; max-height: 360px; overflow-y: auto;
-    }
-    .search-item {
-      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
-      cursor: pointer; border-bottom: 1px solid var(--border); transition: background .15s;
-    }
-    .search-item:last-child { border-bottom: none; }
-    .search-item:hover { background: var(--bg); }
-    .search-item img { width: 40px; height: 40px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; }
-    .search-item-ph { width: 40px; height: 40px; background: var(--bg); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-    .search-item-info { flex: 1; min-width: 0; }
-    .search-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .search-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .search-item-price { font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
-
-    /* Header actions */
-    .header-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; margin-left: auto; }
-    .phone-link {
-      font-size: 13px; font-weight: 700; color: var(--text);
-      display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: color .2s;
-    }
-    .phone-link:hover { color: var(--accent); }
-    .cart-btn {
-      background: var(--accent); color: #fff; border: none; border-radius: 10px;
-      padding: 10px 18px; font-size: 14px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px; transition: background .2s, transform .15s;
-    }
-    .cart-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
-    .cart-count {
-      background: #fff; color: var(--accent); border-radius: 50%;
-      width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 800;
-    }
-
-    /* Category nav */
-    .cat-nav { border-top: 1px solid var(--border); background: var(--surface); }
-    .cat-nav-inner { display: flex; overflow-x: auto; scrollbar-width: none; }
-    .cat-nav-inner::-webkit-scrollbar { display: none; }
-    .cat-link {
-      padding: 10px 20px; font-size: 13px; font-weight: 500; color: var(--muted);
-      white-space: nowrap; border-bottom: 2.5px solid transparent; transition: all .15s;
-      cursor: pointer; flex-shrink: 0;
-    }
-    .cat-link:hover { color: var(--text); }
-    .cat-link.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
-
-    /* ── Main layout ── */
-    .main-wrap { flex: 1; padding: 24px 0 48px; }
-    .main { display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start; }
-
-    /* Filters */
-    .filters-toggle {
-      display: none; width: 100%; padding: 12px; background: var(--accent); color: #fff;
-      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; margin-bottom: 16px;
-    }
-    @media (max-width: 960px) {
-      .filters-toggle { display: block; }
-      #filtersPanel { display: none; }
-      #filtersPanel.open { display: block; }
-    }
-    .filters {
-      background: var(--surface); border-radius: 12px; border: 1px solid var(--border);
-      padding: 20px; position: sticky; top: calc(var(--header-height,110px) + 12px);
-    }
-    .filters-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 18px; font-weight: 700; font-size: 15px;
-    }
-    .filters-reset { font-size: 12px; color: var(--accent); font-weight: 500; cursor: pointer; }
-    .filter-group { margin-bottom: 22px; }
-    .filter-group:last-child { margin-bottom: 0; }
-    .filter-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .6px; color: var(--muted); margin-bottom: 10px;
-    }
-    .filter-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; cursor: pointer; font-size: 14px; }
-    .filter-item input[type="radio"],
-    .filter-item input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
-    .filter-avail {
-      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-      background: var(--bg); border-radius: 8px; cursor: pointer;
-      font-size: 14px; font-weight: 500; margin-bottom: 8px;
-    }
-    .filter-avail input { accent-color: var(--accent); width: 15px; height: 15px; }
-    .price-inputs { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .price-inputs input {
-      flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 10px;
-      font-size: 13px; background: var(--surface); color: var(--text); outline: none;
-      width: 0; transition: border-color .2s;
-    }
-    .price-inputs input:focus { border-color: var(--accent); }
-    .price-inputs span { color: var(--muted); flex-shrink: 0; }
-    .btn-apply {
-      width: 100%; background: var(--accent); color: #fff; border: none;
-      border-radius: 8px; padding: 9px; font-size: 13px; font-weight: 600; transition: background .2s;
-    }
-    .btn-apply:hover { background: var(--accent-hover); }
-
-    /* Catalog */
-    .catalog-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
-    }
-    .catalog-title { font-size: 20px; font-weight: 800; }
-    .catalog-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .catalog-count { font-size: 14px; color: var(--muted); }
-    .catalog-sort select {
-      border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 12px;
-      font-size: 13px; background: var(--surface); color: var(--text); cursor: pointer; outline: none;
-    }
-    .catalog-sort select:focus { border-color: var(--accent); }
-
-    /* Products grid */
-    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
-    .product-card {
-      background: var(--surface); border-radius: 12px; border: 1px solid var(--border);
-      overflow: hidden; cursor: pointer; transition: box-shadow .2s, transform .15s, border-color .2s;
-      display: flex; flex-direction: column;
-    }
-    .product-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.12); transform: translateY(-3px); border-color: var(--accent); }
-    .product-card.unavailable { opacity: .65; }
-    .product-img-wrap { position: relative; height: 200px; background: var(--bg); overflow: hidden; }
-    .product-img-wrap img { width: 100%; height: 100%; object-fit: contain; padding: 10px; transition: transform .3s; }
-    .product-card:hover .product-img-wrap img { transform: scale(1.05); }
-    .product-img-placeholder { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 52px; color: var(--muted); }
-
-    /* Badges */
-    .badge-discount {
-      position: absolute; top: 8px; right: 8px; background: var(--accent);
-      color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
-    }
-    .badge-unavail {
-      position: absolute; top: 8px; left: 8px; background: #6b7280;
-      color: #fff; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
-    }
-    .badge-label {
-      position: absolute; top: 8px; left: 8px; font-size: 11px; font-weight: 800;
-      padding: 3px 9px; border-radius: 6px; text-transform: uppercase; letter-spacing: .3px;
-    }
-    .badge-akcia   { background: #e63222; color: #fff; }
-    .badge-top     { background: #2563eb; color: #fff; }
-    .badge-novinka { background: #16a34a; color: #fff; }
-    .badge-hit     { background: #ea580c; color: #fff; }
-    .badge-default { background: #7c3aed; color: #fff; }
-
-    /* Card body */
-    .product-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .product-brand { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--accent); }
-    .product-name {
-      font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; flex: 1;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .product-avail { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; margin-top: 2px; }
-    .avail-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .avail-yes { color: #16a34a; } .avail-yes .avail-dot { background: #16a34a; }
-    .avail-no  { color: #9ca3af; } .avail-no  .avail-dot { background: #9ca3af; }
-    .product-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border);
-    }
-    .product-price-wrap { display: flex; flex-direction: column; line-height: 1.2; }
-    .product-old-price { font-size: 11px; color: var(--muted); text-decoration: line-through; }
-    .product-price { font-size: 18px; font-weight: 800; }
-    .btn-cart-add {
-      background: var(--accent); color: #fff; border: none; border-radius: 9px;
-      width: 38px; height: 38px; font-size: 16px; display: flex; align-items: center;
-      justify-content: center; flex-shrink: 0; transition: background .2s, transform .15s;
-    }
-    .btn-cart-add:hover { background: var(--accent-hover); transform: scale(1.08); }
-    .btn-cart-add.in-cart { background: #16a34a; }
-    .btn-cart-add:disabled { background: #d1d5db; cursor: not-allowed; }
-
-    /* Empty state */
-    .empty-state { display: none; text-align: center; padding: 60px 20px; color: var(--muted); }
-    .empty-state.show { display: block; }
-    .empty-icon { font-size: 52px; margin-bottom: 14px; }
-    .empty-state p { font-size: 16px; margin-bottom: 20px; }
-    .btn-primary {
-      display: inline-flex; align-items: center; justify-content: center;
-      background: var(--accent); color: #fff; border: none; border-radius: 10px;
-      padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .2s;
-    }
-    .btn-primary:hover { background: var(--accent-hover); }
-
-    /* ── Footer ── */
-    .footer { background: var(--footer-bg); color: rgba(255,255,255,.8); margin-top: auto; }
-    .footer-inner { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; padding: 48px 20px 40px; }
-    .footer-logo-img { height: 40px; border-radius: 8px; margin-bottom: 10px; }
-    .footer-logo-text { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
-    .footer-sub { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.5; margin-bottom: 14px; }
-    .footer-contacts a, .footer-contacts p {
-      font-size: 13px; color: rgba(255,255,255,.6); display: flex; align-items: center;
-      gap: 6px; margin-bottom: 7px; transition: color .15s;
-    }
-    .footer-contacts a:hover { color: #fff; }
-    .footer-social { display: flex; gap: 10px; margin-top: 12px; }
-    .footer-social a {
-      width: 36px; height: 36px; background: rgba(255,255,255,.08); border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; font-size: 16px; transition: background .15s;
-    }
-    .footer-social a:hover { background: rgba(255,255,255,.18); }
-    .footer-section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-      color: rgba(255,255,255,.3); margin-bottom: 16px;
-    }
-    .footer-links { display: flex; flex-direction: column; gap: 10px; }
-    .footer-links a { font-size: 14px; color: rgba(255,255,255,.6); transition: color .15s; }
-    .footer-links a:hover { color: #fff; }
-    .footer-links p { font-size: 13px; color: rgba(255,255,255,.4); line-height: 1.5; }
-    .footer-bottom {
-      border-top: 1px solid rgba(255,255,255,.07); padding: 16px 20px;
-      font-size: 13px; color: rgba(255,255,255,.3); text-align: center;
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-    }
-
-    /* ── Cart ── */
-    .cart-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; }
-    .cart-overlay.open { display: block; }
-    .cart-drawer {
-      position: fixed; top: 0; right: -440px; width: 400px; max-width: 100vw; height: 100vh;
-      background: var(--surface); z-index: 201; display: flex; flex-direction: column;
-      transition: right .3s ease; box-shadow: -4px 0 28px rgba(0,0,0,.15);
-    }
-    .cart-drawer.open { right: 0; }
-    .cart-head {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 20px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 700;
-    }
-    .cart-head button { background: none; border: none; font-size: 22px; color: var(--muted); }
-    .cart-items { flex: 1; overflow-y: auto; padding: 16px; }
-    .cart-item { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .cart-item img { width: 52px; height: 52px; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; flex-shrink: 0; }
-    .cart-img-ph { width: 52px; height: 52px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-    .cart-item-info { flex: 1; min-width: 0; }
-    .cart-item-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
-    .cart-item-price { font-size: 12px; color: var(--muted); margin-top: 3px; }
-    .cart-item-controls { display: flex; align-items: center; gap: 6px; }
-    .cart-item-controls button {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-      width: 28px; height: 28px; font-size: 15px; display: flex; align-items: center; justify-content: center;
-    }
-    .cart-item-controls span { font-size: 14px; font-weight: 600; min-width: 20px; text-align: center; }
-    .cart-remove { background: none !important; border: none !important; font-size: 16px !important; color: var(--accent) !important; }
-    .cart-empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
-    .cart-foot { padding: 16px 20px; border-top: 1px solid var(--border); }
-    .cart-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 16px; font-weight: 700; }
-    .cart-total-row strong { font-size: 20px; color: var(--accent); }
-    .btn-checkout { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; transition: background .2s; }
-    .btn-checkout:hover { background: var(--accent-hover); }
-    .btn-checkout:disabled { background: #d1d5db; cursor: not-allowed; }
-
-    /* ── Order modal ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 300; align-items: center; justify-content: center; padding: 16px; }
-    .modal-overlay.open { display: flex; }
-    .modal-box { background: var(--surface); border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; max-height: 90vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 700; position: sticky; top: 0; background: var(--surface); z-index: 1; }
-    .modal-header button { background: none; border: none; font-size: 20px; color: var(--muted); }
-    .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 12px; }
-    .order-summary { background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 4px; }
-    .order-summary-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 8px; }
-    .order-summary-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
-    .order-summary-row span:last-child { font-weight: 600; }
-    .order-summary-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--border); }
-    .order-summary-total span:last-child { color: var(--accent); }
-    .modal-body input, .modal-body textarea {
-      border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px;
-      font-size: 15px; font-family: inherit; resize: none; width: 100%;
-      color: var(--text); background: var(--bg); outline: none; transition: border-color .2s;
-    }
-    .modal-body input:focus, .modal-body textarea:focus { border-color: var(--accent); }
-    .modal-body input.error { border-color: #ef4444; }
-    .field-error { font-size: 12px; color: #ef4444; display: none; margin-top: -6px; }
-    .field-error.show { display: block; }
-    .btn-submit { width: 100%; padding: 14px; font-size: 16px; }
-
-    /* Success modal */
-    .success-body { text-align: center; padding: 32px 24px; }
-    .success-icon { font-size: 54px; margin-bottom: 12px; }
-    .success-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .success-text { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
-    .btn-continue { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px 28px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s; }
-    .btn-continue:hover { background: var(--accent-hover); }
-
-    /* Toast */
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: #1a1a1a; color: #fff; padding: 14px 24px; border-radius: 12px;
-      font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s;
-      pointer-events: none; z-index: 9999; min-width: 280px; text-align: center;
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    /* ── Responsive ── */
-    @media (max-width: 960px) {
-      .main { grid-template-columns: 1fr; }
-      .filters { position: static; }
-      .footer-inner { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 640px) {
-      .header-top { flex-wrap: wrap; }
-      .header-search { order: 3; flex: 1 0 100%; max-width: 100%; }
-      .logo { flex: 1; }
-      .products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      .footer-inner { grid-template-columns: 1fr; gap: 24px; }
-      .cart-drawer { width: 100%; right: -100%; }
-      .footer-bottom { justify-content: center; }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
-<body class="theme-{{ (client.theme_name or 'light_red') | replace('_', '-') }}">
+<body>
 
-<!-- MARQUEE -->
-{% if client.marquee_text %}
-<div class="marquee-strip">
-  <div class="marquee-inner">
-    <span>{{ client.marquee_text }}</span><span>{{ client.marquee_text }}</span><span>{{ client.marquee_text }}</span>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  PROMO BAR                                   ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="promo-bar" id="promoBar">
+  <div class="promo-marquee-wrap">
+    <span class="promo-bar-text">⚡ Швидка доставка по всій Україні &nbsp;&nbsp;&nbsp;&nbsp; 🛡️ Офіційна гарантія &nbsp;&nbsp;&nbsp;&nbsp; 💳 Кредит 0% &nbsp;&nbsp;&nbsp;&nbsp; 📞 Безкоштовна консультація &nbsp;&nbsp;&nbsp;&nbsp; ⚡ Швидка доставка по всій Україні &nbsp;&nbsp;&nbsp;&nbsp; 🛡️ Офіційна гарантія &nbsp;&nbsp;&nbsp;&nbsp; 💳 Кредит 0% &nbsp;&nbsp;&nbsp;&nbsp; 📞 Безкоштовна консультація</span>
   </div>
+  <button class="promo-bar-close" onclick="document.getElementById('promoBar').style.display='none'" aria-label="Закрити">✕</button>
 </div>
-{% else %}
-<div class="marquee-strip">
-  <div class="marquee-inner">
-    <span>&#x1F69A; Безкоштовна доставка по місту</span>
-    <span>&#x2705; Гарантія на всі товари</span>
-    <span>&#x1F4DE; Телефонуйте — знайдемо рішення</span>
-    <span>&#x1F4B3; Оплата при отриманні</span>
-    <span>&#x1F69A; Безкоштовна доставка по місту</span>
-    <span>&#x2705; Гарантія на всі товари</span>
-    <span>&#x1F4DE; Телефонуйте — знайдемо рішення</span>
-    <span>&#x1F4B3; Оплата при отриманні</span>
-  </div>
-</div>
-{% endif %}
 
-<!-- HEADER -->
-<header class="header" id="siteHeader">
-  <div class="container header-top">
-    <a href="#" onclick="resetFilters();window.scrollTo({top:0,behavior:'smooth'});return false;" class="logo">
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  HEADER                                      ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-title">
       {% if client.logo_url %}
+      <a href="/" class="site-logo" aria-label="{{ client.shop_title }}">
         <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="logo-img">
+        <span class="logo-text">{{ client.shop_title }}</span>
+      </a>
       {% else %}
-        <div class="logo-icon">{{ (client.shop_title or 'S')[0] | upper }}</div>
+      <a href="/" class="site-logo" aria-label="{{ client.shop_title }}">
+        <span class="logo-badge">{{ client.shop_title[0] | upper }}</span>
+        <span class="logo-text">{{ client.shop_title }}</span>
+      </a>
       {% endif %}
-      <div>
-        <div class="logo-name">{{ client.shop_title }}</div>
-        {% if client.address %}<div class="logo-sub">{{ client.address | truncate(30, true, '…') }}</div>{% endif %}
-      </div>
-    </a>
-
-    <div class="header-search">
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Пошук товарів..." autocomplete="off"
-               oninput="handleSearch(this.value)" onkeydown="handleSearchKey(event)">
-        <button type="button" onclick="applySearch()">&#x1F50D;</button>
-        <div class="search-dropdown" id="searchDropdown"></div>
-      </div>
-    </div>
-
-    <div class="header-actions">
+      <p>Побутова техніка під замовлення та в наявності</p>
       {% if client.phone %}
-      <a class="phone-link" href="tel:{{ client.phone }}">&#x1F4DE; {{ client.phone }}</a>
+      <a href="tel:{{ client.phone | replace(' ','') | replace('(','') | replace(')','') | replace('-','') }}" class="header-phone">📞 {{ client.phone }}</a>
       {% endif %}
-      <button class="cart-btn" onclick="openCart()">
-        &#x1F6D2; <span id="cartCount" class="cart-count">0</span>
-      </button>
+    </div>
+    <div class="header-actions">
+      <div class="lang-switch">
+        <button class="site-lang-btn" id="langBtnRu" onclick="setLang('ru')">RU</button>
+        <span class="lang-separator">|</span>
+        <button class="site-lang-btn" id="langBtnUk" onclick="setLang('uk')">UA</button>
+      </div>
+      <a href="#" class="cart-pill" id="cartBtn" onclick="openCartDrawer(); return false;" aria-label="Кошик">🛒 <span id="cartCount">0</span></a>
     </div>
   </div>
-
-  <nav class="cat-nav" id="catNavWrap" style="display:none">
-    <div class="container cat-nav-inner" id="catNav"></div>
-  </nav>
 </header>
 
-<!-- MAIN -->
-<div class="main-wrap">
-  <div class="container">
-    <button class="filters-toggle" onclick="toggleFilters()">&#x1F50D; Фільтри та категорії</button>
-    <div class="main">
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  HERO BANNER                                 ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<section class="hero-banner">
+  <div class="hero-glow hero-glow-1"></div>
+  <div class="hero-glow hero-glow-2"></div>
+  <div class="hero-content">
+    <h1 class="hero-title">{{ client.shop_title }}</h1>
+    <p class="hero-subtitle"
+       data-ru="Бытовая техника под заказ и в наличии"
+       data-uk="Побутова техніка під замовлення та в наявності">
+      Побутова техніка під замовлення та в наявності
+    </p>
+    <a href="#catalog" class="hero-cta"
+       data-ru="В каталог" data-uk="До каталогу">До каталогу</a>
+  </div>
+</section>
 
-      <!-- SIDEBAR -->
-      <aside class="filters" id="filtersPanel">
-        <div class="filters-header">
-          <span>Фільтри</span>
-          <span class="filters-reset" onclick="resetFilters()">Скинути все</span>
-        </div>
-        <div class="filter-group">
-          <label class="filter-avail">
-            <input type="checkbox" id="availCheck">
-            &#x1F7E2; Тільки в наявності
-          </label>
-        </div>
-        <div class="filter-group" id="groupFilterGroup" style="display:none">
-          <div class="filter-title">Група товарів</div>
-          <div id="groupFilterList"></div>
-        </div>
-        <div class="filter-group" id="catFilterGroup" style="display:none">
-          <div class="filter-title">Категорія</div>
-          <div id="catFilterList"></div>
-        </div>
-        <div class="filter-group" id="brandFilterGroup" style="display:none">
-          <div class="filter-title">Бренд</div>
-          <div id="brandFilterList"></div>
-        </div>
-        <div class="filter-group">
-          <div class="filter-title">Ціна, грн</div>
-          <div class="price-inputs">
-            <input type="number" id="priceMin" placeholder="Від" min="0">
-            <span>—</span>
-            <input type="number" id="priceMax" placeholder="До" min="0">
-          </div>
-          <button class="btn-apply" onclick="applyPriceFilter()">Застосувати</button>
-        </div>
-      </aside>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  CATEGORY TABS                               ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<section class="site-categories" id="categoryNav" aria-label="Категорії">
+  <a href="#" class="site-category-card active" data-filter-group="" onclick="filterByGroup('', this); return false;">
+    <div class="site-category-emoji">📦</div>
+    <div class="site-category-title" data-ru="Все товары" data-uk="Всі товари">Всі товари</div>
+  </a>
+  {% set ns = namespace(seen=[]) %}
+  {% for p in products %}
+    {% if p.group_name and p.group_name not in ns.seen %}
+      {% set ns.seen = ns.seen + [p.group_name] %}
+      <a href="#" class="site-category-card" data-filter-group="{{ p.group_name }}"
+         onclick="filterByGroup('{{ p.group_name | replace("'", "\\'") }}', this); return false;">
+        <div class="site-category-emoji">🏷️</div>
+        <div class="site-category-title">{{ p.group_name }}</div>
+      </a>
+    {% endif %}
+  {% endfor %}
+</section>
 
-      <!-- CATALOG -->
-      <div id="catalog">
-        <div class="catalog-header">
-          <div class="catalog-title" id="catalogTitle">Каталог</div>
-          <div class="catalog-meta">
-            <div class="catalog-count" id="catalogCount">0 товарів</div>
-            <div class="catalog-sort">
-              <select id="sortSelect" onchange="renderProducts()">
-                <option value="">За замовчуванням</option>
-                <option value="new">Новинки</option>
-                <option value="price_asc">Дешевше</option>
-                <option value="price_desc">Дорожче</option>
-                <option value="sale">Спочатку акції</option>
-              </select>
-            </div>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  CATALOG (sidebar + grid)                    ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div class="catalog-layout" id="catalog">
+
+  <!-- ── SIDEBAR / FILTERS ── -->
+  <section class="search-box" aria-label="Фільтри">
+    <div class="search-form">
+
+      <!-- Desktop panel header -->
+      <div id="filtersPanel" class="filters-panel" data-open="true" aria-hidden="false">
+        <div class="filters-drag-handle"></div>
+        <div class="filters-panel-header">
+          <span class="filters-panel-title" data-ru="Фильтры" data-uk="Фільтри">Фільтри</span>
+          <button type="button" class="filters-close-btn" id="filtersCloseBtn" onclick="closeMobileFilters()">✕</button>
+        </div>
+        <div class="filters-panel-body">
+          <!-- Search row -->
+          <div class="search-main-row" style="padding:0;">
+            <input type="text" id="searchInput"
+              placeholder="Пошук товарів..."
+              data-placeholder-ru="Поиск товаров..."
+              data-placeholder-uk="Пошук товарів..."
+              oninput="applyFilters()" autocomplete="off">
+            <button type="button" id="searchBtn" onclick="applyFilters()"
+              data-ru="Найти" data-uk="Знайти">Знайти</button>
+          </div>
+
+          <div class="search-filters-row">
+            <!-- Brand -->
+            <select id="brandSelect" class="brand-select" onchange="applyFilters()">
+              <option value="" data-ru="Все бренды" data-uk="Усі бренди">Усі бренди</option>
+              {% set ns2 = namespace(brands=[]) %}
+              {% for p in products %}{% if p.brand and p.brand not in ns2.brands %}{% set ns2.brands = ns2.brands + [p.brand] %}{% endif %}{% endfor %}
+              {% for b in ns2.brands | sort %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+            </select>
+
+            <!-- Price min/max -->
+            <input type="number" id="priceMin" class="price-input"
+              placeholder="Ціна від" data-placeholder-ru="Цена от" data-placeholder-uk="Ціна від"
+              min="0" oninput="applyFilters()">
+            <input type="number" id="priceMax" class="price-input"
+              placeholder="Ціна до" data-placeholder-ru="Цена до" data-placeholder-uk="Ціна до"
+              min="0" oninput="applyFilters()">
+
+            <!-- In stock -->
+            <label class="in-stock-label">
+              <input type="checkbox" id="inStockCheck" onchange="applyFilters()">
+              <span data-ru="Только в наличии" data-uk="Тільки в наявності">Тільки в наявності</span>
+            </label>
           </div>
         </div>
-        <div class="products-grid" id="productsGrid"></div>
-        <div class="empty-state" id="emptyState">
-          <div class="empty-icon">&#x1F50D;</div>
-          <p>Товарів не знайдено.<br>Спробуйте змінити фільтри.</p>
-          <button class="btn-primary" onclick="resetFilters()">Показати всі товари</button>
+        <div class="filters-panel-footer">
+          <button type="button" class="filters-apply-btn" id="applyFiltersBtn"
+            onclick="applyFilters(); closeMobileFilters();"
+            data-ru="Застосувати" data-uk="Застосувати">Застосувати</button>
         </div>
       </div>
 
     </div>
+  </section>
+
+  <!-- Mobile filters toggle button -->
+  <div class="filters-toggle-row">
+    <button type="button" id="filtersToggleBtn" class="filters-toggle-btn" aria-expanded="false" onclick="openMobileFilters()">
+      <svg class="filters-btn-icon" width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><path d="M2 5a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1zm3 5a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm3 5a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"/></svg>
+      <span data-ru="Фильтры" data-uk="Фільтри">Фільтри</span>
+      <svg class="filters-btn-chevron" width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+    </button>
+  </div>
+  <div id="filtersBackdrop" class="filters-backdrop" hidden onclick="closeMobileFilters()"></div>
+
+  <!-- ── CATALOG CONTENT ── -->
+  <div class="catalog-content">
+    <div class="catalog-toolbar" id="catalogToolbar">
+      <div class="chips-row" id="chipsRow">
+        <div class="active-chips" id="activeChips"></div>
+      </div>
+      <div class="sort-row">
+        <div class="sort-wrap">
+          <select id="sortSelect" class="sort-select" onchange="applyFilters()">
+            <option value="" data-ru="За популярністю" data-uk="За популярністю">За популярністю</option>
+            <option value="price_asc" data-ru="Від дешевих" data-uk="Від дешевих">Від дешевих</option>
+            <option value="price_desc" data-ru="Від дорогих" data-uk="Від дорогих">Від дорогих</option>
+            <option value="name_asc" data-ru="За назвою" data-uk="За назвою">За назвою</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="noResults" style="display:none;text-align:center;padding:60px 20px;color:#9ca3af;font-size:15px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔍</div>
+      <div data-ru="Товары не найдены" data-uk="Товари не знайдено">Товари не знайдено</div>
+    </div>
+
+    <main class="products products-grid" id="productsGrid">
+      {% for product in products %}
+      <div class="card"
+           data-group="{{ product.group_name or '' }}"
+           data-brand="{{ product.brand or '' }}"
+           data-price="{{ product.price | int }}"
+           data-available="{{ 'true' if product.is_available else 'false' }}"
+           data-name="{{ product.name or '' }}"
+           data-pid="{{ product.id }}"
+           tabindex="0" role="button"
+           aria-label="{{ (product.brand or '') ~ ' ' ~ (product.name or '') }}">
+
+        <div class="card-image-wrap">
+          {% if product.old_price %}
+          <div class="card-sale-badge">🔥 <span data-ru="Акция" data-uk="Акція">Акція</span></div>
+          {% endif %}
+          {% if product.badge and not product.old_price %}
+          <div class="card-custom-badge badge-{{ product.badge | lower | replace(' ','-') }}">{{ product.badge }}</div>
+          {% endif %}
+          {% if product.image_url %}
+          <img src="{{ product.image_url }}" class="product-img" alt="{{ (product.brand or '') ~ ' ' ~ (product.name or '') }}" loading="lazy">
+          {% else %}
+          <div class="no-photo" data-ru="Нет фото" data-uk="Немає фото">Немає фото</div>
+          {% endif %}
+        </div>
+
+        {% if product.brand %}<div class="card-brand">{{ product.brand }}</div>{% endif %}
+        {% if product.category %}<div class="category">{{ product.category }}</div>{% endif %}
+        <h2>{{ product.name }}</h2>
+
+        <div class="status">
+          {% if product.is_available %}
+          <span class="stock-badge stock-in" data-ru="🟢 В наличии" data-uk="🟢 В наявності">🟢 В наявності</span>
+          {% else %}
+          <span class="stock-badge stock-preorder" data-ru="🟡 Под заказ" data-uk="🟡 Під замовлення">🟡 Під замовлення</span>
+          {% endif %}
+        </div>
+
+        <div class="price-block">
+          <p class="price">{{ product.price | int }} грн</p>
+          {% if product.old_price %}<p class="old-price">{{ product.old_price | int }} грн</p>{% endif %}
+        </div>
+
+        <div class="card-actions">
+          <a href="#" class="details-btn product-link"
+             data-product-id="{{ product.id }}"
+             data-ru="Подробнее" data-uk="Детальніше">Детальніше</a>
+          <button type="button" class="cart-btn"
+                  data-cart-id="{{ product.id }}"
+                  data-cart-name="{{ ((product.brand or '') ~ ' ' ~ (product.name or '')) | trim }}"
+                  data-cart-price="{{ product.price | int }}"
+                  data-cart-img="{{ product.image_url or '' }}"
+                  data-ru="В корзину" data-uk="У кошик">🛒 <span data-ru="В корзину" data-uk="У кошик">У кошик</span></button>
+        </div>
+      </div>
+      {% endfor %}
+    </main>
   </div>
 </div>
 
-<!-- FOOTER -->
-<footer class="footer">
-  <div class="container footer-inner">
-    <div>
-      {% if client.logo_url %}<img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="footer-logo-img">{% endif %}
-      <div class="footer-logo-text">{{ client.shop_title }}</div>
-      <p class="footer-sub">Ваш надійний магазин техніки. Широкий вибір, гарантія якості та швидка доставка.</p>
-      <div class="footer-contacts">
-        {% if client.phone %}<a href="tel:{{ client.phone }}">&#x1F4DE; {{ client.phone }}</a>{% endif %}
-        {% if client.address %}<p>&#x1F4CD; {{ client.address }}</p>{% endif %}
-      </div>
-      <div class="footer-social">
-        {% if client.telegram_url %}<a href="{{ client.telegram_url }}" target="_blank" rel="noopener" title="Telegram">&#x2708;&#xFE0F;</a>{% endif %}
-        {% if client.instagram_url %}<a href="{{ client.instagram_url }}" target="_blank" rel="noopener" title="Instagram">&#x1F4F7;</a>{% endif %}
-      </div>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  FOOTER                                      ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      {% if client.logo_url %}
+      <a href="/" class="site-logo" aria-label="{{ client.shop_title }}">
+        <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="logo-img" style="width:36px;height:36px;">
+        <span class="logo-text">{{ client.shop_title }}</span>
+      </a>
+      {% else %}
+      <a href="/" class="site-logo" aria-label="{{ client.shop_title }}">
+        <span class="logo-badge" style="width:36px;height:36px;font-size:16px;">{{ client.shop_title[0] | upper }}</span>
+        <span class="logo-text">{{ client.shop_title }}</span>
+      </a>
+      {% endif %}
+      <p data-ru="Бытовая техника под заказ и в наличии" data-uk="Побутова техніка під замовлення та в наявності">Побутова техніка під замовлення та в наявності</p>
     </div>
-    <div>
-      <div class="footer-section-title">Каталог</div>
-      <div class="footer-links" id="footerCatLinks"></div>
+
+    <div class="footer-col">
+      <h4 data-ru="Каталог" data-uk="Каталог">Каталог</h4>
+      <ul>
+        {% set ns3 = namespace(seen=[]) %}
+        {% for p in products %}{% if p.group_name and p.group_name not in ns3.seen %}{% set ns3.seen = ns3.seen + [p.group_name] %}<li><a href="#">{{ p.group_name }}</a></li>{% endif %}{% endfor %}
+        {% if not ns3.seen %}<li><a href="#" data-ru="Все товары" data-uk="Всі товари">Всі товари</a></li>{% endif %}
+      </ul>
     </div>
-    <div>
-      <div class="footer-section-title">Покупцям</div>
-      <div class="footer-links">
-        <p>Оформлення замовлення через сайт</p>
-        <p>Доставка по Україні</p>
-        <p>Гарантія на всі товари</p>
-        {% if client.telegram_url %}<a href="{{ client.telegram_url }}" target="_blank" rel="noopener noreferrer">&#x2708;&#xFE0F; Telegram-підтримка</a>{% endif %}
-      </div>
+
+    <div class="footer-col">
+      <h4 data-ru="Покупателям" data-uk="Покупцям">Покупцям</h4>
+      <ul>
+        <li><a href="#" data-ru="Доставка и оплата" data-uk="Доставка та оплата">Доставка та оплата</a></li>
+        <li><a href="#" data-ru="Гарантия" data-uk="Гарантія">Гарантія</a></li>
+        <li><a href="#" data-ru="Возврат" data-uk="Повернення">Повернення</a></li>
+        <li><a href="#" data-ru="Кредит" data-uk="Кредит">Кредит</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col footer-contacts">
+      <h4 data-ru="Контакты" data-uk="Контакти">Контакти</h4>
+      {% if client.phone %}
+      <p><a href="tel:{{ client.phone | replace(' ','') | replace('(','') | replace(')','') | replace('-','') }}">📞 {{ client.phone }}</a></p>
+      {% endif %}
+      {% if client.telegram_url %}
+      <p>💬 <a href="{{ client.telegram_url }}" target="_blank" rel="noopener noreferrer">Telegram</a></p>
+      {% endif %}
+      {% if client.instagram_url %}
+      <p>📷 <a href="{{ client.instagram_url }}" target="_blank" rel="noopener noreferrer">Instagram</a></p>
+      {% endif %}
+      {% if client.address %}
+      <p>📍 {{ client.address }}</p>
+      {% endif %}
     </div>
   </div>
+
+  <hr class="footer-divider">
   <div class="footer-bottom">
-    <span>&#x00A9; {{ client.shop_title }}</span>
-    <span>Всі права захищені</span>
+    <span class="copyright">© 2026 {{ client.shop_title }}. Всі права захищено.</span>
+    <div class="footer-bottom-links">
+      <a href="#catalog" data-ru="Каталог" data-uk="Каталог">Каталог</a>
+      <a href="#" data-ru="Контакты" data-uk="Контакти">Контакти</a>
+    </div>
   </div>
 </footer>
 
-<!-- CART -->
-<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
-<div class="cart-drawer" id="cartDrawer">
-  <div class="cart-head"><span>&#x1F6D2; Кошик</span><button onclick="closeCart()">&#x2715;</button></div>
-  <div class="cart-items" id="cartItems"></div>
-  <div class="cart-foot">
-    <div class="cart-total-row"><span>Разом:</span><strong id="cartTotal">0 грн</strong></div>
-    <button class="btn-checkout" id="checkoutBtn" disabled onclick="openOrderModal()">Оформити замовлення</button>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  CART DRAWER                                 ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div id="cartDrawer" class="cart-drawer" aria-hidden="true" role="dialog" aria-label="Кошик">
+  <div class="cart-drawer-header">
+    <span class="cart-drawer-title" data-ru="Корзина" data-uk="Кошик">🛒 Кошик</span>
+    <button class="cart-drawer-close" onclick="closeCartDrawer()" aria-label="Закрити">✕</button>
+  </div>
+  <div class="cart-drawer-body" id="cartDrawerBody">
+    <div class="cart-drawer-empty" data-ru="Кошик порожній" data-uk="Кошик порожній">Кошик порожній</div>
+  </div>
+  <div class="cart-drawer-footer" id="cartDrawerFooter" style="display:none">
+    <div class="cart-total-row">
+      <span data-ru="Итого" data-uk="Разом">Разом:</span>
+      <span id="cartTotal">0 грн</span>
+    </div>
+    <button class="cart-checkout-btn" onclick="openOrderModal(null)" data-ru="Оформити замовлення" data-uk="Оформити замовлення">Оформити замовлення</button>
   </div>
 </div>
+<div id="cartBackdrop" class="cart-backdrop" hidden onclick="closeCartDrawer()"></div>
 
-<!-- ORDER MODAL -->
-<div class="modal-overlay" id="orderOverlay">
-  <div class="modal-box">
-    <div class="modal-header"><span>Оформлення замовлення</span><button onclick="closeOrderModal()">&#x2715;</button></div>
-    <div class="modal-body">
-      <div class="order-summary">
-        <div class="order-summary-title">Ваше замовлення</div>
-        <div id="orderRows"></div>
-        <div class="order-summary-total"><span>Разом</span><span id="orderTotal">0 грн</span></div>
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  ORDER MODAL                                 ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
+<div id="orderModal" class="order-modal" role="dialog" aria-label="Оформлення замовлення">
+  <div class="order-modal-box">
+    <button class="order-modal-close" onclick="closeOrderModal()" aria-label="Закрити">✕</button>
+    <div class="order-modal-title" data-ru="Оформление заказа" data-uk="Оформлення замовлення">Оформлення замовлення</div>
+    <div class="order-modal-product" id="orderModalProduct"></div>
+    <form id="orderForm" onsubmit="submitOrder(event)">
+      <input type="hidden" id="orderProductId" name="product_id" value="">
+      <div class="order-field">
+        <label data-ru="Ваше имя" data-uk="Ваше ім'я">Ваше ім'я</label>
+        <input type="text" name="name" required placeholder="Ім'я та прізвище" autocomplete="name">
       </div>
-      <input type="text" id="orderName"  placeholder="Ваше ім'я *">
-      <div class="field-error" id="errName">Будь ласка, введіть ваше ім'я</div>
-      <input type="tel"  id="orderPhone" placeholder="Телефон *">
-      <div class="field-error" id="errPhone">Будь ласка, введіть номер телефону</div>
-      <input type="text" id="orderCity"  placeholder="Місто">
-      <textarea id="orderComment" rows="3" placeholder="Коментар до замовлення"></textarea>
-      <button class="btn-primary btn-submit" id="submitBtn" onclick="submitOrder()">Підтвердити замовлення</button>
-    </div>
-  </div>
-</div>
-
-<!-- SUCCESS MODAL -->
-<div class="modal-overlay" id="successOverlay">
-  <div class="modal-box" style="max-width:400px">
-    <div class="success-body">
-      <div class="success-icon">&#x1F389;</div>
-      <div class="success-title">Замовлення прийнято!</div>
-      <p class="success-text">Дякуємо за ваше замовлення.<br>Ми зв'яжемось з вами найближчим часом.</p>
-      <button class="btn-continue" onclick="closeSuccessModal()">Продовжити покупки</button>
-    </div>
+      <div class="order-field">
+        <label data-ru="Телефон" data-uk="Телефон">Телефон</label>
+        <input type="tel" name="phone" required placeholder="+38 (0XX) XXX-XX-XX" autocomplete="tel">
+      </div>
+      <div class="order-field">
+        <label data-ru="Комментарий (необязательно)" data-uk="Коментар (необов'язково)">Коментар (необов'язково)</label>
+        <input type="text" name="comment" placeholder="Колір, комплектація...">
+      </div>
+      <button type="submit" class="order-submit-btn" data-ru="Отправить заявку" data-uk="Надіслати заявку">Надіслати заявку</button>
+    </form>
   </div>
 </div>
 
 <!-- TOAST -->
-<div class="toast" id="toast"></div>
+<div id="toast" class="toast"></div>
 
-<!-- SCRIPT -->
+<!-- IMAGE LIGHTBOX -->
+<div class="img-lightbox" id="imgLightbox" onclick="closeLightbox()">
+  <button class="img-lightbox-close" onclick="closeLightbox()" aria-label="Закрити">✕</button>
+  <img src="" alt="" class="img-lightbox-img" id="lightboxImg">
+</div>
+
+<!-- ╔══════════════════════════════════════════════╗ -->
+<!-- ║  SCRIPTS                                     ║ -->
+<!-- ╚══════════════════════════════════════════════╝ -->
 <script>
-"use strict";
-const PRODUCTS        = {{ products | tojson }};
-const CLIENT_SLUG     = {{ client.slug | tojson }};
-const EVENT_URL       = {{ event_url | tojson }};
-const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
-
-const isSubdomainMode = !!PLATFORM_DOMAIN
-  && location.hostname !== PLATFORM_DOMAIN
-  && location.hostname.endsWith("." + PLATFORM_DOMAIN);
-
-function productUrl(id) { return isSubdomainMode ? "/product/" + id : "/site/" + CLIENT_SLUG + "/product/" + id; }
-function orderUrl()     { return isSubdomainMode ? "/order"        : "/site/" + CLIENT_SLUG + "/order"; }
-
-let cart=[], selectedGroup=null, selectedCat=null, activeBrands=new Set();
-let priceMin=null, priceMax=null, searchQuery="", onlyAvail=false;
-
-function $(id) { return document.getElementById(id); }
-function esc(s) {
-  return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+// ── Routing ──────────────────────────────────────────────
+var _slug = '{{ client.slug }}';
+var _isSubdomain = !window.location.pathname.startsWith('/site/');
+function productUrl(id) {
+  return _isSubdomain ? '/product/' + id : '/site/' + _slug + '/product/' + id;
 }
-function fmt(n) { return n.toLocaleString("uk-UA",{minimumFractionDigits:0,maximumFractionDigits:2})+"\u00a0грн"; }
-
-function badgeClass(text) {
-  if (!text) return "badge-default";
-  const t = text.toLowerCase();
-  if (t.includes("акці") || t.includes("sale"))        return "badge-akcia";
-  if (t.includes("топ")  || t.includes("bestsell"))    return "badge-top";
-  if (t.includes("новин") || t.includes("new"))        return "badge-novinka";
-  if (t.includes("хіт")  || t.includes("хит") || t.includes("hit")) return "badge-hit";
-  return "badge-default";
+function orderUrl() {
+  return _isSubdomain ? '/order' : '/site/' + _slug + '/order';
 }
 
-function buildGroupFilter() {
-  const groups = [...new Set(PRODUCTS.map(p => p.group_name).filter(Boolean))].sort();
-  const grp = $("groupFilterGroup"), container = $("groupFilterList");
-  if (!groups.length) return;
-  grp.style.display = "";
-  container.innerHTML = "";
-  groups.forEach(g => {
-    const lbl = document.createElement("label");
-    lbl.className = "filter-item";
-    lbl.innerHTML = `<input type="radio" name="groupRadio" value="${esc(g)}"${selectedGroup===g?" checked":""}><span>${esc(g)}</span>`;
-    lbl.querySelector("input").addEventListener("change", e => {
-      selectedGroup = e.target.checked ? g : null; selectedCat = null;
-      buildCatNav(); buildCatFilter(); renderProducts();
-    });
-    container.appendChild(lbl);
+// ── Fix product links on load ─────────────────────────────
+document.querySelectorAll('.product-link[data-product-id]').forEach(function(a) {
+  a.href = productUrl(a.getAttribute('data-product-id'));
+});
+document.querySelectorAll('.card[data-pid]').forEach(function(card) {
+  card.addEventListener('click', function(e) {
+    if (!e.target.closest('.cart-btn, .details-btn, a, button, input, select')) {
+      window.location.href = productUrl(card.getAttribute('data-pid'));
+    }
   });
-}
+});
 
-function buildCatNav() {
-  const cats = [...new Set(PRODUCTS.map(p => p.category).filter(Boolean))].sort();
-  if (!cats.length) return;
-  const wrap = $("catNavWrap"), nav = $("catNav");
-  wrap.style.display = "";
-  nav.innerHTML = "";
-  function addLink(label, cat) {
-    const a = document.createElement("a");
-    a.className = "cat-link" + (selectedCat===cat?" active":"");
-    a.textContent = label; a.href = "#";
-    a.addEventListener("click", e => {
-      e.preventDefault();
-      selectedCat = (selectedCat===cat) ? null : cat;
-      buildCatNav(); buildCatFilter(); renderProducts();
-      window.scrollTo({top:0,behavior:"smooth"});
-    });
-    nav.appendChild(a);
+// ── Language ──────────────────────────────────────────────
+var _lang = localStorage.getItem('tm_lang') || 'uk';
+function setLang(lang) {
+  _lang = lang;
+  localStorage.setItem('tm_lang', lang);
+  document.querySelectorAll('[data-ru][data-uk]').forEach(function(el) {
+    el.textContent = el.getAttribute('data-' + lang) || el.textContent;
+  });
+  document.querySelectorAll('[data-placeholder-ru][data-placeholder-uk]').forEach(function(el) {
+    el.placeholder = el.getAttribute('data-placeholder-' + lang) || el.placeholder;
+  });
+  document.querySelectorAll('.site-lang-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang || btn.id === 'langBtn' + lang.charAt(0).toUpperCase() + lang.slice(1));
+  });
+  document.getElementById('langBtnRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('langBtnUk').classList.toggle('active', lang === 'uk');
+}
+setLang(_lang);
+
+// ── Cart ──────────────────────────────────────────────────
+var _cart = JSON.parse(localStorage.getItem('tm_cart') || '[]');
+
+function saveCart() { localStorage.setItem('tm_cart', JSON.stringify(_cart)); }
+function cartTotal() { return _cart.reduce(function(s, i) { return s + i.price * i.qty; }, 0); }
+function cartCount() { return _cart.reduce(function(s, i) { return s + i.qty; }, 0); }
+
+function updateCartUI() {
+  var count = cartCount();
+  document.getElementById('cartCount').textContent = count;
+  var body = document.getElementById('cartDrawerBody');
+  var footer = document.getElementById('cartDrawerFooter');
+  if (!_cart.length) {
+    body.innerHTML = '<div class="cart-drawer-empty" data-ru="Корзина пуста" data-uk="Кошик порожній">Кошик порожній</div>';
+    footer.style.display = 'none';
+  } else {
+    footer.style.display = 'flex';
+    body.innerHTML = _cart.map(function(item) {
+      return '<div class="cart-item">' +
+        (item.img ? '<img src="' + item.img + '" class="cart-item-img" alt="">' : '') +
+        '<div class="cart-item-info">' +
+          '<div class="cart-item-name">' + item.name + '</div>' +
+          '<div class="cart-item-price">' + (item.price * item.qty) + ' грн</div>' +
+          '<div class="cart-item-controls">' +
+            '<button class="qty-btn" onclick="changeQty(' + item.id + ',-1)">−</button>' +
+            '<span class="qty-display">' + item.qty + '</span>' +
+            '<button class="qty-btn" onclick="changeQty(' + item.id + ',1)">+</button>' +
+            '<button class="cart-item-remove" onclick="removeFromCart(' + item.id + ')" data-ru="Удалить" data-uk="Видалити">Видалити</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('cartTotal').textContent = cartTotal() + ' грн';
+    if (_lang !== 'uk') setLang(_lang);
   }
-  addLink("&#x1F4E6; Всі товари", null);
-  cats.forEach(c => addLink(c, c));
-  const h = $("siteHeader");
-  if (h) document.body.style.setProperty("--header-height", h.offsetHeight+"px");
 }
 
-function buildCatFilter() {
-  const cats = [...new Set(PRODUCTS.map(p => p.category).filter(Boolean))].sort();
-  const grp = $("catFilterGroup"), container = $("catFilterList");
-  if (!cats.length) return;
-  grp.style.display = "";
-  container.innerHTML = "";
-  cats.forEach(cat => {
-    const lbl = document.createElement("label");
-    lbl.className = "filter-item";
-    lbl.innerHTML = `<input type="radio" name="catRadio" value="${esc(cat)}"${selectedCat===cat?" checked":""}><span>${esc(cat)}</span>`;
-    lbl.querySelector("input").addEventListener("change", e => {
-      selectedCat = e.target.checked ? cat : null;
-      buildCatNav(); renderProducts();
-    });
-    container.appendChild(lbl);
+function addToCart(id, name, price, img) {
+  id = parseInt(id);
+  var idx = _cart.findIndex(function(i) { return i.id === id; });
+  if (idx >= 0) { _cart[idx].qty++; }
+  else { _cart.push({ id: id, name: name, price: parseFloat(price), img: img || '', qty: 1 }); }
+  saveCart();
+  updateCartUI();
+  showToast(_lang === 'ru' ? '✅ Добавлено в корзину' : '✅ Додано до кошика');
+}
+
+function changeQty(id, delta) {
+  var idx = _cart.findIndex(function(i) { return i.id === id; });
+  if (idx < 0) return;
+  _cart[idx].qty += delta;
+  if (_cart[idx].qty <= 0) _cart.splice(idx, 1);
+  saveCart();
+  updateCartUI();
+}
+function removeFromCart(id) {
+  _cart = _cart.filter(function(i) { return i.id !== id; });
+  saveCart();
+  updateCartUI();
+}
+
+// Cart button clicks
+document.querySelectorAll('.cart-btn[data-cart-id]').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    addToCart(btn.dataset.cartId, btn.dataset.cartName, btn.dataset.cartPrice, btn.dataset.cartImg);
   });
-}
+});
 
-function buildBrandFilter() {
-  const brands = [...new Set(PRODUCTS.map(p => p.brand).filter(Boolean))].sort();
-  const grp = $("brandFilterGroup"), container = $("brandFilterList");
-  if (!brands.length) return;
-  grp.style.display = "";
-  container.innerHTML = "";
-  brands.forEach(brand => {
-    const lbl = document.createElement("label");
-    lbl.className = "filter-item";
-    lbl.innerHTML = `<input type="checkbox" value="${esc(brand)}"${activeBrands.has(brand)?" checked":""}><span>${esc(brand)}</span>`;
-    lbl.querySelector("input").addEventListener("change", e => {
-      e.target.checked ? activeBrands.add(brand) : activeBrands.delete(brand);
-      renderProducts();
-    });
-    container.appendChild(lbl);
-  });
+function openCartDrawer() {
+  document.getElementById('cartDrawer').classList.add('open');
+  document.getElementById('cartDrawer').removeAttribute('aria-hidden');
+  document.getElementById('cartBackdrop').removeAttribute('hidden');
+  document.body.style.overflow = 'hidden';
 }
-
-function buildFooterCats() {
-  const cats = [...new Set(PRODUCTS.map(p => p.category).filter(Boolean))].sort().slice(0, 8);
-  const el = $("footerCatLinks");
-  if (!el || !cats.length) return;
-  cats.forEach(cat => {
-    const a = document.createElement("a"); a.href = "#"; a.textContent = cat;
-    a.addEventListener("click", e => {
-      e.preventDefault(); selectedCat = cat;
-      buildCatNav(); buildCatFilter(); renderProducts();
-      window.scrollTo({top:0,behavior:"smooth"});
-    });
-    el.appendChild(a);
-  });
+function closeCartDrawer() {
+  document.getElementById('cartDrawer').classList.remove('open');
+  document.getElementById('cartDrawer').setAttribute('aria-hidden', 'true');
+  document.getElementById('cartBackdrop').setAttribute('hidden', '');
+  document.body.style.overflow = '';
 }
+updateCartUI();
 
-function filtered() {
-  let list = PRODUCTS.slice();
-  if (onlyAvail) list = list.filter(p => p.is_available !== false);
-  if (selectedGroup) list = list.filter(p => (p.group_name||"") === selectedGroup);
-  if (selectedCat)   list = list.filter(p => (p.category||"") === selectedCat);
-  if (activeBrands.size > 0) list = list.filter(p => p.brand && activeBrands.has(p.brand));
-  if (priceMin !== null) list = list.filter(p => p.price >= priceMin);
-  if (priceMax !== null) list = list.filter(p => p.price <= priceMax);
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase();
-    list = list.filter(p =>
-      p.name.toLowerCase().includes(q) || (p.description||"").toLowerCase().includes(q) ||
-      (p.category||"").toLowerCase().includes(q) || (p.brand||"").toLowerCase().includes(q)
-    );
+// ── Order Modal ───────────────────────────────────────────
+function openOrderModal(productId, productName) {
+  var modal = document.getElementById('orderModal');
+  document.getElementById('orderProductId').value = productId || '';
+  var prodDiv = document.getElementById('orderModalProduct');
+  if (productId && productName) {
+    prodDiv.textContent = productName;
+    prodDiv.style.display = 'block';
+  } else if (_cart.length) {
+    prodDiv.textContent = _lang === 'ru' ? 'Товары в корзине: ' + _cart.length : 'Товарів у кошику: ' + _cart.length;
+    prodDiv.style.display = 'block';
+  } else {
+    prodDiv.style.display = 'none';
   }
-  switch (($("sortSelect")||{}).value) {
-    case "new":       list.sort((a,b)=>b.id-a.id); break;
-    case "price_asc": list.sort((a,b)=>a.price-b.price); break;
-    case "price_desc":list.sort((a,b)=>b.price-a.price); break;
-    case "sale":      list.sort((a,b)=>(b.old_price?1:0)-(a.old_price?1:0)); break;
-  }
-  return list;
-}
-
-function renderProducts() {
-  const list=filtered(), grid=$("productsGrid"), empty=$("emptyState"), title=$("catalogTitle");
-  $("catalogCount").textContent = list.length+" товарів";
-  if (title) title.textContent = selectedCat ? selectedCat : (selectedGroup ? selectedGroup : "Каталог");
-  if (!list.length) { grid.style.display="none"; empty.classList.add("show"); return; }
-  grid.style.display=""; empty.classList.remove("show");
-  grid.innerHTML = list.map(p => {
-    const unavail = p.is_available === false;
-    const discPct = (!unavail && p.old_price && p.old_price > p.price)
-      ? Math.round((1 - p.price/p.old_price)*100) : 0;
-    const imgHtml = p.image_url
-      ? `<img src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy">`
-      : `<div class="product-img-placeholder">&#x1F4E6;</div>`;
-    const discHtml = discPct ? `<div class="badge-discount">-${discPct}%</div>` : "";
-    let overlayBadge = "";
-    if (unavail) overlayBadge = `<div class="badge-unavail">Немає</div>`;
-    else if (p.badge) overlayBadge = `<div class="badge-label ${badgeClass(p.badge)}">${esc(p.badge)}</div>`;
-    const brandHtml = p.brand ? `<div class="product-brand">${esc(p.brand)}</div>` : "";
-    const oldHtml = p.old_price ? `<div class="product-old-price">${esc(String(p.old_price))} грн</div>` : "";
-    const availHtml = unavail
-      ? `<div class="product-avail avail-no"><span class="avail-dot"></span>Немає в наявності</div>`
-      : `<div class="product-avail avail-yes"><span class="avail-dot"></span>В наявності</div>`;
-    const inC = cart.some(i=>i.id===p.id);
-    const btnHtml = unavail
-      ? `<button class="btn-cart-add" disabled title="Немає в наявності">&#x2715;</button>`
-      : inC
-        ? `<button class="btn-cart-add in-cart" onclick="event.stopPropagation();removeFromCart(${p.id})">&#x2713;</button>`
-        : `<button class="btn-cart-add" onclick="event.stopPropagation();addToCart(${p.id})">&#x1F6D2;</button>`;
-    return `<div class="product-card${unavail?" unavailable":""}" onclick="goToProduct(${p.id})">
-      <div class="product-img-wrap">${imgHtml}${discHtml}${overlayBadge}</div>
-      <div class="product-body">
-        ${brandHtml}
-        <div class="product-name">${esc(p.name||"")}</div>
-        ${availHtml}
-        <div class="product-footer">
-          <div class="product-price-wrap">${oldHtml}<span class="product-price">${esc(String(p.price))} грн</span></div>
-          ${btnHtml}
-        </div>
-      </div>
-    </div>`;
-  }).join("");
-  grid.querySelectorAll(".product-img-wrap img").forEach(img => {
-    img.addEventListener("error", function() { this.parentNode.innerHTML='<div class="product-img-placeholder">&#x1F4E6;</div>'; });
-  });
-}
-
-function goToProduct(id) { window.location = productUrl(id); }
-function toggleFilters() { $("filtersPanel").classList.toggle("open"); }
-function applyPriceFilter() {
-  priceMin = $("priceMin").value !== "" ? parseFloat($("priceMin").value) : null;
-  priceMax = $("priceMax").value !== "" ? parseFloat($("priceMax").value) : null;
-  renderProducts();
-}
-function resetFilters() {
-  selectedGroup=null; selectedCat=null; activeBrands=new Set();
-  priceMin=priceMax=null; searchQuery=""; onlyAvail=false;
-  $("priceMin").value=""; $("priceMax").value=""; $("searchInput").value="";
-  $("searchDropdown").style.display="none";
-  const ac=$("availCheck"); if(ac) ac.checked=false;
-  buildGroupFilter(); buildCatNav(); buildCatFilter(); buildBrandFilter();
-  renderProducts();
-}
-const _ac=$("availCheck");
-if(_ac) _ac.addEventListener("change", function(){ onlyAvail=this.checked; renderProducts(); });
-
-function addToCart(id) {
-  const p=PRODUCTS.find(x=>x.id===id);
-  if(!p || p.is_available===false) return;
-  const existing=cart.find(i=>i.id===id);
-  if(existing) existing.qty++;
-  else cart.push({id:p.id, name:p.name, price:p.price, image_url:p.image_url||null, qty:1});
-  syncCart();
-  showToast("&#x2705; Додано: "+p.name);
-  fetch(EVENT_URL, {method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({event_type:"add_to_cart",product_id:id})}).catch(()=>{});
-}
-function removeFromCart(id) { cart=cart.filter(i=>i.id!==id); syncCart(); }
-function changeQty(id,delta) {
-  const item=cart.find(i=>i.id===id); if(!item) return;
-  item.qty+=delta; if(item.qty<=0) removeFromCart(id); else syncCart();
-}
-function cartCount() { return cart.reduce((s,i)=>s+i.qty,0); }
-function cartSum()   { return cart.reduce((s,i)=>s+i.price*i.qty,0); }
-function syncCart() {
-  $("cartCount").textContent=cartCount();
-  $("cartTotal").textContent=fmt(cartSum());
-  const btn=$("checkoutBtn"); if(btn) btn.disabled=cartCount()===0;
-  renderCart(); renderProducts();
-}
-function renderCart() {
-  const el=$("cartItems");
-  if(!cart.length){el.innerHTML='<p class="cart-empty">&#x1F6D2; Кошик порожній</p>';return;}
-  el.innerHTML=cart.map(item=>{
-    const imgHtml=item.image_url
-      ?`<img src="${esc(item.image_url)}" alt="${esc(item.name)}">`
-      :`<div class="cart-img-ph">&#x1F4E6;</div>`;
-    return `<div class="cart-item">${imgHtml}
-      <div class="cart-item-info"><div class="cart-item-name">${esc(item.name)}</div><div class="cart-item-price">${esc(String(item.price))} грн</div></div>
-      <div class="cart-item-controls">
-        <button onclick="changeQty(${item.id},-1)">&#x2212;</button>
-        <span>${item.qty}</span>
-        <button onclick="changeQty(${item.id},1)">&#x2B;</button>
-        <button class="cart-remove" onclick="removeFromCart(${item.id})">&#x1F5D1;</button>
-      </div></div>`;
-  }).join("");
-}
-function openCart()  { renderCart(); $("cartDrawer").classList.add("open"); $("cartOverlay").classList.add("open"); }
-function closeCart() { $("cartDrawer").classList.remove("open"); $("cartOverlay").classList.remove("open"); }
-
-function openOrderModal() {
-  if(!cart.length) return;
-  $("orderRows").innerHTML=cart.map(item=>
-    `<div class="order-summary-row"><span>${esc(item.name)} &#xD7; ${item.qty}</span><span>${esc(String(item.price*item.qty))} грн</span></div>`
-  ).join("");
-  $("orderTotal").textContent=fmt(cartSum());
-  closeCart(); $("orderOverlay").classList.add("open");
+  modal.classList.add('open');
+  closeCartDrawer();
 }
 function closeOrderModal() {
-  $("orderOverlay").classList.remove("open");
-  ["orderName","orderPhone"].forEach(id=>{const el=$(id);if(el)el.classList.remove("error");});
-  ["errName","errPhone"].forEach(id=>{const el=$(id);if(el)el.classList.remove("show");});
+  document.getElementById('orderModal').classList.remove('open');
 }
-async function submitOrder() {
-  const name=$("orderName").value.trim(), phone=$("orderPhone").value.trim();
-  const city=$("orderCity").value.trim(), comment=$("orderComment").value.trim();
-  let valid=true;
-  if(!name){$("orderName").classList.add("error");$("errName").classList.add("show");valid=false;}
-  else{$("orderName").classList.remove("error");$("errName").classList.remove("show");}
-  if(!phone){$("orderPhone").classList.add("error");$("errPhone").classList.add("show");valid=false;}
-  else{$("orderPhone").classList.remove("error");$("errPhone").classList.remove("show");}
-  if(!valid) return;
-  const btn=$("submitBtn"); btn.disabled=true; btn.textContent="Надсилаємо\u2026";
-  try {
-    const res=await fetch(orderUrl(),{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({name,phone,city,comment,items:cart.map(i=>({product_id:i.id,name:i.name,qty:i.qty,price:i.price}))})});
-    const data=await res.json();
-    if(data.ok){cart=[];syncCart();closeOrderModal();$("successOverlay").classList.add("open");}
-    else showToast("&#x26A0;&#xFE0F; Помилка. Спробуйте ще раз.");
-  } catch { showToast("&#x26A0;&#xFE0F; Помилка мережі."); }
-  finally { btn.disabled=false; btn.textContent="Підтвердити замовлення"; }
-}
-function closeSuccessModal() { $("successOverlay").classList.remove("open"); }
 
-let searchTimer=null;
-function handleSearch(value) {
-  clearTimeout(searchTimer);
-  searchTimer=setTimeout(()=>{searchQuery=value.trim();renderSearchDropdown(value);renderProducts();},200);
+function submitOrder(e) {
+  e.preventDefault();
+  var form = document.getElementById('orderForm');
+  var fd = new FormData(form);
+  var data = {};
+  fd.forEach(function(v, k) { data[k] = v; });
+  if (!data.product_id && _cart.length) {
+    data.cart = _cart;
+  }
+  fetch(orderUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function() {
+      closeOrderModal();
+      _cart = []; saveCart(); updateCartUI();
+      showToast(_lang === 'ru' ? '🎉 Заявка принята!' : '🎉 Заявку прийнято!');
+    })
+    .catch(function() {
+      showToast(_lang === 'ru' ? '❌ Ошибка. Попробуйте ещё раз.' : '❌ Помилка. Спробуйте ще раз.');
+    });
 }
-function renderSearchDropdown(value) {
-  const dd=$("searchDropdown");
-  if(!value||value.length<2){dd.style.display="none";return;}
-  const q=value.toLowerCase();
-  const results=PRODUCTS.filter(p=>p.name.toLowerCase().includes(q)||(p.brand||"").toLowerCase().includes(q)).slice(0,6);
-  if(!results.length){dd.style.display="none";return;}
-  dd.innerHTML=results.map(r=>{
-    const meta=[r.brand,r.category].filter(Boolean).join(" \u00b7 ");
-    const img=r.image_url?`<img src="${esc(r.image_url)}" alt="">`:`<div class="search-item-ph">&#x1F4E6;</div>`;
-    return `<div class="search-item" onclick="goToProduct(${r.id})">${img}
-      <div class="search-item-info"><div class="search-item-name">${esc(r.name)}</div>${meta?`<div class="search-item-meta">${esc(meta)}</div>`:""}</div>
-      <div class="search-item-price">${esc(String(r.price))} грн</div></div>`;
-  }).join("");
-  dd.style.display="block";
-}
-function applySearch() { searchQuery=$("searchInput").value.trim(); $("searchDropdown").style.display="none"; renderProducts(); }
-function handleSearchKey(e) {
-  if(e.key==="Enter"){e.preventDefault();applySearch();}
-  if(e.key==="Escape"){$("searchDropdown").style.display="none";}
-}
-document.addEventListener("click", e=>{ if(!e.target.closest(".search-wrap")) $("searchDropdown").style.display="none"; });
 
+// ── Filters ───────────────────────────────────────────────
+var _activeGroup = '';
+var _cards = [];
+
+function initCards() {
+  _cards = Array.from(document.querySelectorAll('#productsGrid .card'));
+}
+
+function filterByGroup(group, el) {
+  _activeGroup = group;
+  document.querySelectorAll('.site-category-card').forEach(function(c) {
+    c.classList.toggle('active', c.getAttribute('data-filter-group') === group);
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  if (!_cards.length) initCards();
+  var search = (document.getElementById('searchInput').value || '').toLowerCase();
+  var brand = (document.getElementById('brandSelect').value || '').toLowerCase();
+  var priceMin = parseInt(document.getElementById('priceMin').value) || 0;
+  var priceMax = parseInt(document.getElementById('priceMax').value) || Infinity;
+  var onlyStock = document.getElementById('inStockCheck').checked;
+  var sort = document.getElementById('sortSelect').value;
+
+  var filtered = _cards.filter(function(card) {
+    var name = (card.getAttribute('data-name') || '').toLowerCase();
+    var cardBrand = (card.getAttribute('data-brand') || '').toLowerCase();
+    var price = parseFloat(card.getAttribute('data-price')) || 0;
+    var avail = card.getAttribute('data-available') === 'true';
+    var group = card.getAttribute('data-group') || '';
+    if (_activeGroup && group !== _activeGroup) return false;
+    if (search && name.indexOf(search) === -1 && cardBrand.indexOf(search) === -1) return false;
+    if (brand && cardBrand !== brand) return false;
+    if (price < priceMin || price > priceMax) return false;
+    if (onlyStock && !avail) return false;
+    return true;
+  });
+
+  // Sort
+  if (sort === 'price_asc')  filtered.sort(function(a,b){ return parseFloat(a.getAttribute('data-price')) - parseFloat(b.getAttribute('data-price')); });
+  if (sort === 'price_desc') filtered.sort(function(a,b){ return parseFloat(b.getAttribute('data-price')) - parseFloat(a.getAttribute('data-price')); });
+  if (sort === 'name_asc')   filtered.sort(function(a,b){ return (a.getAttribute('data-name')||'').localeCompare(b.getAttribute('data-name')||''); });
+
+  // Show/hide
+  var filteredIds = new Set(filtered.map(function(c){ return c; }));
+  _cards.forEach(function(card) {
+    card.style.display = filteredIds.has(card) ? '' : 'none';
+  });
+
+  document.getElementById('noResults').style.display = filtered.length === 0 ? 'block' : 'none';
+
+  // Reorder in DOM
+  var grid = document.getElementById('productsGrid');
+  filtered.forEach(function(card) { grid.appendChild(card); });
+}
+
+// ── Mobile filters panel ──────────────────────────────────
+function openMobileFilters() {
+  var panel = document.getElementById('filtersPanel');
+  var btn = document.getElementById('filtersToggleBtn');
+  var backdrop = document.getElementById('filtersBackdrop');
+  panel.setAttribute('data-open', 'true');
+  panel.setAttribute('aria-hidden', 'false');
+  btn.setAttribute('aria-expanded', 'true');
+  backdrop.removeAttribute('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeMobileFilters() {
+  var panel = document.getElementById('filtersPanel');
+  var btn = document.getElementById('filtersToggleBtn');
+  var backdrop = document.getElementById('filtersBackdrop');
+  panel.setAttribute('data-open', 'false');
+  panel.setAttribute('aria-hidden', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  backdrop.setAttribute('hidden', '');
+  document.body.style.overflow = '';
+}
+
+// Desktop: always keep panel open
+function initFiltersPanel() {
+  var mq = window.matchMedia('(min-width: 769px)');
+  if (mq.matches) {
+    document.getElementById('filtersPanel').setAttribute('data-open', 'true');
+    document.getElementById('filtersPanel').setAttribute('aria-hidden', 'false');
+  } else {
+    document.getElementById('filtersPanel').setAttribute('data-open', 'false');
+    document.getElementById('filtersPanel').setAttribute('aria-hidden', 'true');
+  }
+}
+initFiltersPanel();
+window.addEventListener('resize', initFiltersPanel);
+
+// ── Toast ─────────────────────────────────────────────────
 function showToast(msg) {
-  const t=$("toast"); t.innerHTML=msg; t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),3000);
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
 }
 
-buildGroupFilter(); buildCatNav(); buildCatFilter(); buildBrandFilter(); buildFooterCats();
-renderProducts(); syncCart();
-window.addEventListener("load",()=>{
-  const h=$("siteHeader"); if(h) document.body.style.setProperty("--header-height",h.offsetHeight+"px");
+// ── Lightbox ──────────────────────────────────────────────
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('imgLightbox').classList.add('open');
+}
+function closeLightbox() { document.getElementById('imgLightbox').classList.remove('open'); }
+document.querySelectorAll('.product-img').forEach(function(img) {
+  img.addEventListener('click', function(e) { e.stopPropagation(); openLightbox(img.src); });
+  img.style.cursor = 'zoom-in';
 });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeLightbox(); closeCartDrawer(); closeOrderModal(); closeMobileFilters(); } });
+
+// ── Keyboard nav on cards ─────────────────────────────────
+document.querySelectorAll('.card[data-pid]').forEach(function(card) {
+  card.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      window.location.href = productUrl(card.getAttribute('data-pid'));
+    }
+  });
+});
+
+// Init
+initCards();
 </script>
 </body>
 </html>
