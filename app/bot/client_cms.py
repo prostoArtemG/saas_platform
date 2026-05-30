@@ -29,6 +29,7 @@ from aiogram.types import (
     Message,
 )
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 
 from app.bot.filters import CMSFilter
 from app.bot.keyboards import (
@@ -41,7 +42,7 @@ from app.bot.keyboards import (
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Order, Product, SiteEvent
+from app.models import Client, ClientSettings, Order, Plan, Product, SiteEvent
 
 logger = logging.getLogger(__name__)
 
@@ -1236,11 +1237,16 @@ async def _site_stats(client_id: int) -> dict[str, dict[str, int]]:
     return result
 
 
-def _stats_text(stats: dict[str, dict[str, int]]) -> str:
+def _stats_text(stats: dict[str, dict[str, int]], product_count: int, product_limit: int | None) -> str:
     def _c(period: str, et: str) -> int:
         return stats.get(period, {}).get(et, 0)
 
-    lines = ["📈 <b>Статистика сайту</b>\n"]
+    if product_limit is not None:
+        products_line = f"\n📦 Товари: <b>{product_count} / {product_limit}</b>\n"
+    else:
+        products_line = f"\n📦 Товари: <b>{product_count}</b>\n"
+
+    lines = ["📈 <b>Статистика сайту</b>\n", products_line]
     for label, key in [("Сьогодні", "today"), ("7 днів", "week"), ("30 днів", "month")]:
         lines.append(f"<b>{label}:</b>")
         lines.append(f"  👁 Відвідувань сайту: {_c(key, 'site_view')}")
@@ -1258,9 +1264,26 @@ async def cms_stats(message: Message, state: FSMContext) -> None:
     if client is None:
         return
     stats = await _site_stats(client.id)
+
+    async with AsyncSessionLocal() as session:
+        client_with_plan = await session.scalar(
+            select(Client).options(selectinload(Client.plan)).where(Client.id == client.id)
+        )
+        plan = client_with_plan.plan if client_with_plan else None
+        product_limit: int | None = plan.products_limit if plan is not None else None
+        product_count: int = (
+            await session.scalar(
+                select(func.count(Product.id)).where(Product.client_id == client.id)
+            )
+        ) or 0
+
     data = await state.get_data()
     menu = client_test_menu() if data.get("selected_client_id") else client_main_menu()
-    await message.answer(_stats_text(stats), parse_mode="HTML", reply_markup=menu)
+    await message.answer(
+        _stats_text(stats, product_count, product_limit),
+        parse_mode="HTML",
+        reply_markup=menu,
+    )
 
 
 # ── �📊 Замовлення ────────────────────────────────────────────────────────────
@@ -1992,6 +2015,35 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
     old_price_val = Decimal(data["old_price"]) if data.get("old_price") else None
 
     async with AsyncSessionLocal() as session:
+        # ── Check plan product limit ──────────────────────────────────────────
+        client_with_plan = await session.scalar(
+            select(Client)
+            .options(selectinload(Client.plan))
+            .where(Client.id == client_id)
+        )
+        plan: Plan | None = client_with_plan.plan if client_with_plan else None
+        limit: int | None = plan.products_limit if plan is not None else None
+        if limit is not None:
+            current_count: int = (
+                await session.scalar(
+                    select(func.count(Product.id)).where(Product.client_id == client_id)
+                )
+            ) or 0
+            if current_count >= limit:
+                plan_label = plan.name if plan else "вашого тарифу"
+                await _clear_fsm_keep_test(state)
+                data_after = await state.get_data()
+                from app.bot.keyboards import client_main_menu, client_test_menu  # noqa: PLC0415
+                menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
+                await message.answer(
+                    f"❌ Досягнуто ліміт тарифу <b>{plan_label}</b> ({limit} товарів).\n\n"
+                    f"Для збільшення ліміту зверніться до підтримки або змініть тариф.",
+                    parse_mode="HTML",
+                    reply_markup=menu,
+                )
+                return
+        # ─────────────────────────────────────────────────────────────────────
+
         product = Product(
             client_id=client_id,
             name=data["name"],
