@@ -2033,7 +2033,6 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
                 plan_label = plan.name if plan else "вашого тарифу"
                 await _clear_fsm_keep_test(state)
                 data_after = await state.get_data()
-                from app.bot.keyboards import client_main_menu, client_test_menu  # noqa: PLC0415
                 menu = client_test_menu() if data_after.get("selected_client_id") else client_main_menu()
                 await message.answer(
                     f"❌ Досягнуто ліміт тарифу <b>{plan_label}</b> ({limit} товарів).\n\n"
