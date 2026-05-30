@@ -251,7 +251,7 @@
       function tierOf(val) {
         var v = (val || '').toLowerCase();
         if (v.startsWith('premium')) return 'premium';
-        if (v.startsWith('business')) return 'business';
+        if (v.startsWith('business') || v.startsWith('pro')) return 'business';
         return 'starter'; // default / empty
       }
 
