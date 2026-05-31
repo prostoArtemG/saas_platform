@@ -8,7 +8,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
 
 revision: str = "0018_product_specs"
 down_revision: Union[str, None] = "0017_premium_plan"
@@ -18,51 +17,40 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     bind = op.get_bind()
-    inspector = Inspector.from_engine(bind)
-    existing = inspector.get_table_names()
 
-    if "product_specs" not in existing:
-        op.create_table(
-            "product_specs",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column(
-                "product_id",
-                sa.Integer(),
-                sa.ForeignKey("products.id", ondelete="CASCADE"),
-                nullable=False,
-            ),
-            sa.Column(
-                "client_id",
-                sa.Integer(),
-                sa.ForeignKey("clients.id", ondelete="CASCADE"),
-                nullable=False,
-            ),
-            sa.Column("name", sa.String(128), nullable=False),
-            sa.Column("value", sa.String(512), nullable=False),
+    # Use raw SQL so the migration is truly idempotent regardless of
+    # SQLAlchemy version — no Inspector.from_engine() needed.
+    bind.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS product_specs (
+            id         SERIAL PRIMARY KEY,
+            product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+            client_id  INTEGER NOT NULL REFERENCES clients(id)  ON DELETE CASCADE,
+            name       VARCHAR(128) NOT NULL,
+            value      VARCHAR(512) NOT NULL
         )
-        op.create_index("ix_product_specs_product_id", "product_specs", ["product_id"])
-        op.create_index("ix_product_specs_client_id", "product_specs", ["client_id"])
+    """))
+    bind.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_product_specs_product_id"
+        " ON product_specs (product_id)"
+    ))
+    bind.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_product_specs_client_id"
+        " ON product_specs (client_id)"
+    ))
 
-    if "category_specs" not in existing:
-        op.create_table(
-            "category_specs",
-            sa.Column("id", sa.Integer(), primary_key=True),
-            sa.Column(
-                "client_id",
-                sa.Integer(),
-                sa.ForeignKey("clients.id", ondelete="CASCADE"),
-                nullable=False,
-            ),
-            sa.Column("category", sa.String(128), nullable=False),
-            sa.Column("name", sa.String(128), nullable=False),
-            sa.Column(
-                "is_filterable",
-                sa.Boolean(),
-                nullable=False,
-                server_default="true",
-            ),
+    bind.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS category_specs (
+            id            SERIAL PRIMARY KEY,
+            client_id     INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            category      VARCHAR(128) NOT NULL,
+            name          VARCHAR(128) NOT NULL,
+            is_filterable BOOLEAN NOT NULL DEFAULT TRUE
         )
-        op.create_index("ix_category_specs_client_id", "category_specs", ["client_id"])
+    """))
+    bind.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_category_specs_client_id"
+        " ON category_specs (client_id)"
+    ))
 
 
 def downgrade() -> None:

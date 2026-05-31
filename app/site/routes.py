@@ -980,11 +980,17 @@ async def client_site(
             select(ClientSettings).where(ClientSettings.client_id == client.id)
         )
         # Load structured specs for all products of this client
-        spec_rows = (
-            await session.scalars(
-                select(ProductSpec).where(ProductSpec.client_id == client.id)
-            )
-        ).all()
+        # Guarded: table may not exist on first deploy before migration runs
+        spec_rows: list = []
+        try:
+            spec_rows = (
+                await session.scalars(
+                    select(ProductSpec).where(ProductSpec.client_id == client.id)
+                )
+            ).all()
+        except Exception:
+            await session.rollback()
+            spec_rows = []
         # Build specs_map per product_id: {product_id: {name: value}}
         _specs_by_product: dict[int, dict[str, str]] = {}
         for _sr in spec_rows:

@@ -352,6 +352,33 @@ CREATE TABLE IF NOT EXISTS site_events (
 CREATE INDEX IF NOT EXISTS ix_site_events_client_id  ON site_events (client_id);
 CREATE INDEX IF NOT EXISTS ix_site_events_created_at ON site_events (created_at);
 
+-- ---------------------------------------------------------------------------
+-- 14. product_specs  (structured per-product spec rows for sidebar filters)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS product_specs (
+    id          SERIAL PRIMARY KEY,
+    product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    client_id   INTEGER NOT NULL REFERENCES clients(id)  ON DELETE CASCADE,
+    name        VARCHAR(128) NOT NULL,
+    value       VARCHAR(512) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_product_specs_product_id ON product_specs (product_id);
+CREATE INDEX IF NOT EXISTS ix_product_specs_client_id  ON product_specs (client_id);
+
+-- ---------------------------------------------------------------------------
+-- 15. category_specs  (filterable spec metadata per category)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS category_specs (
+    id             SERIAL PRIMARY KEY,
+    client_id      INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    category       VARCHAR(128) NOT NULL,
+    name           VARCHAR(128) NOT NULL,
+    is_filterable  BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS ix_category_specs_client_id ON category_specs (client_id);
+
 -- =============================================================================
 -- HOW TO RUN ON RAILWAY
 -- =============================================================================
