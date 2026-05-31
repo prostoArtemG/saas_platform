@@ -201,16 +201,17 @@
         <p class="text-white/50 max-w-lg mx-auto">{{ t.templates.subtitle }}</p>
       </div>
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site?template=technovlada'">
+        <!-- Card 1: Mini Market — в разработке -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:default;">
           <div class="relative h-48 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <div class="text-4xl font-black text-brand-lime mb-1">TV</div>
-                <div class="text-xs text-white/40">TechnoVlada</div>
+                <div class="text-4xl font-black text-brand-lime mb-1">🛒</div>
+                <div class="text-xs text-white/40">Mini Market</div>
               </div>
             </div>
-            <div class="absolute top-3 right-3 bg-brand-lime/20 text-brand-lime text-xs font-medium px-2 py-0.5 rounded-full border border-brand-lime/30">{{ t.templates.popular }}</div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
           </div>
           <div class="p-6">
             <h3 class="text-lg font-bold mb-2">{{ t.templates.t1_name }}</h3>
@@ -220,15 +221,19 @@
             </div>
           </div>
         </div>
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site?template=technovlada'">
+        <!-- Card 2: Market — демо скоро -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
+             data-soon="{{ t.templates.demo_coming }}"
+             onclick="alert(this.dataset.soon)">
           <div class="relative h-48 bg-gradient-to-br from-blue-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <svg class="w-12 h-12 text-blue-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                <div class="text-xs text-white/40">Catalog Template</div>
+                <div class="text-4xl font-black text-blue-400 mb-1">🏪</div>
+                <div class="text-xs text-white/40">Market</div>
               </div>
             </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.soon_badge }}</div>
           </div>
           <div class="p-6">
             <h3 class="text-lg font-bold mb-2">{{ t.templates.t2_name }}</h3>
@@ -238,15 +243,17 @@
             </div>
           </div>
         </div>
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site?template=shop_bot'">
+        <!-- Card 3: Super Market — в разработке -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:default;">
           <div class="relative h-48 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <svg class="w-12 h-12 text-emerald-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                <div class="text-xs text-white/40">Store Template</div>
+                <div class="text-4xl font-black text-emerald-400 mb-1">🏬</div>
+                <div class="text-xs text-white/40">Super Market</div>
               </div>
             </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
           </div>
           <div class="p-6">
             <h3 class="text-lg font-bold mb-2">{{ t.templates.t3_name }}</h3>
@@ -256,25 +263,23 @@
             </div>
           </div>
         </div>
+        <!-- Card 4: Pro Market — рабочее демо -->
         <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.open('https://shopbot-production-634e.up.railway.app?demo=1', '_blank')">
           <div class="relative h-48 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <svg class="w-12 h-12 text-orange-400 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                <div class="text-xs text-white/40">TechnoMarket</div>
+                <div class="text-4xl font-black text-orange-400 mb-1">🚀</div>
+                <div class="text-xs text-white/40">Pro Market</div>
               </div>
             </div>
-            <div class="absolute top-3 right-3 bg-orange-400/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-400/30">NEW</div>
+            <div class="absolute top-3 right-3 bg-orange-400/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-400/30">DEMO</div>
           </div>
           <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">ТехноМаркет</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">Інтернет-магазин з кошиком, фільтрами, характеристиками товарів та прийомом замовлень через Telegram-бота.</p>
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t4_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t4_desc }}</p>
             <div class="flex flex-wrap gap-2">
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Кошик</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Фільтри</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Характеристики</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Замовлення</span>
+              {% for tag in t.templates.t4_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
           </div>
         </div>
