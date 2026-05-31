@@ -28,7 +28,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     Message,
 )
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.bot.filters import CMSFilter
@@ -42,7 +42,7 @@ from app.bot.keyboards import (
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Order, Plan, Product, SiteEvent
+from app.models import Client, ClientSettings, Order, Plan, Product, ProductSpec, SiteEvent
 
 logger = logging.getLogger(__name__)
 
@@ -369,6 +369,26 @@ def _specs_kb() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="⏭ Пропустити", callback_data="cms:skip:specs"),
         ]]
     )
+
+
+def _parse_specs_text(text: str | None) -> dict[str, str]:
+    """Parse 'Key: Value\nKey2: Value2' text into a dict.
+
+    Lines without a ':' separator are ignored (kept only in Product.specs,
+    not saved as structured ProductSpec rows).
+    """
+    result: dict[str, str] = {}
+    if not text:
+        return result
+    for line in text.splitlines():
+        line = line.strip()
+        if ":" in line:
+            name, _, value = line.partition(":")
+            name = name.strip()
+            value = value.strip()
+            if name and value:
+                result[name] = value
+    return result
 
 
 def _specs_list_text(items: list) -> str:
@@ -792,6 +812,22 @@ async def cms_prod_edit_field_input(message: Message, state: FSMContext) -> None
                 except (InvalidOperation, ValueError):
                     await message.answer("❌ Некоректна ціна. Введіть число або «-»:")
                     return
+        elif field == "specs":
+            new_specs_text = None if clear else (val or None)
+            product.specs = new_specs_text
+            # Rebuild structured ProductSpec rows
+            await session.execute(
+                delete(ProductSpec).where(ProductSpec.product_id == prod_id)
+            )
+            if not clear and val:
+                specs_map = _parse_specs_text(val)
+                for spec_name, spec_value in specs_map.items():
+                    session.add(ProductSpec(
+                        product_id=prod_id,
+                        client_id=client.id,
+                        name=spec_name,
+                        value=spec_value,
+                    ))
         else:
             setattr(product, field, None if clear else (val or None))
         await session.commit()
@@ -2057,6 +2093,16 @@ async def _do_save_product(message: Message, state: FSMContext) -> None:
             is_available=True,
         )
         session.add(product)
+        await session.flush()  # populate product.id
+        # Save structured specs (lines with "Key: Value")
+        specs_map = _parse_specs_text(data.get("specs"))
+        for spec_name, spec_value in specs_map.items():
+            session.add(ProductSpec(
+                product_id=product.id,
+                client_id=client_id,
+                name=spec_name,
+                value=spec_value,
+            ))
         await session.commit()
         await session.refresh(product)
 

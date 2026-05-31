@@ -144,6 +144,28 @@
               <span data-ru="Только в наличии" data-uk="Тільки в наявності">Тільки в наявності</span>
             </label>
           </div>
+
+          <!-- Specs filters (rendered only when available_filters is non-empty) -->
+          {% if available_filters %}
+          <div id="specsFiltersSection" style="margin-top:12px;">
+            {% for spec_name, spec_values in available_filters.items() %}
+            {% if spec_values %}
+            <div class="filter-group" style="margin-bottom:10px;">
+              <div style="font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">{{ spec_name }}</div>
+              {% for val in spec_values %}
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#d1d5db;cursor:pointer;margin-bottom:3px;">
+                <input type="checkbox" class="spec-check"
+                  data-spec-name="{{ spec_name | e }}"
+                  data-spec-value="{{ val | e }}"
+                  onchange="applyFilters()">
+                {{ val }}
+              </label>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
         <div class="filters-panel-footer">
           <button type="button" class="filters-apply-btn" id="applyFiltersBtn"
@@ -197,6 +219,7 @@
            data-available="{{ 'true' if product.is_available else 'false' }}"
            data-name="{{ product.name or '' }}"
            data-pid="{{ product.id }}"
+           data-specs='{{ product.specs_map | tojson }}'
            tabindex="0" role="button"
            aria-label="{{ (product.brand or '') ~ ' ' ~ (product.name or '') }}">
 
@@ -569,6 +592,18 @@ function applyFilters() {
   var onlyStock = document.getElementById('inStockCheck').checked;
   var sort = document.getElementById('sortSelect').value;
 
+  // Collect active spec filters: { specName: Set<value> }
+  var activeSpecs = {};
+  document.querySelectorAll('.spec-check:checked').forEach(function(cb) {
+    var sn = cb.getAttribute('data-spec-name');
+    var sv = cb.getAttribute('data-spec-value');
+    if (sn && sv) {
+      if (!activeSpecs[sn]) activeSpecs[sn] = new Set();
+      activeSpecs[sn].add(sv);
+    }
+  });
+  var activeSpecEntries = Object.entries(activeSpecs);
+
   var filtered = _cards.filter(function(card) {
     var name = (card.getAttribute('data-name') || '').toLowerCase();
     var cardBrand = (card.getAttribute('data-brand') || '').toLowerCase();
@@ -580,6 +615,17 @@ function applyFilters() {
     if (brand && cardBrand !== brand) return false;
     if (price < priceMin || price > priceMax) return false;
     if (onlyStock && !avail) return false;
+    // Specs filter
+    if (activeSpecEntries.length > 0) {
+      var specsRaw = card.getAttribute('data-specs') || '{}';
+      var specsMap;
+      try { specsMap = JSON.parse(specsRaw); } catch(e) { specsMap = {}; }
+      for (var i = 0; i < activeSpecEntries.length; i++) {
+        var k = activeSpecEntries[i][0];
+        var vals = activeSpecEntries[i][1];
+        if (!vals.has(specsMap[k])) return false;
+      }
+    }
     return true;
   });
 

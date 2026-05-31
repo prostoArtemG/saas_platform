@@ -356,3 +356,44 @@ class SiteEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class ProductSpec(Base):
+    """Structured spec entries for a product (one row per key-value pair).
+
+    Parsed from Product.specs (each "Key: Value" line becomes one row).
+    Used to build available_filters for the storefront.
+    """
+
+    __tablename__ = "product_specs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str] = mapped_column(String(512), nullable=False)
+
+
+class CategorySpec(Base):
+    """Metadata: which spec names are filterable for a given category.
+
+    Populated automatically when specs are first saved for a product in
+    that category.  ``is_filterable`` can be set to False via the admin
+    interface to hide a noisy spec from the sidebar filters.
+    """
+
+    __tablename__ = "category_specs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(128), nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    is_filterable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )

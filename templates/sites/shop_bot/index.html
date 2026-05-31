@@ -671,6 +671,8 @@
       <button class="btn-apply" onclick="applyPriceFilter()">Застосувати</button>
     </div>
 
+    <div id="specFilterGroups"></div>
+
   </aside>
 
   <!-- ── Catalog ─────────────────────────────────────────────────────── -->
@@ -813,6 +815,7 @@
 
 /* ── Data from server ──────────────────────────────────────────────────────── */
 const PRODUCTS    = {{ products | tojson }};
+const AVAILABLE_FILTERS = {{ available_filters | tojson }};
 const CLIENT_SLUG     = {{ client.slug | tojson }};
 const EVENT_URL       = {{ event_url | tojson }};
 const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
@@ -840,6 +843,7 @@ let cart         = [];
 let selectedGroup = null;
 let selectedCat  = null;
 let activeBrands = new Set();
+let activeSpecs  = {}; // { specName: Set<values> }
 let priceMin     = null;
 let priceMax     = null;
 let searchQuery  = "";
@@ -955,6 +959,39 @@ function buildBrandFilter() {
   });
 }
 
+/* ── Sidebar: specs checkboxes ─────────────────────────────────────────────── */
+function buildSpecsFilters() {
+  const container = $("specFilterGroups");
+  if (!container) return;
+  container.innerHTML = "";
+  const entries = Object.entries(AVAILABLE_FILTERS);
+  if (!entries.length) { container.style.display = "none"; return; }
+  container.style.display = "";
+  entries.forEach(([specName, values]) => {
+    if (!values.length) return;
+    const group = document.createElement("div");
+    group.className = "filter-group";
+    const title = document.createElement("div");
+    title.className = "filter-title";
+    title.textContent = specName;
+    group.appendChild(title);
+    values.forEach(val => {
+      const lbl = document.createElement("label");
+      lbl.className = "filter-item";
+      const checked = activeSpecs[specName] && activeSpecs[specName].has(val) ? " checked" : "";
+      lbl.innerHTML = `<input type="checkbox" value="${esc(val)}"${checked}><span>${esc(val)}</span>`;
+      lbl.querySelector("input").addEventListener("change", e => {
+        if (!activeSpecs[specName]) activeSpecs[specName] = new Set();
+        e.target.checked ? activeSpecs[specName].add(val) : activeSpecs[specName].delete(val);
+        if (!activeSpecs[specName].size) delete activeSpecs[specName];
+        renderProducts();
+      });
+      group.appendChild(lbl);
+    });
+    container.appendChild(group);
+  });
+}
+
 /* ── Footer category links ─────────────────────────────────────────────────── */
 function buildFooterCats() {
   const cats = [...new Set(PRODUCTS.map(p => p.category).filter(Boolean))].sort().slice(0, 6);
@@ -988,6 +1025,12 @@ function filtered() {
     list = list.filter(p => p.price >= priceMin);
   if (priceMax !== null)
     list = list.filter(p => p.price <= priceMax);
+  const activeSpecEntries = Object.entries(activeSpecs);
+  if (activeSpecEntries.length > 0)
+    list = list.filter(p => {
+      const sm = p.specs_map || {};
+      return activeSpecEntries.every(([k, vals]) => vals.has(sm[k]));
+    });
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     list = list.filter(p =>
@@ -1092,6 +1135,7 @@ function resetFilters() {
   selectedGroup = null;
   selectedCat  = null;
   activeBrands = new Set();
+  activeSpecs  = {};
   priceMin = priceMax = null;
   searchQuery  = "";
   $("priceMin").value = "";
@@ -1102,6 +1146,7 @@ function resetFilters() {
   buildCatNav();
   buildCatFilter();
   buildBrandFilter();
+  buildSpecsFilters();
   renderProducts();
 }
 
@@ -1327,6 +1372,7 @@ buildGroupFilter();
 buildCatNav();
 buildCatFilter();
 buildBrandFilter();
+buildSpecsFilters();
 buildFooterCats();
 renderProducts();
 syncCart();

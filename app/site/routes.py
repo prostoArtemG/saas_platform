@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Order, Payment, Plan, Product, SiteEvent, SiteRequest, Subscription
+from app.models import Client, ClientSettings, Order, Payment, Plan, Product, ProductSpec, SiteEvent, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
 from app.services.railway_api import deploy_shop_bot
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
@@ -979,6 +979,23 @@ async def client_site(
         client_settings = await session.scalar(
             select(ClientSettings).where(ClientSettings.client_id == client.id)
         )
+        # Load structured specs for all products of this client
+        spec_rows = (
+            await session.scalars(
+                select(ProductSpec).where(ProductSpec.client_id == client.id)
+            )
+        ).all()
+        # Build specs_map per product_id: {product_id: {name: value}}
+        _specs_by_product: dict[int, dict[str, str]] = {}
+        for _sr in spec_rows:
+            _specs_by_product.setdefault(_sr.product_id, {})[_sr.name] = _sr.value
+        # Build available_filters: {spec_name: sorted(distinct_values)}
+        _filters_acc: dict[str, set] = {}
+        for _sr in spec_rows:
+            _filters_acc.setdefault(_sr.name, set()).add(_sr.value)
+        available_filters: dict[str, list[str]] = {
+            k: sorted(v) for k, v in _filters_acc.items()
+        }
         products = [
             {
                 "id": p.id,
@@ -990,6 +1007,7 @@ async def client_site(
                 "price": float(p.price) if p.price is not None else 0.0,
                 "old_price": float(p.old_price) if p.old_price is not None else None,
                 "specs": p.specs,
+                "specs_map": _specs_by_product.get(p.id, {}),
                 "image_url": p.image_url,
                 "is_available": p.is_available,
                 "badge": p.badge,
@@ -1041,6 +1059,7 @@ async def client_site(
             "lang": chosen,
             "client": client_data,
             "products": products,
+            "available_filters": available_filters,
             "event_url": f"/api/event/{slug}",
             "platform_domain": settings.platform_domain,
         },
