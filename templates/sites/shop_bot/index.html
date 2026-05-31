@@ -591,6 +591,17 @@
 </head>
 <body class="theme-{{ (client.theme_name or 'light_red') | replace('_', '-') }}">
 
+{% if client.slug.startswith('demo-') %}
+<!-- ── Demo banner (shown only for demo-* slugs) ───────────────────────── -->
+<div style="background:linear-gradient(90deg,#7c3aed 0%,#4f46e5 100%);color:#fff;text-align:center;padding:10px 16px;font-size:14px;font-weight:600;line-height:1.6;">
+  🚀 Це демонстраційний сайт ShopPlatform &nbsp;·&nbsp; Створіть такий сайт за 2 хвилини
+  <a href="/create-site"
+     style="display:inline-block;background:#a3e635;color:#0f0a1e;border-radius:6px;padding:3px 14px;font-weight:700;text-decoration:none;margin-left:10px;white-space:nowrap;">
+    Створити сайт →
+  </a>
+</div>
+{% endif %}
+
 <!-- ═══════════════════════════ HEADER ═══════════════════════════════════════ -->
 <header class="header">
   <div class="container header-inner">
