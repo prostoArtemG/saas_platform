@@ -1160,6 +1160,10 @@ async def client_site_product(
 
     asyncio.create_task(_record_event(client_data["id"], "product_view", product_id))
 
+    _host = request.headers.get("host", "")
+    _slug_from_host = get_client_slug_from_host(_host, settings.platform_domain or "")
+    catalog_url = "/" if _slug_from_host == slug else f"/site/{slug}"
+
     return templates.TemplateResponse(
         product_tpl,
         {
@@ -1168,6 +1172,8 @@ async def client_site_product(
             "lang": chosen,
             "client": client_data,
             "product": product_data,
+            "platform_domain": settings.platform_domain,
+            "catalog_url": catalog_url,
         },
     )
 

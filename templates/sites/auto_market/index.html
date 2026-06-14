@@ -588,9 +588,23 @@
 
 <!-- DATA -->
 <script>
-const SLUG = {{ client.slug | tojson }};
-const ALL_CARS = {{ products | tojson }};
-const SITE_URL = '/site/' + SLUG;
+const SLUG            = {{ client.slug | tojson }};
+const ALL_CARS        = {{ products | tojson }};
+const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
+
+/* True when opened via {slug}.shopplatform.app (subdomain mode) */
+const isSubdomainMode = !!PLATFORM_DOMAIN
+  && location.hostname !== PLATFORM_DOMAIN
+  && location.hostname.endsWith("." + PLATFORM_DOMAIN);
+
+function productUrl(id) {
+  return isSubdomainMode
+    ? "/product/" + id
+    : "/site/" + SLUG + "/product/" + id;
+}
+function orderUrl() {
+  return isSubdomainMode ? "/order" : "/site/" + SLUG + "/order";
+}
 
 let currentView = 'grid';
 let searchQuery  = '';
@@ -890,7 +904,7 @@ function setView(v) {
 }
 
 function goProduct(id) {
-  window.location.href = SITE_URL + '/product/' + id;
+  window.location.href = productUrl(id);
 }
 
 // ── Quick filters ─────────────────────────────────────────────────────────────

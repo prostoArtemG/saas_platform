@@ -263,7 +263,7 @@
 <!-- HEADER -->
 <header class="header">
   <div class="container header-inner">
-    <a href="/site/{{ client.slug }}" class="logo">
+    <a href="{{ catalog_url }}" class="logo">
       {% if client.logo_url %}
         <img src="{{ client.logo_url }}" alt="{{ client.shop_title }}" class="logo-img">
       {% else %}
@@ -274,16 +274,16 @@
       </div>
     </a>
     <div class="header-spacer"></div>
-    <a class="btn-back" href="/site/{{ client.slug }}">&#x2190; До каталогу</a>
+    <a class="btn-back" href="{{ catalog_url }}">&#x2190; До каталогу</a>
   </div>
 </header>
 
 <!-- BREADCRUMB -->
 <div class="container">
   <nav class="breadcrumb">
-    <a href="/site/{{ client.slug }}">{{ client.shop_title }}</a>
+    <a href="{{ catalog_url }}">{{ client.shop_title }}</a>
     <span class="breadcrumb-sep">/</span>
-    {% if product.category %}<a href="/site/{{ client.slug }}">{{ product.category }}</a><span class="breadcrumb-sep">/</span>{% endif %}
+    {% if product.category %}<a href="{{ catalog_url }}">{{ product.category }}</a><span class="breadcrumb-sep">/</span>{% endif %}
     <span>{% if product.brand %}{{ product.brand }} {% endif %}{{ product.name }}</span>
   </nav>
 </div>
@@ -525,7 +525,7 @@
   </div>
   <div class="footer-bottom">
     <span>&#x00A9; {{ client.shop_title }}</span>
-    <a href="/site/{{ client.slug }}" style="color:var(--accent);">&#x2190; До каталогу</a>
+    <a href="{{ catalog_url }}" style="color:var(--accent);">&#x2190; До каталогу</a>
     <span>Всі права захищені</span>
   </div>
 </footer>
@@ -534,8 +534,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const SLUG = {{ client.slug | tojson }};
-const PRODUCT_ID = {{ product.id }};
+const SLUG            = {{ client.slug | tojson }};
+const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
+const PRODUCT_ID      = {{ product.id }};
+
+const isSubdomainMode = !!PLATFORM_DOMAIN
+  && location.hostname !== PLATFORM_DOMAIN
+  && location.hostname.endsWith("." + PLATFORM_DOMAIN);
+
+function orderUrl() {
+  return isSubdomainMode ? "/order" : "/site/" + SLUG + "/order";
+}
 const PRODUCT_NAME = {{ ((product.brand or '') + ' ' + product.name) | tojson }};
 const PRODUCT_PRICE = {{ product.price }};
 
@@ -589,7 +598,7 @@ async function submitRequest() {
   ].filter(Boolean).join('\n');
 
   try {
-    const resp = await fetch(`/site/${SLUG}/order`, {
+    const resp = await fetch(orderUrl(), {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
