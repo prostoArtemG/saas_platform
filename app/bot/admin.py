@@ -12,7 +12,7 @@ from app.bot.keyboards import (
     client_test_menu,
 )
 from app.db import AsyncSessionLocal
-from app.models import Client, ClientSettings, Product, Subscription
+from app.models import Client, ClientSettings, Product, ProductSpec, Subscription
 
 router = Router(name="admin")
 router.message.filter(AdminFilter())
@@ -225,5 +225,150 @@ async def cmd_seed_demo_market(message: Message) -> None:
     text = "\n".join(log) + (
         f"\n\n🌐 https://{_DEMO_SLUG}.shopplatform.app"
         f"\n🌐 https://shopplatform.app/site/{_DEMO_SLUG}"
+    )
+    await message.answer(text, parse_mode="HTML")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /seed_demo_auto — demo-auto клієнт для шаблону auto_market
+# ─────────────────────────────────────────────────────────────────────────────
+_DEMO_AUTO_SLUG = "demo-auto"
+
+_DEMO_AUTO_CARS: list[dict] = [
+    dict(
+        brand="Toyota", name="Camry 2.5 Hybrid", category="Седан",
+        description="Надійний японський бізнес-седан з гібридним двигуном 2.5 л. Один власник, сервісна книга.",
+        price=28500, old_price=31000, badge="Знижка", is_available=True,
+        image_url="https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2021"),("Пробіг","42 000 км"),("Паливо","Гібрид"),("Коробка","Автомат"),("Двигун","2.5 л / 178 к.с."),("Місто","Київ")],
+    ),
+    dict(
+        brand="BMW", name="X5 xDrive30d M Sport", category="SUV",
+        description="Преміум позашляховик BMW X5 у комплектації M Sport. Панорамний дах, Harman Kardon, розмитнений.",
+        price=65000, old_price=None, badge="Преміум", is_available=True,
+        image_url="https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2022"),("Пробіг","38 500 км"),("Паливо","Дизель"),("Коробка","Автомат"),("Двигун","3.0 л / 286 к.с."),("Місто","Дніпро")],
+    ),
+    dict(
+        brand="Audi", name="Q7 3.0 TDI quattro", category="SUV",
+        description="7-місний преміум-SUV з дизельним двигуном 3.0 TDI і повним приводом quattro. Перший власник.",
+        price=72000, old_price=76500, badge="Знижка", is_available=True,
+        image_url="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2020"),("Пробіг","61 000 км"),("Паливо","Дизель"),("Коробка","Автомат"),("Двигун","3.0 л / 249 к.с."),("Місто","Львів")],
+    ),
+    dict(
+        brand="Volkswagen", name="Passat B8 2.0 TDI Variant", category="Університ",
+        description="Практичний VW Passat B8 Variant. Великий багажник, DSG7, активний круїз-контроль.",
+        price=19800, old_price=None, badge=None, is_available=True,
+        image_url="https://images.unsplash.com/photo-1590362891991-f776e747a588?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2019"),("Пробіг","88 000 км"),("Паливо","Дизель"),("Коробка","Автомат"),("Двигун","2.0 л / 150 к.с."),("Місто","Харків")],
+    ),
+    dict(
+        brand="Hyundai", name="Tucson 1.6 T-GDi 4WD", category="SUV",
+        description="Стильний Hyundai Tucson нового покоління. Кругова камера, підігрів керма, CarPlay.",
+        price=26500, old_price=28000, badge="Хіт", is_available=True,
+        image_url="https://images.unsplash.com/photo-1617469767280-0cebb3967d73?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2022"),("Пробіг","29 000 км"),("Паливо","Бензин"),("Коробка","Автомат"),("Двигун","1.6 л / 180 к.с."),("Місто","Одеса")],
+    ),
+    dict(
+        brand="Mercedes-Benz", name="E 220d AMG Line", category="Седан",
+        description="Бізнес-седан Mercedes E-Class AMG Line. Пневматика, Burmester аудіо, проекційний дисплей.",
+        price=47000, old_price=None, badge="Преміум", is_available=True,
+        image_url="https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2021"),("Пробіг","54 000 км"),("Паливо","Дизель"),("Коробка","Автомат"),("Двигун","2.0 л / 194 к.с."),("Місто","Київ")],
+    ),
+    dict(
+        brand="Nissan", name="Leaf e+ 62 kWh", category="Електро",
+        description="Повністю електричний Nissan Leaf 62 кВт·год. Запас ходу 385 км, швидка зарядка CHAdeMO.",
+        price=18500, old_price=21000, badge="Акція", is_available=True,
+        image_url="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2020"),("Пробіг","47 000 км"),("Паливо","Електро"),("Коробка","Автомат"),("Двигун","62 кВт·год / 217 к.с."),("Місто","Запоріжжя")],
+    ),
+    dict(
+        brand="Skoda", name="Octavia A7 1.6 TDI Combi", category="Університ",
+        description="Надійна Skoda Octavia A7 Combi. Велика навігація, підігрів сидінь, один власник, без аварій.",
+        price=14900, old_price=None, badge=None, is_available=True,
+        image_url="https://images.unsplash.com/photo-1596625618196-832a8077e24a?w=800&auto=format&fit=crop",
+        spec_rows=[("Рік","2018"),("Пробіг","112 000 км"),("Паливо","Дизель"),("Коробка","Механіка"),("Двигун","1.6 л / 115 к.с."),("Місто","Вінниця")],
+    ),
+]
+
+
+@router.message(Command("seed_demo_auto"))
+async def cmd_seed_demo_auto(message: Message) -> None:
+    """Create or refresh the demo-auto client with 8 cars for the auto_market template."""
+    await message.answer("⏳ Запускаю seed demo-auto…")
+    log: list[str] = []
+
+    async with AsyncSessionLocal() as session:
+        # 1. Upsert client
+        client = await session.scalar(
+            select(Client).where(Client.slug == _DEMO_AUTO_SLUG)
+        )
+        if client is None:
+            client = Client(
+                business_name="Auto Market Demo",
+                slug=_DEMO_AUTO_SLUG,
+                status="active",
+                template_name="auto_market",
+            )
+            session.add(client)
+            await session.flush()
+            log.append(f"✅ Клієнт <code>{_DEMO_AUTO_SLUG}</code> створений (id={client.id})")
+        else:
+            client.status = "active"
+            client.template_name = "auto_market"
+            client.business_name = "Auto Market Demo"
+            log.append(f"♻️ Клієнт <code>{_DEMO_AUTO_SLUG}</code> оновлений (id={client.id})")
+
+        # 2. Upsert settings
+        cs = await session.get(ClientSettings, client.id)
+        if cs is None:
+            cs = ClientSettings(
+                client_id=client.id,
+                language="uk",
+                currency="USD",
+                timezone="Europe/Kyiv",
+                theme_name="auto_dark",
+                shop_title="Auto Market Demo",
+                phone="+38 (099) 111-22-33",
+                address="Україна",
+            )
+            session.add(cs)
+            log.append("✅ Налаштування створені")
+        else:
+            cs.theme_name = "auto_dark"
+            cs.shop_title = "Auto Market Demo"
+            cs.phone = "+38 (099) 111-22-33"
+            cs.address = "Україна"
+            log.append("♻️ Налаштування оновлені")
+
+        # 3. Products + ProductSpec — insert only if none exist
+        existing_count: int = await session.scalar(
+            select(func.count()).where(Product.client_id == client.id)
+        ) or 0
+
+        if existing_count == 0:
+            for car in _DEMO_AUTO_CARS:
+                spec_rows = car.pop("spec_rows")
+                product = Product(client_id=client.id, **car)
+                session.add(product)
+                await session.flush()
+                for spec_name, spec_value in spec_rows:
+                    session.add(ProductSpec(
+                        product_id=product.id,
+                        client_id=client.id,
+                        name=spec_name,
+                        value=spec_value,
+                    ))
+            log.append(f"✅ Додано {len(_DEMO_AUTO_CARS)} авто з характеристиками")
+        else:
+            log.append(f"ℹ️ Товари вже є ({existing_count} шт.), пропускаю")
+
+        await session.commit()
+
+    text = "\n".join(log) + (
+        f"\n\n🌐 https://{_DEMO_AUTO_SLUG}.shopplatform.app"
+        f"\n🌐 https://shopplatform.app/site/{_DEMO_AUTO_SLUG}"
     )
     await message.answer(text, parse_mode="HTML")
