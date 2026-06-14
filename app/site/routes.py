@@ -1108,6 +1108,18 @@ async def client_site_product(
         client_settings = await session.scalar(
             select(ClientSettings).where(ClientSettings.client_id == client.id)
         )
+        # Load structured specs for this product (for templates that use specs_map)
+        _spec_rows: list = []
+        try:
+            _spec_rows = (
+                await session.scalars(
+                    select(ProductSpec).where(ProductSpec.product_id == product_id)
+                )
+            ).all()
+        except Exception:
+            await session.rollback()
+            _spec_rows = []
+        _specs_map: dict[str, str] = {sr.name: sr.value for sr in _spec_rows}
 
     client_data = {
         "id": client.id,
@@ -1132,6 +1144,7 @@ async def client_site_product(
         "price": float(product.price) if product.price is not None else 0.0,
         "old_price": float(product.old_price) if product.old_price is not None else None,
         "specs": _clean(product.specs),
+        "specs_map": _specs_map,
         "image_url": product.image_url,
         "is_available": product.is_available,
         "badge": _clean(product.badge),
