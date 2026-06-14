@@ -77,7 +77,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Whitelist of installed site templates. Each must have an `index.html`
 # at templates/sites/{name}/index.html
-AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "red_market", "technomarket_premium"}
+AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "red_market", "technomarket_premium", "auto_market"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
