@@ -200,7 +200,7 @@
         <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.templates.title }} <span class="gradient-text">{{ t.templates.title_accent }}</span></h2>
         <p class="text-white/50 max-w-lg mx-auto">{{ t.templates.subtitle }}</p>
       </div>
-      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
         <!-- Card 1: Mini Market — в разработке -->
         <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:default;">
           <div class="relative h-48 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
@@ -279,6 +279,27 @@
             <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t4_desc }}</p>
             <div class="flex flex-wrap gap-2">
               {% for tag in t.templates.t4_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <!-- Card 5: Auto Market — demo link -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
+             onclick="window.open('https://demo-auto.shopplatform.app', '_blank')">
+          <div class="relative h-48 bg-gradient-to-br from-amber-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl font-black text-amber-400 mb-1">🚗</div>
+                <div class="text-xs text-white/40">Auto Market</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">DEMO</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t5_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t5_desc }}</p>
+            <div class="flex flex-wrap gap-2">
+              {% for tag in t.templates.t5_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
           </div>
         </div>
