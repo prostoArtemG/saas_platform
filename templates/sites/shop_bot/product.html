@@ -445,7 +445,7 @@
     <span class="header-phone-mobile">📞 Позвонити</span>
   </a>
   {% endif %}
-  <a class="btn-back" href="/site/{{ client.slug }}">
+  <a class="btn-back" href="{{ catalog_url }}">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
     </svg>
@@ -458,14 +458,14 @@
 
   <!-- Breadcrumb -->
   <nav class="breadcrumb">
-    <a href="/site/{{ client.slug }}">Магазин</a>
+    <a href="{{ catalog_url }}">Магазин</a>
     {% if product.group_name %}
     <span>›</span>
-    <a href="/site/{{ client.slug }}">{{ product.group_name }}</a>
+    <a href="{{ catalog_url }}">{{ product.group_name }}</a>
     {% endif %}
     {% if product.category %}
     <span>›</span>
-    <a href="/site/{{ client.slug }}">{{ product.category }}</a>
+    <a href="{{ catalog_url }}">{{ product.category }}</a>
     {% endif %}
     <span>›</span>
     <span>{% if product.brand %}{{ product.brand }} {% endif %}{{ product.name }}</span>
@@ -638,10 +638,22 @@
 (function () {
   "use strict";
 
-  const SLUG       = {{ client.slug | tojson }};
+  const SLUG            = {{ client.slug | tojson }};
+  const PLATFORM_DOMAIN = {{ platform_domain | tojson }};
   const PRODUCT_ID = {{ product.id }};
   const PRICE      = {{ product.price }};
   const NAME       = {{ product.name | tojson }};
+
+  const isSubdomainMode = !!PLATFORM_DOMAIN
+    && location.hostname !== PLATFORM_DOMAIN
+    && location.hostname.endsWith("." + PLATFORM_DOMAIN);
+
+  function catalogUrl() {
+    return isSubdomainMode ? "/" : "/site/" + SLUG;
+  }
+  function orderUrl() {
+    return isSubdomainMode ? "/order" : "/site/" + SLUG + "/order";
+  }
 
   function $(id) { return document.getElementById(id); }
 
@@ -687,7 +699,7 @@
     if (e.target === this) closeSuccess();
   });
   $("btn-continue").addEventListener("click", function() {
-    window.location.href = "/site/" + SLUG;
+    window.location.href = catalogUrl();
   });
 
   document.addEventListener("keydown", function(e) {
@@ -716,7 +728,7 @@
     };
 
     try {
-      const res = await fetch("/site/" + SLUG + "/order", {
+      const res = await fetch(orderUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

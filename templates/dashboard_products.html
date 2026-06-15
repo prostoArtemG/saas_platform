@@ -179,6 +179,18 @@
         </button>
       </div>
 
+      <!-- Error toast -->
+      {% if error %}
+      <div class="mb-6 animate-fade-up flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        {% if error == 'limit_exceeded' %}Досягнуто ліміт товарів для вашого тарифу. Зверніться до підтримки для збільшення ліміту.
+        {% else %}Сталася помилка. Спробуйте ще раз.
+        {% endif %}
+      </div>
+      {% endif %}
+
       <!-- Success toast -->
       {% if success %}
       <div class="toast-success mb-6 animate-fade-up">

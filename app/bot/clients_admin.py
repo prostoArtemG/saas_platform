@@ -54,11 +54,14 @@ def _card_kb(client_id: int) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🌐 Домен", callback_data=f"cli:domain:{client_id}"),
             ],
             [
-                InlineKeyboardButton(text="� Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),                InlineKeyboardButton(text="🔍 Проверить бота", callback_data=f"cli:check_bot:{client_id}"),            ],
+                InlineKeyboardButton(text="🤖 Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),
+                InlineKeyboardButton(text="🔍 Проверить бота", callback_data=f"cli:check_bot:{client_id}"),
+            ],
             [
-                InlineKeyboardButton(text="�🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
+                InlineKeyboardButton(text="🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
                 InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
             ],
+            [InlineKeyboardButton(text="📦 Сменить тариф", callback_data=f"cli:plan:{client_id}")],
             [InlineKeyboardButton(text="🗑 Видалити", callback_data=f"client:delete:{client_id}")],
             [InlineKeyboardButton(text="« К списку", callback_data="cli:list")],
         ]
@@ -691,3 +694,90 @@ async def cb_connect_token(message: Message, state: FSMContext) -> None:
         reply_markup=admin_main_menu(),
     )
     await _send_card(message, client_id, edit=False)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Plan change
+# ──────────────────────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.regexp(r"^cli:plan:(\d+)$"))
+async def plan_change_menu(callback: CallbackQuery) -> None:
+    """Show a list of plans to switch the client to."""
+    await callback.answer()
+    client_id = int(callback.data.split(":")[2])
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if client is None:
+            await callback.message.answer("Клиент не найден.")
+            return
+        plans = (await session.scalars(select(Plan).where(Plan.is_active == True).order_by(Plan.price))).all()  # noqa: E712
+
+    if not plans:
+        await callback.message.answer(
+            "Нет активных тарифов.",
+            reply_markup=_back_kb(client_id),
+        )
+        return
+
+    current_mark = ""
+    rows: list[list[InlineKeyboardButton]] = []
+    for p in plans:
+        is_current = p.id == client.plan_id
+        label = f"{'✅ ' if is_current else ''}{p.name} — {p.price} грн/мес"
+        rows.append([InlineKeyboardButton(
+            text=label,
+            callback_data=f"cli:plan:set:{client_id}:{p.id}",
+        )])
+    rows.append([InlineKeyboardButton(text="« Назад", callback_data=f"cli:open:{client_id}")])
+
+    await callback.message.edit_text(
+        f"📦 <b>Смена тарифа</b>\n"
+        f"Клиент: <b>{client.business_name}</b>\n\n"
+        f"Текущий тариф ID: <code>{client.plan_id or '—'}</code>\n"
+        f"Выберите новый тариф:",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+    )
+
+
+@router.callback_query(F.data.regexp(r"^cli:plan:set:(\d+):(\d+)$"))
+async def plan_change_set(callback: CallbackQuery) -> None:
+    """Apply the selected plan to client and their active subscription."""
+    await callback.answer()
+    parts = callback.data.split(":")
+    client_id = int(parts[3])
+    plan_id = int(parts[4])
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if client is None:
+            await callback.message.answer("Клиент не найден.")
+            return
+        plan = await session.get(Plan, plan_id)
+        if plan is None:
+            await callback.message.answer("Тариф не найден.")
+            return
+
+        client.plan_id = plan_id
+
+        # Update active/trial subscription if exists
+        subscription: Optional[Subscription] = await session.scalar(
+            select(Subscription)
+            .where(Subscription.client_id == client_id)
+            .where(Subscription.status.in_(["active", "trial"]))
+            .order_by(Subscription.created_at.desc())
+        )
+        if subscription is not None:
+            subscription.plan_id = plan_id
+
+        await session.commit()
+
+    logger.info("admin changed plan for client_id=%s to plan_id=%s", client_id, plan_id)
+    await callback.message.edit_text(
+        f"✅ <b>Тариф обновлён</b>\n\n"
+        f"Клиент: <b>{client.business_name}</b>\n"
+        f"Новый тариф: <b>{plan.name}</b>",
+        parse_mode="HTML",
+        reply_markup=_back_kb(client_id),
+    )

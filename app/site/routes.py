@@ -254,7 +254,7 @@ async def create_site_submit(
         logger.warning("SiteRequest audit log failed: %s", exc)
 
     # Atomic self-service onboarding ------------------------------------------
-    template_name = site_type if site_type in {"technovlada", "shop_bot", "red_market", "premium_store", "technomarket_premium"} else "technovlada"
+    template_name = site_type if site_type in {"technovlada", "shop_bot", "red_market", "premium_store", "technomarket_premium", "auto_market"} else "technovlada"
 
     logger.info(
         "create_site_submit: business_name=%s site_type=%r template_name=%r bot_token_len=%s",
@@ -593,6 +593,7 @@ async def dashboard_products(
     token: Optional[str] = None,
     edit_id: Optional[int] = None,
     success: Optional[str] = None,
+    error: Optional[str] = None,
     lang: Optional[str] = None,
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
@@ -636,6 +637,7 @@ async def dashboard_products(
             "products": products,
             "edit_product": edit_product,
             "success": success,
+            "error": error,
         },
     )
 
@@ -660,6 +662,25 @@ async def dashboard_products_add(
         if client is None:
             raise HTTPException(status_code=404)
         _check_dashboard_token(client, token)
+        # Check plan product limit (same logic as Telegram CMS)
+        from sqlalchemy.orm import selectinload as _sil
+        client_with_plan = await session.scalar(
+            select(Client).options(_sil(Client.plan)).where(Client.id == client.id)
+        )
+        _plan = client_with_plan.plan if client_with_plan else None
+        _limit: Optional[int] = _plan.products_limit if _plan else None
+        if _limit is not None:
+            _count: int = (
+                await session.scalar(
+                    select(func.count(Product.id)).where(Product.client_id == client.id)
+                )
+            ) or 0
+            if _count >= _limit:
+                _tp = f"&token={token}" if token else ""
+                return RedirectResponse(
+                    f"/dashboard/{slug}/products?error=limit_exceeded{_tp}",
+                    status_code=303,
+                )
         try:
             price_val = float(price.replace(",", ".")) if price else 0.0
         except ValueError:
@@ -722,8 +743,8 @@ async def dashboard_products_toggle(
         if product and product.client_id == client.id:
             product.is_available = not product.is_available
             await session.commit()
-    _tp = f"?token={token}" if token else ""
-    return RedirectResponse(f"/dashboard/{slug}/products{_tp}", status_code=303)
+    _tp = f"&token={token}" if token else ""
+    return RedirectResponse(f"/dashboard/{slug}/products?success=updated{_tp}", status_code=303)
 
 
 @router.post("/dashboard/{slug}/products/{product_id}/edit")
