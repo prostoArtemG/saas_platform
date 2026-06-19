@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         alias="TECHNOMARKET_CLIENT_REPO",
     )
     client_deploy_enabled: bool = Field(False, alias="CLIENT_DEPLOY_ENABLED")
+    railway_api_token: str = Field("", alias="RAILWAY_API_TOKEN")
 
     @field_validator("admin_ids", mode="before")
     @classmethod

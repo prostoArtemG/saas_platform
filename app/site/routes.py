@@ -426,6 +426,9 @@ async def create_site_submit(
                 bot_token=bot_token,
                 admin_ids=admin_telegram_id if admin_telegram_id.isdigit() else "",
                 saas_platform_url=str(request.base_url).rstrip("/"),
+                cloudinary_cloud=settings.cloudinary_cloud_name,
+                cloudinary_key=settings.cloudinary_api_key,
+                cloudinary_secret=settings.cloudinary_api_secret,
             )
             _deploy_ok = True
         except Exception as _exc:

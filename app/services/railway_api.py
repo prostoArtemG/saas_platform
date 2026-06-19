@@ -334,6 +334,9 @@ async def deploy_technomarket_client(
     bot_token: str,
     admin_ids: str,
     saas_platform_url: str,
+    cloudinary_cloud: str = "",
+    cloudinary_key: str = "",
+    cloudinary_secret: str = "",
 ) -> dict:
     """Deploy a personal TechnoMarket Premium bot to a dedicated Railway project.
 
@@ -377,6 +380,7 @@ async def deploy_technomarket_client(
     await asyncio.sleep(2)
 
     # 5. Set environment variables before first deploy
+    _site_url = f"https://client-{slug}.up.railway.app"
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
@@ -384,8 +388,21 @@ async def deploy_technomarket_client(
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
         "TEMPLATE_NAME": "technomarket_premium",
-        "PUBLIC_BASE_URL": f"https://client-{slug}.up.railway.app",
+        "PUBLIC_BASE_URL": _site_url,
+        "SITE_URL": _site_url,
+        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
     }
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
+        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
+        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
+    else:
+        logger.warning(
+            "deploy_technomarket_client: Cloudinary credentials not set for slug=%s, "
+            "image upload will be unavailable in client project.",
+            slug,
+        )
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(2)
 
