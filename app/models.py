@@ -44,6 +44,11 @@ class Client(Base):
     bot_mode: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default="shared", default="shared"
     )
+    railway_project_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    railway_service_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    railway_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    deployment_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    deployment_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -187,6 +187,20 @@ async def _build_card_text(session, client: Client) -> str:
     else:
         bot_mode_str = "🌐 Загальний платформи (shared)"
 
+    # Deployment info (personal bot Railway deploy)
+    deployment_status = getattr(client, "deployment_status", None)
+    railway_url = getattr(client, "railway_url", None)
+    deployment_error = getattr(client, "deployment_error", None)
+    if deployment_status == "ready":
+        deploy_str = f"✅ ready — {railway_url or '—'}"
+    elif deployment_status == "failed":
+        err_short = (deployment_error or "")[:120]
+        deploy_str = f"❌ failed — {err_short}"
+    elif deployment_status:
+        deploy_str = deployment_status
+    else:
+        deploy_str = "—"
+
     admin_tg = (
         f"<code>{client.admin_telegram_id}</code>"
         if client.admin_telegram_id
@@ -214,6 +228,7 @@ async def _build_card_text(session, client: Client) -> str:
         f"💳 Последний платёж: {last_payment_str}",
         f"🤖 Bot: <b>{bot_str}</b>",
         f"📲 Режим бота: {bot_mode_str}",
+        f"🚀 Деплой: {deploy_str}",
     ]
     return "\n".join(lines)
 

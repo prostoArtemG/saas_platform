@@ -17,7 +17,7 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, ClientSettings, Order, Payment, Plan, Product, ProductSpec, SiteEvent, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
-from app.services.railway_api import deploy_shop_bot
+from app.services.railway_api import deploy_shop_bot, deploy_technomarket_client
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -413,6 +413,43 @@ async def create_site_submit(
             except Exception as _e:
                 logger.warning("Could not start personal bot for %s: %s", result.slug, _e)
 
+    # Auto-deploy for technomarket_premium + personal bot mode
+    if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token and settings.client_deploy_enabled:
+        logger.info("Starting Railway deploy for technomarket_premium personal slug=%s", slug)
+        _deploy_ok = False
+        _deploy_error: str | None = None
+        _deploy_result: dict | None = None
+        try:
+            _deploy_result = await deploy_technomarket_client(
+                client_name=business_name,
+                slug=slug,
+                bot_token=bot_token,
+                admin_ids=admin_telegram_id if admin_telegram_id.isdigit() else "",
+                saas_platform_url=str(request.base_url).rstrip("/"),
+            )
+            _deploy_ok = True
+        except Exception as _exc:
+            logger.warning("deploy_technomarket_client failed for %s: %s", slug, _exc, exc_info=True)
+            _deploy_error = str(_exc)[:1000]
+
+        # Persist deploy result (client already exists — just update)
+        try:
+            async with AsyncSessionLocal() as _ds:
+                _dc = await _ds.get(Client, client.id)
+                if _dc:
+                    if _deploy_ok and _deploy_result:
+                        _dc.railway_project_id = _deploy_result.get("project_id")
+                        _dc.railway_service_id = _deploy_result.get("service_id")
+                        _dc.railway_url = _deploy_result.get("url")
+                        _dc.deployment_status = "ready"
+                        _dc.deployment_error = None
+                    else:
+                        _dc.deployment_status = "failed"
+                        _dc.deployment_error = _deploy_error
+                    await _ds.commit()
+        except Exception as _se:
+            logger.warning("Could not save deploy status for %s: %s", slug, _se)
+
     # Auto-deploy only for premium_store template
     deploy_result = None
     railway_url = None
@@ -628,6 +665,10 @@ async def onboarding_success(
         "cms_url": _clean(cms_url) if cms_url else None,
         "connect_cms_url": _clean(connect_cms_url) if connect_cms_url else None,
         "dashboard_url": dashboard_url,
+        "bot_mode": client.bot_mode or "shared",
+        "deployment_status": client.deployment_status,
+        "railway_url": _clean(client.railway_url) if client.railway_url else None,
+        "deployment_error": _clean(client.deployment_error) if client.deployment_error else None,
     }
 
     return templates.TemplateResponse(

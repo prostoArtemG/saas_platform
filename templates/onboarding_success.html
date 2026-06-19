@@ -241,6 +241,41 @@
           </div>
         </div>
 
+        <!-- Personal bot deploy status block -->
+        {% if data.bot_mode == 'personal' and data.template == 'technomarket_premium' %}
+        <div class="glass-card rounded-2xl p-6 mt-6 animate-fade-up"
+             style="border: 1px solid {% if data.deployment_status == 'ready' %}rgba(163,230,53,0.35){% elif data.deployment_status == 'failed' %}rgba(239,68,68,0.35){% else %}rgba(255,255,255,0.08){% endif %};">
+          {% if data.deployment_status == 'ready' %}
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-2xl">✅</span>
+              <div>
+                <p class="font-bold text-white">Сайт та особистий бот готові!</p>
+                <p class="text-sm text-white/55">Ваш бот задеплоєний на окремому Railway-проекті.</p>
+              </div>
+            </div>
+            {% if data.railway_url %}
+            <div class="bg-black/20 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+              <span class="text-sm text-white/50">Бот URL:</span>
+              <a href="{{ data.railway_url }}" target="_blank" rel="noopener"
+                 class="text-brand-lime font-semibold text-sm break-all hover:underline">{{ data.railway_url }}</a>
+            </div>
+            {% endif %}
+          {% elif data.deployment_status == 'failed' %}
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-2xl">⚠️</span>
+              <div>
+                <p class="font-bold text-white">Сайт створено, але деплой не завершився</p>
+                <p class="text-sm text-white/55">Адміністратор перевірить деплой та виправить помилку.</p>
+              </div>
+            </div>
+            <a href="{{ data.dashboard_url }}"
+               class="btn-secondary w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm mt-2">
+              Перейти в dashboard
+            </a>
+          {% endif %}
+        </div>
+        {% endif %}
+
       </div>
 
       <div class="text-center mt-6">

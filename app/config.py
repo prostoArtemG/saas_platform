@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # If empty, personal client bots will not be started automatically.
     client_bot_webhook_base: str = Field("", alias="CLIENT_BOT_WEBHOOK_BASE")
 
+    # Railway deploy settings for personal bot mode (technomarket_premium).
+    # Set TECHNOMARKET_CLIENT_REPO to the GitHub repo slug used as deploy template.
+    technomarket_client_repo: str = Field(
+        "prostoArtemG/technomarket_client_template",
+        alias="TECHNOMARKET_CLIENT_REPO",
+    )
+    client_deploy_enabled: bool = Field(False, alias="CLIENT_DEPLOY_ENABLED")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):

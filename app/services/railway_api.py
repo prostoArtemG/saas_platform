@@ -10,6 +10,9 @@ RAILWAY_API_URL = "https://backboard.railway.app/graphql/v2"
 RAILWAY_TOKEN = os.getenv("RAILWAY_API_TOKEN", "")
 GITHUB_REPO = "prostoArtemG/shop_bot"
 GITHUB_REPO_PREMIUM = "prostoArtemG/premium_store"
+TECHNOMARKET_CLIENT_REPO = os.getenv(
+    "TECHNOMARKET_CLIENT_REPO", "prostoArtemG/technomarket_client_template"
+)
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -322,4 +325,80 @@ async def deploy_shop_bot(
         "service_id": service_id,
         "url": railway_url,
         "custom_domain": f"https://{custom_domain}",
+    }
+
+
+async def deploy_technomarket_client(
+    client_name: str,
+    slug: str,
+    bot_token: str,
+    admin_ids: str,
+    saas_platform_url: str,
+) -> dict:
+    """Deploy a personal TechnoMarket Premium bot to a dedicated Railway project.
+
+    Returns a dict with keys: project_id, service_id, url.
+    Raises on failure so the caller can record deployment_status='failed'.
+    """
+    project_name = f"client-{slug}"
+
+    # 1. Create project
+    project_id = await create_project(project_name)
+    await asyncio.sleep(2)
+
+    # 2. Get environment ID
+    environment_id = await get_environment_id(project_id)
+    await asyncio.sleep(1)
+
+    # 3. Create Postgres
+    pg_service_id = await create_postgres(project_id, environment_id)
+    await asyncio.sleep(2)
+
+    # 4. Create app service from template repo (no immediate deploy)
+    query = """
+    mutation serviceCreate($input: ServiceCreateInput!) {
+        serviceCreate(input: $input) {
+            id
+            name
+        }
+    }
+    """
+    variables = {
+        "input": {
+            "projectId": project_id,
+            "name": "technomarket",
+            "source": {
+                "repo": TECHNOMARKET_CLIENT_REPO,
+            },
+        }
+    }
+    result = await graphql(query, variables)
+    service_id = result["data"]["serviceCreate"]["id"]
+    await asyncio.sleep(2)
+
+    # 5. Set environment variables before first deploy
+    env_vars = {
+        "BOT_TOKEN": bot_token,
+        "ADMIN_IDS": admin_ids,
+        "DATABASE_URL": "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway",
+        "SAAS_PLATFORM_URL": saas_platform_url,
+        "SAAS_CLIENT_SLUG": slug,
+        "TEMPLATE_NAME": "technomarket_premium",
+        "PUBLIC_BASE_URL": f"https://client-{slug}.up.railway.app",
+    }
+    await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(2)
+
+    # 6. Trigger deployment
+    await trigger_deployment(project_id, service_id)
+    await asyncio.sleep(3)
+
+    # 7. Create Railway domain
+    await asyncio.sleep(5)
+    railway_url = await create_service_domain(service_id, environment_id)
+
+    return {
+        "project_id": project_id,
+        "service_id": service_id,
+        "url": railway_url,
     }
