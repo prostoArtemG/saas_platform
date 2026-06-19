@@ -303,6 +303,33 @@
             </div>
           </div>
         </div>
+        <!-- Card 6: TechnoMarket Premium — personal bot -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
+             onclick="window.location='/create-site?plan=premium&template=technomarket_premium'">
+          <div class="relative h-48 bg-gradient-to-br from-violet-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl font-black text-violet-300 mb-1">⚡</div>
+                <div class="text-xs text-white/40">TechnoMarket Premium</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 flex gap-1 flex-wrap justify-end">
+              <span class="bg-violet-500/20 text-violet-300 text-xs font-medium px-2 py-0.5 rounded-full border border-violet-400/30">Premium</span>
+              <span class="bg-yellow-500/20 text-yellow-300 text-xs font-medium px-2 py-0.5 rounded-full border border-yellow-400/30">🤖 Свій бот</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">⚡ TechnoMarket Premium</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t6_desc }}</p>
+            <div class="flex flex-wrap gap-2 mb-4">
+              {% for tag in t.templates.t6_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+            <div class="glass border border-violet-400/30 text-violet-300 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-violet-500/20 transition-all duration-200">
+              Обрати шаблон →
+            </div>
+          </div>
+        </div>
       </div>
   <section id="pricing" class="py-28 relative">
     <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>

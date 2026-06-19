@@ -68,6 +68,7 @@ ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_username   VARCHAR(64);
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_id         BIGINT;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_admin_ids  TEXT;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS dashboard_token VARCHAR(64);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS bot_mode       VARCHAR(16) NOT NULL DEFAULT 'shared';
 -- Backfill tokens for existing clients
 UPDATE clients
    SET dashboard_token = md5(random()::text || id::text || clock_timestamp()::text)

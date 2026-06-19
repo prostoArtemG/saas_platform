@@ -46,26 +46,36 @@ def _list_kb(clients: list[Client]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def _card_kb(client_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="💳 Платежи", callback_data=f"cli:payments:{client_id}"),
-                InlineKeyboardButton(text="🌐 Домен", callback_data=f"cli:domain:{client_id}"),
-            ],
-            [
-                InlineKeyboardButton(text="🤖 Подключить бота", callback_data=f"cli:connect_bot:{client_id}"),
-                InlineKeyboardButton(text="🔍 Проверить бота", callback_data=f"cli:check_bot:{client_id}"),
-            ],
-            [
-                InlineKeyboardButton(text="🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
-                InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
-            ],
-            [InlineKeyboardButton(text="📦 Сменить тариф", callback_data=f"cli:plan:{client_id}")],
-            [InlineKeyboardButton(text="🗑 Видалити", callback_data=f"client:delete:{client_id}")],
-            [InlineKeyboardButton(text="« К списку", callback_data="cli:list")],
-        ]
-    )
+def _card_kb(client_id: int, bot_mode: str = "shared") -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text="💳 Платежи", callback_data=f"cli:payments:{client_id}"),
+            InlineKeyboardButton(text="🌐 Домен", callback_data=f"cli:domain:{client_id}"),
+        ],
+    ]
+    if bot_mode == "personal":
+        rows.append([
+            InlineKeyboardButton(text="🤖 Підключити бота", callback_data=f"cli:connect_bot:{client_id}"),
+            InlineKeyboardButton(text="🔍 Перевірити бота", callback_data=f"cli:check_bot:{client_id}"),
+        ])
+        rows.append([
+            InlineKeyboardButton(text="▶️ Запустити вебхук", callback_data=f"cli:start_bot:{client_id}"),
+        ])
+    else:
+        rows.append([
+            InlineKeyboardButton(text="🤖 Підключити бота", callback_data=f"cli:connect_bot:{client_id}"),
+            InlineKeyboardButton(text="🔍 Перевірити бота", callback_data=f"cli:check_bot:{client_id}"),
+        ])
+    rows += [
+        [
+            InlineKeyboardButton(text="🔒 Заблокировать", callback_data=f"cli:block:{client_id}"),
+            InlineKeyboardButton(text="✅ Активировать", callback_data=f"cli:activate:{client_id}"),
+        ],
+        [InlineKeyboardButton(text="📦 Сменить тариф", callback_data=f"cli:plan:{client_id}")],
+        [InlineKeyboardButton(text="🗑 Видалити", callback_data=f"client:delete:{client_id}")],
+        [InlineKeyboardButton(text="« К списку", callback_data="cli:list")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _back_kb(client_id: int) -> InlineKeyboardMarkup:
@@ -171,6 +181,12 @@ async def _build_card_text(session, client: Client) -> str:
     else:
         bot_str = "not connected"
 
+    bot_mode = getattr(client, "bot_mode", "shared") or "shared"
+    if bot_mode == "personal":
+        bot_mode_str = "🔵 Особистий (personal)"
+    else:
+        bot_mode_str = "🌐 Загальний платформи (shared)"
+
     admin_tg = (
         f"<code>{client.admin_telegram_id}</code>"
         if client.admin_telegram_id
@@ -197,6 +213,7 @@ async def _build_card_text(session, client: Client) -> str:
         f"📅 Истекает: {expires}",
         f"💳 Последний платёж: {last_payment_str}",
         f"🤖 Bot: <b>{bot_str}</b>",
+        f"📲 Режим бота: {bot_mode_str}",
     ]
     return "\n".join(lines)
 
@@ -209,7 +226,8 @@ async def _send_card(message_target, client_id: int, *, edit: bool = False) -> b
             return False
         text = await _build_card_text(session, client)
 
-    kb = _card_kb(client_id)
+    bot_mode = getattr(client, "bot_mode", "shared") or "shared"
+    kb = _card_kb(client_id, bot_mode=bot_mode)
     if edit and isinstance(message_target, Message):
         await message_target.edit_text(text, parse_mode="HTML", reply_markup=kb)
     else:
@@ -600,6 +618,43 @@ async def cb_check_bot(call: CallbackQuery) -> None:
     )
     # Refresh card to reflect saved username/bot_id
     await _send_card(call.message, client_id, edit=True)
+
+
+@router.callback_query(F.data.startswith("cli:start_bot:"))
+async def cb_start_bot(call: CallbackQuery) -> None:
+    """Manually re-register the webhook for a personal client bot."""
+    try:
+        client_id = int(call.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await call.answer("bad id", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+    if client is None:
+        await call.answer("Клієнта не знайдено", show_alert=True)
+        return
+    if not client.telegram_bot_token:
+        await call.answer("❌ BOT_TOKEN не вказаний", show_alert=True)
+        return
+
+    from app.config import settings as _s
+    from app.services.client_bot_manager import start_client_bot, is_running
+
+    wb_base = _s.client_bot_webhook_base
+    if not wb_base:
+        await call.answer("❌ CLIENT_BOT_WEBHOOK_BASE не налаштований", show_alert=True)
+        return
+
+    if is_running(client.slug):
+        await call.answer("ℹ️ Вебхук вже активний", show_alert=True)
+        return
+
+    ok = await start_client_bot(wb_base, client.slug, client.telegram_bot_token)
+    if ok:
+        await call.answer("✅ Вебхук запущено", show_alert=True)
+    else:
+        await call.answer("❌ Не вдалось запустити — перевірте BOT_TOKEN", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("cli:connect_bot:"))

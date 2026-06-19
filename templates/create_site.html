@@ -211,6 +211,55 @@
           </p>
         </div>
 
+        <!-- Bot mode — shown only for TechnoMarket Premium -->
+        <div id="bot-mode-block" class="mb-5 hidden">
+          <label class="block text-sm font-medium text-white/70 mb-3">
+            Режим Telegram-бота <span class="text-brand-lime">*</span>
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="cursor-pointer">
+              <input type="radio" name="bot_mode" value="shared" id="bot-mode-shared"
+                     class="sr-only peer"
+                     {% if form.bot_mode != 'personal' %}checked{% endif %}>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">🤖</div>
+                <div class="font-semibold text-sm text-white">Загальний бот платформи</div>
+                <div class="text-xs text-white/40 mt-0.5">15$/міс · керується платформою</div>
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="bot_mode" value="personal" id="bot-mode-personal"
+                     class="sr-only peer"
+                     {% if form.bot_mode == 'personal' %}checked{% endif %}>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">⭐</div>
+                <div class="font-semibold text-sm text-white">Особистий бот клієнта</div>
+                <div class="text-xs text-white/40 mt-0.5">20$/міс · власний BOT_TOKEN</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- BOT_TOKEN — shown only when personal mode selected -->
+        <div id="bot-token-block" class="mb-5 hidden">
+          <label class="block text-sm font-medium text-white/70 mb-2">
+            BOT_TOKEN вашого бота <span class="text-brand-lime">*</span>
+          </label>
+          <input type="text" name="bot_token" id="bot-token-input"
+                 value="{{ form.bot_token | default('') }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base font-mono"
+                 placeholder="123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw"
+                 autocomplete="off" spellcheck="false" />
+          <small class="block mt-1 text-white/40 text-xs">
+            Отримайте токен у
+            <a href="https://t.me/BotFather" target="_blank" rel="noopener"
+               class="text-brand-lime hover:underline">@BotFather</a>.
+            Токен буде перевірено автоматично.
+          </small>
+        </div>
+
         <!-- Comment -->
         <div class="mb-8">
           <label class="block text-sm font-medium text-white/70 mb-2">{{ t.create_site.f_comment }}</label>
@@ -305,6 +354,39 @@
 
       planSel.addEventListener('change', sync);
       sync();
+    })();
+  </script>
+  <script>
+    (function () {
+      var botModeBlock    = document.getElementById('bot-mode-block');
+      var botTokenBlock   = document.getElementById('bot-token-block');
+      var botModePersonal = document.getElementById('bot-mode-personal');
+      var botTokenInput   = document.getElementById('bot-token-input');
+
+      function syncBotMode() {
+        var premRadio = document.getElementById('tpl-premium');
+        var isPrem = premRadio && premRadio.checked && !premRadio.disabled;
+        if (isPrem) {
+          botModeBlock.classList.remove('hidden');
+          var isPersonal = botModePersonal && botModePersonal.checked;
+          botTokenBlock.classList[isPersonal ? 'remove' : 'add']('hidden');
+          if (botTokenInput) botTokenInput.required = isPersonal;
+        } else {
+          botModeBlock.classList.add('hidden');
+          botTokenBlock.classList.add('hidden');
+          if (botTokenInput) { botTokenInput.required = false; }
+        }
+      }
+
+      document.querySelectorAll('input[name="site_type"]').forEach(function (r) {
+        r.addEventListener('change', syncBotMode);
+      });
+      document.querySelectorAll('input[name="bot_mode"]').forEach(function (r) {
+        r.addEventListener('change', syncBotMode);
+      });
+      var planSelectEl = document.getElementById('plan-select');
+      if (planSelectEl) planSelectEl.addEventListener('change', syncBotMode);
+      syncBotMode();
     })();
   </script>
 </body>

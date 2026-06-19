@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = Field("", alias="CLOUDINARY_API_KEY")
     cloudinary_api_secret: str = Field("", alias="CLOUDINARY_API_SECRET")
 
+    # Base URL for personal client bot webhooks.
+    # Example: https://shopplatform.app
+    # If empty, personal client bots will not be started automatically.
+    client_bot_webhook_base: str = Field("", alias="CLIENT_BOT_WEBHOOK_BASE")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):

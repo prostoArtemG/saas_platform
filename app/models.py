@@ -41,6 +41,9 @@ class Client(Base):
         index=True,
     )
     dashboard_token: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    bot_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="shared", default="shared"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

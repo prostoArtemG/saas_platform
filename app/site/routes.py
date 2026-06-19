@@ -162,6 +162,7 @@ async def create_site_form(
             "form": {
                 "plan": plan_matched,
                 "site_type": template or "",
+                "bot_mode": "shared",
             },
         },
     )
@@ -178,6 +179,7 @@ async def create_site_submit(
     plan: str = Form(""),
     comment: str = Form(""),
     bot_token: str = Form(""),
+    bot_mode: str = Form("shared"),
     admin_telegram_id: str = Form(""),
     admin_preview: str = Form(""),
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
@@ -188,6 +190,7 @@ async def create_site_submit(
     business_name = _clean(business_name.strip()[:255]) or ""
     telegram = telegram.strip()[:128]
     bot_token = bot_token.strip()[:255]
+    bot_mode = "personal" if bot_mode.strip() == "personal" else "shared"
     admin_telegram_id = admin_telegram_id.strip()[:20]
     site_type = site_type.strip()[:64]
     plan = plan.strip()[:64]
@@ -215,6 +218,7 @@ async def create_site_submit(
                     "plan": plan,
                     "comment": comment or "",
                     "bot_token": bot_token,
+                    "bot_mode": bot_mode,
                     "admin_telegram_id": admin_telegram_id,
                 },
             },
@@ -235,6 +239,29 @@ async def create_site_submit(
         if site_type == "technomarket_premium" and not _plan_lower.startswith("premium"):
             return _form_error(
                 "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
+            )
+        if site_type == "technomarket_premium" and bot_mode == "personal" and not bot_token:
+            return _form_error(
+                "Для режиму «Особистий бот» необхідно вказати BOT_TOKEN."
+            )
+
+    # Verify personal bot token via Telegram API (before DB operations)
+    _bot_info: dict | None = None
+    if site_type == "technomarket_premium" and bot_mode == "personal" and bot_token and not _is_admin_preview:
+        try:
+            import httpx as _httpx
+            async with _httpx.AsyncClient(timeout=10) as _hc:
+                _r = await _hc.get(f"https://api.telegram.org/bot{bot_token}/getMe")
+                _data = _r.json()
+            if not _data.get("ok"):
+                return _form_error(
+                    f"Невалідний BOT_TOKEN: {_data.get('description', 'помилка Telegram API')}"
+                )
+            _bot_info = _data["result"]
+        except Exception as _e:
+            logger.warning("Bot token verification failed: %s", _e)
+            return _form_error(
+                "Не вдалось перевірити BOT_TOKEN. Перевірте токен та спробуйте знову."
             )
 
     # Persist a SiteRequest as audit log (best-effort, non-blocking failure).
@@ -307,13 +334,24 @@ async def create_site_submit(
             slug = await _allocate_slug(session, business_name)
 
             # 3. Create Client + flush + onboard, all-or-nothing
+            # For personal bot mode, admin TG ID is sourced from the telegram field
+            _admin_tg_id = admin_telegram_id
+            if template_name == "technomarket_premium" and bot_mode == "personal":
+                if telegram.strip().isdigit():
+                    _admin_tg_id = telegram.strip()
             client = Client(
                 business_name=business_name,
                 slug=slug,
                 template_name=template_name,
                 domain_status="pending",
                 status="active",
-                admin_telegram_id=int(admin_telegram_id) if admin_telegram_id.isdigit() else None,
+                admin_telegram_id=int(_admin_tg_id) if _admin_tg_id.isdigit() else None,
+                telegram_bot_token=(
+                    bot_token
+                    if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token
+                    else None
+                ),
+                bot_mode=bot_mode if template_name == "technomarket_premium" else "shared",
                 dashboard_token=secrets.token_urlsafe(24),
             )
             session.add(client)
@@ -352,6 +390,28 @@ async def create_site_submit(
                 await bot.send_message(admin_id, text, parse_mode="HTML")
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
+
+    # Save personal bot username/id from earlier token verification
+    if template_name == "technomarket_premium" and bot_mode == "personal" and _bot_info:
+        try:
+            async with AsyncSessionLocal() as _upd:
+                _c = await _upd.get(Client, client.id)
+                if _c:
+                    _c.bot_username = _bot_info.get("username")
+                    _c.bot_id = _bot_info.get("id")
+                    await _upd.commit()
+        except Exception as _e:
+            logger.warning("Could not save personal bot info: %s", _e)
+
+    # Register webhook for new personal bot (best-effort, non-blocking)
+    if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token:
+        _wb_base = settings.client_bot_webhook_base
+        if _wb_base:
+            try:
+                from app.services.client_bot_manager import start_client_bot
+                await start_client_bot(_wb_base, result.slug, bot_token)
+            except Exception as _e:
+                logger.warning("Could not start personal bot for %s: %s", result.slug, _e)
 
     # Auto-deploy only for premium_store template
     deploy_result = None
