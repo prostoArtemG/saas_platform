@@ -244,6 +244,13 @@ async def create_site_submit(
             return _form_error(
                 "Для режиму «Особистий бот» необхідно вказати BOT_TOKEN."
             )
+        # For personal bot, Telegram field must be a numeric ID (becomes ADMIN_IDS in Railway)
+        _check_tg_id = admin_telegram_id.strip() or telegram.strip().lstrip("@")
+        if site_type == "technomarket_premium" and bot_mode == "personal" and not _check_tg_id.isdigit():
+            return _form_error(
+                "Для режиму «Особистий бот» необхідно вказати ваш числовий Telegram ID. "
+                "Дізнайтесь його через @userinfobot."
+            )
 
     # Verify personal bot token via Telegram API (before DB operations)
     _bot_info: dict | None = None
@@ -342,6 +349,17 @@ async def create_site_submit(
                 _raw_tg = telegram.strip().lstrip("@")
                 if _raw_tg.isdigit():
                     _admin_tg_id = _raw_tg
+            logger.info(
+                "create_site_submit: resolved admin_tg_id=%s "
+                "(from admin_telegram_id=%r, telegram=%r) template=%s bot_mode=%s",
+                _admin_tg_id, admin_telegram_id, telegram, template_name, bot_mode,
+            )
+            if bot_mode == "personal" and not _admin_tg_id.isdigit():
+                logger.warning(
+                    "create_site_submit: personal bot but admin_tg_id empty — "
+                    "ADMIN_IDS will fall back to platform admin. telegram=%r",
+                    telegram,
+                )
             client = Client(
                 business_name=business_name,
                 slug=slug,
@@ -373,8 +391,8 @@ async def create_site_submit(
         return _form_error(t["create_site"]["error_provision"], status=500)
 
     logger.info(
-        "Self-service onboarding OK: client_id=%s slug=%s plan=%s",
-        result.client_id, result.slug, result.plan_name,
+        "Self-service onboarding OK: client_id=%s slug=%s plan=%s admin_telegram_id=%s bot_mode=%s",
+        result.client_id, result.slug, result.plan_name, client.admin_telegram_id, client.bot_mode,
     )
 
     # Notify admins (best-effort)
