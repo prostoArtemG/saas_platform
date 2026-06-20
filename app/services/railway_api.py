@@ -13,6 +13,7 @@ GITHUB_REPO_PREMIUM = "prostoArtemG/premium_store"
 TECHNOMARKET_CLIENT_REPO = os.getenv(
     "TECHNOMARKET_CLIENT_REPO", "prostoArtemG/technomarket_client_template"
 )
+PLATFORM_DOMAIN = os.getenv("PLATFORM_DOMAIN", "shopplatform.app")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -380,7 +381,7 @@ async def deploy_technomarket_client(
     await asyncio.sleep(2)
 
     # 5. Set environment variables before first deploy
-    _site_url = f"https://client-{slug}.up.railway.app"
+    _site_url = f"https://{slug}.{PLATFORM_DOMAIN}"
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
@@ -414,66 +415,17 @@ async def deploy_technomarket_client(
     await asyncio.sleep(5)
     railway_url = await create_service_domain(service_id, environment_id)
 
+    # 8. Register custom domain {slug}.PLATFORM_DOMAIN on the Railway service
+    custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
+    await add_custom_domain(service_id, environment_id, custom_domain)
+    logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
+
     return {
         "project_id": project_id,
         "service_id": service_id,
         "url": railway_url,
+        "custom_domain_url": f"https://{custom_domain}",
     }
-
-
-async def redeploy_technomarket_client(
-    project_id: str,
-    service_id: str,
-    slug: str,
-    admin_ids: str,
-    saas_platform_url: str,
-    cloudinary_cloud: str = "",
-    cloudinary_key: str = "",
-    cloudinary_secret: str = "",
-) -> None:
-    """Update env vars and trigger redeploy for an existing client Railway project.
-
-    Does NOT recreate Postgres or the service — only refreshes variables and kicks off deploy.
-    Raises on failure so the caller can record deployment_status='failed'.
-    """
-    environment_id = await get_environment_id(project_id)
-
-    _site_url = f"https://client-{slug}.up.railway.app"
-    env_vars = {
-        "ADMIN_IDS": admin_ids,
-        "SAAS_PLATFORM_URL": saas_platform_url,
-        "SAAS_CLIENT_SLUG": slug,
-        "TEMPLATE_NAME": "technomarket_premium",
-        "PUBLIC_BASE_URL": _site_url,
-        "SITE_URL": _site_url,
-        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
-    }
-    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
-        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
-        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
-        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
-        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
-    else:
-        logger.warning(
-            "redeploy_technomarket_client: Cloudinary credentials not set for slug=%s, "
-            "image upload will be unavailable.",
-            slug,
-        )
-
-    await set_variables(project_id, service_id, environment_id, env_vars)
-    await asyncio.sleep(1)
-
-    variables_deploy = {
-        "serviceId": service_id,
-        "environmentId": environment_id,
-    }
-    query = """
-    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
-        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
-    }
-    """
-    result = await graphql(query, variables_deploy)
-    logger.info("redeploy_technomarket_client result for slug=%s: %s", slug, result)
 
 
 async def redeploy_technomarket_client(
@@ -495,7 +447,7 @@ async def redeploy_technomarket_client(
     """
     environment_id = await get_environment_id(project_id)
 
-    _site_url = railway_url or f"https://client-{slug}.up.railway.app"
+    _site_url = f"https://{slug}.{PLATFORM_DOMAIN}"
     env_vars = {
         "ADMIN_IDS": admin_ids,
         "SITE_URL": _site_url,
@@ -513,6 +465,11 @@ async def redeploy_technomarket_client(
     logger.info("Client deploy ADMIN_IDS=%s slug=%s", admin_ids, slug)
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(1)
+
+    # Ensure custom domain is registered (idempotent — safe to call on redeploy)
+    custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
+    await add_custom_domain(service_id, environment_id, custom_domain)
+    logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
 
     # Reuse the environment_id we already fetched — no extra API call
     query = """

@@ -729,6 +729,7 @@ async def cb_redeploy(call: CallbackQuery) -> None:
             slug=client.slug,
             admin_ids=admin_ids,
             saas_platform_url=saas_url,
+            railway_url=getattr(client, "railway_url", "") or "",
             cloudinary_cloud=_s.cloudinary_cloud_name,
             cloudinary_key=_s.cloudinary_api_key,
             cloudinary_secret=_s.cloudinary_api_secret,

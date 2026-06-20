@@ -474,7 +474,10 @@ async def create_site_submit(
                     if _deploy_ok and _deploy_result:
                         _dc.railway_project_id = _deploy_result.get("project_id")
                         _dc.railway_service_id = _deploy_result.get("service_id")
-                        _dc.railway_url = _deploy_result.get("url")
+                        _dc.railway_url = (
+                            _deploy_result.get("custom_domain_url")
+                            or _deploy_result.get("url")
+                        )
                         _dc.deployment_status = "ready"
                         _dc.deployment_error = None
                     else:
@@ -1157,6 +1160,7 @@ async def dashboard_redeploy(
                 slug=slug,
                 admin_ids=admin_ids,
                 saas_platform_url=saas_url,
+                railway_url=client.railway_url or "",
                 cloudinary_cloud=settings.cloudinary_cloud_name,
                 cloudinary_key=settings.cloudinary_api_key,
                 cloudinary_secret=settings.cloudinary_api_secret,
