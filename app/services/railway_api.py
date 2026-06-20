@@ -419,3 +419,51 @@ async def deploy_technomarket_client(
         "service_id": service_id,
         "url": railway_url,
     }
+
+
+async def redeploy_technomarket_client(
+    project_id: str,
+    service_id: str,
+    slug: str,
+    admin_ids: str,
+    saas_platform_url: str,
+    railway_url: str = "",
+    cloudinary_cloud: str = "",
+    cloudinary_key: str = "",
+    cloudinary_secret: str = "",
+) -> None:
+    """Update env vars and trigger a redeploy for an existing personal client service.
+
+    Unlike deploy_technomarket_client, this does NOT create a new project or
+    Postgres — it only refreshes variables and fires a new deployment on the
+    existing service.
+    """
+    environment_id = await get_environment_id(project_id)
+
+    _site_url = railway_url or f"https://client-{slug}.up.railway.app"
+    env_vars = {
+        "ADMIN_IDS": admin_ids,
+        "SITE_URL": _site_url,
+        "PUBLIC_BASE_URL": _site_url,
+        "SAAS_PLATFORM_URL": saas_platform_url,
+        "SAAS_CLIENT_SLUG": slug,
+        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
+    }
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
+        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
+        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
+
+    logger.info("Client deploy ADMIN_IDS=%s slug=%s", admin_ids, slug)
+    await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(1)
+
+    # Reuse the environment_id we already fetched — no extra API call
+    query = """
+    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
+    }
+    """
+    result = await graphql(query, {"serviceId": service_id, "environmentId": environment_id})
+    logger.info("redeploy_technomarket_client triggered: service=%s result=%s", service_id, result)

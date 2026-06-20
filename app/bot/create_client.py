@@ -94,9 +94,19 @@ async def step_bot_token(message: Message, state: FSMContext) -> None:
     if ":" not in token or len(token) < 20:
         await message.answer("Похоже на некорректный токен. Повтори.")
         return
-    await state.update_data(bot_token=token)
+    creator_id = message.from_user.id
+    await state.update_data(bot_token=token, creator_id=creator_id)
     await state.set_state(CreateClient.admin_tg_id)
-    await message.answer("Шаг 4/5. Введи admin_telegram_id клиента (число).")
+    await message.answer(
+        f"Шаг 4/5. Введи admin_telegram_id клиента (число).\n\n"
+        f"Или используй свой ID:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text=f"👤 Мой ID: {creator_id}",
+                callback_data=f"create:use_my_id:{creator_id}",
+            ),
+        ]]),
+    )
 
 
 @router.message(CreateClient.admin_tg_id, F.text)
@@ -107,6 +117,22 @@ async def step_admin_tg_id(message: Message, state: FSMContext) -> None:
     except ValueError:
         await message.answer("Это должно быть число. Повтори.")
         return
+    await _proceed_after_admin_id(message, state, admin_id)
+
+
+@router.callback_query(F.data.startswith("create:use_my_id:"), StateFilter(CreateClient.admin_tg_id))
+async def use_my_id(cb: CallbackQuery, state: FSMContext) -> None:
+    """Admin taps the ‘My ID’ button — use their own Telegram ID as client’s admin."""
+    await cb.answer()
+    try:
+        admin_id = int(cb.data.split(":")[-1])
+    except ValueError:
+        return
+    await _proceed_after_admin_id(cb.message, state, admin_id)
+
+
+async def _proceed_after_admin_id(msg: Message, state: FSMContext, admin_id: int) -> None:
+    """Shared logic after admin_tg_id is resolved: save and move to plan."""
     await state.update_data(admin_tg_id=admin_id)
 
     async with AsyncSessionLocal() as session:
@@ -115,7 +141,7 @@ async def step_admin_tg_id(message: Message, state: FSMContext) -> None:
 
     if not plans:
         await state.clear()
-        await message.answer(
+        await msg.answer(
             "В системе нет тарифов. Сначала добавь хотя бы один тариф в таблицу plans.",
             reply_markup=admin_main_menu(),
         )
@@ -133,7 +159,7 @@ async def step_admin_tg_id(message: Message, state: FSMContext) -> None:
         ]
     )
     await state.set_state(CreateClient.plan)
-    await message.answer("Шаг 5/5. Выбери тариф:", reply_markup=kb)
+    await msg.answer("Шаг 5/5. Выбери тариф:", reply_markup=kb)
 
 
 @router.callback_query(CreateClient.plan, F.data.startswith("cc:plan:"))

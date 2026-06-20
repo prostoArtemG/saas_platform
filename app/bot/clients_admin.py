@@ -46,7 +46,7 @@ def _list_kb(clients: list[Client]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def _card_kb(client_id: int, bot_mode: str = "shared") -> InlineKeyboardMarkup:
+def _card_kb(client_id: int, bot_mode: str = "shared", has_railway: bool = False) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = [
         [
             InlineKeyboardButton(text="💳 Платежи", callback_data=f"cli:payments:{client_id}"),
@@ -65,6 +65,10 @@ def _card_kb(client_id: int, bot_mode: str = "shared") -> InlineKeyboardMarkup:
         rows.append([
             InlineKeyboardButton(text="🤖 Підключити бота", callback_data=f"cli:connect_bot:{client_id}"),
             InlineKeyboardButton(text="🔍 Перевірити бота", callback_data=f"cli:check_bot:{client_id}"),
+        ])
+    if has_railway:
+        rows.append([
+            InlineKeyboardButton(text="🔄 Оновити сайт клієнта", callback_data=f"cli:redeploy:{client_id}"),
         ])
     rows += [
         [
@@ -242,7 +246,11 @@ async def _send_card(message_target, client_id: int, *, edit: bool = False) -> b
         text = await _build_card_text(session, client)
 
     bot_mode = getattr(client, "bot_mode", "shared") or "shared"
-    kb = _card_kb(client_id, bot_mode=bot_mode)
+    has_railway = bool(
+        getattr(client, "railway_project_id", None)
+        and getattr(client, "railway_service_id", None)
+    )
+    kb = _card_kb(client_id, bot_mode=bot_mode, has_railway=has_railway)
     if edit and isinstance(message_target, Message):
         await message_target.edit_text(text, parse_mode="HTML", reply_markup=kb)
     else:
@@ -851,3 +859,82 @@ async def plan_change_set(callback: CallbackQuery) -> None:
         parse_mode="HTML",
         reply_markup=_back_kb(client_id),
     )
+
+# ── 🔄 Redeploy client site ───────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("cli:redeploy:"))
+async def cli_redeploy(cb: CallbackQuery) -> None:
+    """Refresh env vars and trigger a new Railway deployment for the client."""
+    await cb.answer()
+    try:
+        client_id = int(cb.data.split(":")[-1])
+    except ValueError:
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+        if client is None:
+            await cb.message.answer("❌ Клієнта не знайдено.")
+            return
+        if not client.railway_project_id or not client.railway_service_id:
+            await cb.message.answer(
+                "❌ У клієнта немає Railway project/service ID — redeploy недоступний."
+            )
+            return
+
+        from app.config import settings as _s
+
+        # Resolve ADMIN_IDS
+        admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
+        if not admin_ids and _s.admin_ids:
+            admin_ids = str(_s.admin_ids[0])
+            logger.warning(
+                "cli_redeploy: admin_telegram_id empty for client_id=%s slug=%s"
+                " — falling back to platform admin %s",
+                client_id, client.slug, admin_ids,
+            )
+        logger.info("cli_redeploy: ADMIN_IDS=%s slug=%s", admin_ids, client.slug)
+
+        client.deployment_status = "updating"
+        client.deployment_error = None
+        await session.commit()
+
+    try:
+        from app.services.railway_api import redeploy_technomarket_client
+        await redeploy_technomarket_client(
+            project_id=client.railway_project_id,
+            service_id=client.railway_service_id,
+            slug=client.slug,
+            admin_ids=admin_ids,
+            saas_platform_url="",
+            railway_url=client.railway_url or "",
+            cloudinary_cloud=_s.cloudinary_cloud_name,
+            cloudinary_key=_s.cloudinary_api_key,
+            cloudinary_secret=_s.cloudinary_api_secret,
+        )
+        async with AsyncSessionLocal() as session:
+            upd = await session.get(Client, client_id)
+            if upd:
+                upd.deployment_status = "ready"
+                await session.commit()
+        await cb.message.answer(
+            f"✅ <b>Оновлення запущено</b>\n\n"
+            f"Клієнт: <b>{client.business_name}</b>\n"
+            f"ADMIN_IDS: <code>{admin_ids}</code>\n"
+            f"Railway перезапускає сервіс — зачекайте 1–2 хвилини.",
+            parse_mode="HTML",
+            reply_markup=_back_kb(client_id),
+        )
+    except Exception as exc:
+        logger.warning("cli_redeploy failed for client_id=%s: %s", client_id, exc, exc_info=True)
+        async with AsyncSessionLocal() as session:
+            upd = await session.get(Client, client_id)
+            if upd:
+                upd.deployment_status = "failed"
+                upd.deployment_error = str(exc)[:500]
+                await session.commit()
+        await cb.message.answer(
+            f"❌ <b>Помилка redeploy</b>\n\n<code>{str(exc)[:400]}</code>",
+            parse_mode="HTML",
+            reply_markup=_back_kb(client_id),
+        )
