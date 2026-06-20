@@ -17,7 +17,7 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, ClientSettings, Order, Payment, Plan, Product, ProductSpec, SiteEvent, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
-from app.services.railway_api import deploy_shop_bot, deploy_technomarket_client
+from app.services.railway_api import deploy_shop_bot, deploy_technomarket_client, redeploy_technomarket_client
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -437,9 +437,8 @@ async def create_site_submit(
     # Auto-deploy for technomarket_premium + personal bot mode
     if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token and settings.client_deploy_enabled:
         # Resolve ADMIN_IDS for the deployed client:
-        # _admin_tg_id already prefers the telegram field if it is a digit.
-        # Fall back to the first platform admin when nothing is set.
-        _deploy_admin_ids = _admin_tg_id if _admin_tg_id.isdigit() else ""
+        # Use client.admin_telegram_id (already persisted), fallback to platform admin.
+        _deploy_admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
         if not _deploy_admin_ids and settings.admin_ids:
             _deploy_admin_ids = str(settings.admin_ids[0])
             logger.warning(
@@ -1078,6 +1077,12 @@ async def client_dashboard(
                 "admin_telegram_id": client.admin_telegram_id,
                 "created_at": client.created_at,
                 "template_name": client.template_name or "technovlada",
+                "bot_mode": client.bot_mode or "shared",
+                "railway_project_id": client.railway_project_id,
+                "railway_service_id": client.railway_service_id,
+                "railway_url": client.railway_url,
+                "deployment_status": client.deployment_status,
+                "deployment_error": client.deployment_error,
             },
             "subscription": {
                 "status": sub.status if sub else None,
@@ -1107,6 +1112,66 @@ async def client_dashboard(
     ctx["dashboard_token"] = client.dashboard_token
 
     return templates.TemplateResponse("dashboard.html", ctx)
+
+
+@router.post("/dashboard/{slug}/redeploy")
+async def dashboard_redeploy(
+    request: Request,
+    slug: str,
+    token: Optional[str] = None,
+) -> RedirectResponse:
+    """Trigger a Railway redeploy of the client's personal bot project."""
+    _token_param = f"?token={token}" if token else ""
+    _back = f"/dashboard/{slug}{_token_param}"
+
+    async with AsyncSessionLocal() as session:
+        client = await session.scalar(select(Client).where(Client.slug == slug))
+        if client is None:
+            raise HTTPException(status_code=404, detail="Client not found")
+
+        _check_dashboard_token(client, token)
+
+        project_id = client.railway_project_id
+        service_id = client.railway_service_id
+        if not project_id or not service_id:
+            # No Railway project — redirect back without action
+            return RedirectResponse(_back + ("&" if "?" in _back else "?") + "redeploy=no_project", status_code=303)
+
+        # Resolve ADMIN_IDS
+        admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
+        if not admin_ids and settings.admin_ids:
+            admin_ids = str(settings.admin_ids[0])
+            logger.warning("dashboard_redeploy: admin_telegram_id empty slug=%s fallback to %s", slug, admin_ids)
+        logger.info("dashboard_redeploy: admin_ids=%s slug=%s", admin_ids, slug)
+
+        saas_url = (
+            settings.client_bot_webhook_base.rstrip("/")
+            if settings.client_bot_webhook_base
+            else f"https://{settings.platform_domain}"
+        )
+
+        try:
+            await redeploy_technomarket_client(
+                project_id=project_id,
+                service_id=service_id,
+                slug=slug,
+                admin_ids=admin_ids,
+                saas_platform_url=saas_url,
+                cloudinary_cloud=settings.cloudinary_cloud_name,
+                cloudinary_key=settings.cloudinary_api_key,
+                cloudinary_secret=settings.cloudinary_api_secret,
+            )
+            client.deployment_status = "updating"
+            client.deployment_error = None
+            logger.info("dashboard_redeploy: deploy triggered for slug=%s", slug)
+        except Exception as exc:
+            logger.warning("dashboard_redeploy failed for slug=%s: %s", slug, exc, exc_info=True)
+            client.deployment_status = "failed"
+            client.deployment_error = str(exc)[:1000]
+
+        await session.commit()
+
+    return RedirectResponse(_back + ("&" if "?" in _back else "?") + "redeploy=ok", status_code=303)
 
 
 @router.get("/site/{slug}", response_class=HTMLResponse)

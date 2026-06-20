@@ -230,8 +230,56 @@
             {% endif %}
           </div>
         </div>
-      </div>
+        <!-- Personal bot deploy status (only for personal mode with Railway project) -->
+        {% if client.bot_mode == 'personal' and client.railway_project_id and client.railway_service_id %}
+        <div class="glass-card rounded-2xl p-6 mt-4 animate-fade-up"
+             style="border: 1px solid {% if client.deployment_status == 'ready' %}rgba(163,230,53,0.3){% elif client.deployment_status == 'failed' %}rgba(239,68,68,0.3){% elif client.deployment_status == 'updating' %}rgba(251,191,36,0.3){% else %}rgba(255,255,255,0.08){% endif %};">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <span class="text-xs font-medium text-white/40 uppercase tracking-wider">Особистий бот (Railway)</span>
+              <div class="flex items-center gap-2 mt-2">
+                {% if client.deployment_status == 'ready' %}
+                  <span class="badge badge-active"><span class="dot bg-brand-lime animate-pulse"></span>Ready</span>
+                {% elif client.deployment_status == 'updating' %}
+                  <span class="badge badge-warn"><span class="dot bg-amber-400 animate-pulse"></span>Updating…</span>
+                {% elif client.deployment_status == 'failed' %}
+                  <span class="badge" style="background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3);">
+                    <span class="dot" style="background:#f87171;"></span>Failed
+                  </span>
+                {% else %}
+                  <span class="badge badge-mute"><span class="dot bg-white/40"></span>{{ client.deployment_status or '—' }}</span>
+                {% endif %}
+                {% if client.railway_url %}
+                  <a href="{{ client.railway_url }}" target="_blank" rel="noopener"
+                     class="text-brand-lime text-sm font-medium hover:underline truncate max-w-xs">
+                    {{ client.railway_url }}
+                  </a>
+                {% endif %}
+              </div>
+              {% if client.deployment_status == 'failed' and client.deployment_error %}
+              <p class="text-xs text-red-400/80 mt-2 font-mono break-all">{{ client.deployment_error[:200] }}</p>
+              {% endif %}
+            </div>
+            <!-- Redeploy button -->
+            <form method="post" action="/dashboard/{{ client.slug }}/redeploy{% if dashboard_token %}?token={{ dashboard_token }}{% endif %}"
+                  onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Запускаємо…'">
+              <button type="submit"
+                      class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                             bg-white/5 border border-white/15 text-white/80
+                             hover:bg-white/10 hover:border-brand-lime/40 hover:text-white
+                             transition-all whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                🔄 Оновити сайт
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
 
+      </div>
     </div>
   </main>
 </body>
