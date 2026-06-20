@@ -22,6 +22,7 @@ from app.bot.filters import AdminFilter
 from app.bot.keyboards import BTN_CLIENTS, admin_main_menu
 from app.db import AsyncSessionLocal
 from app.models import Client, Domain, Payment, Plan, Subscription
+from app.services.railway_api import redeploy_technomarket_client
 
 logger = logging.getLogger(__name__)
 
@@ -678,6 +679,78 @@ async def cb_start_bot(call: CallbackQuery) -> None:
         await call.answer("✅ Вебхук запущено", show_alert=True)
     else:
         await call.answer("❌ Не вдалось запустити — перевірте BOT_TOKEN", show_alert=True)
+
+
+# ----- redeploy ---------------------------------------------------------------
+
+@router.callback_query(F.data.startswith("cli:redeploy:"))
+async def cb_redeploy(call: CallbackQuery) -> None:
+    """Refresh env vars and trigger a new Railway deploy for the client project."""
+    try:
+        client_id = int(call.data.split(":", 2)[2])
+    except (ValueError, IndexError):
+        await call.answer("bad id", show_alert=True)
+        return
+
+    async with AsyncSessionLocal() as session:
+        client = await session.get(Client, client_id)
+    if client is None:
+        await call.answer("Клієнта не знайдено", show_alert=True)
+        return
+
+    project_id = getattr(client, "railway_project_id", None)
+    service_id = getattr(client, "railway_service_id", None)
+    if not project_id or not service_id:
+        await call.answer("❌ Railway project/service ID не знайдено", show_alert=True)
+        return
+
+    from app.config import settings as _s
+
+    # Resolve ADMIN_IDS: prefer client's own Telegram ID, fallback to platform admin
+    admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
+    if not admin_ids and _s.admin_ids:
+        admin_ids = str(_s.admin_ids[0])
+        logger.warning(
+            "cb_redeploy: admin_telegram_id empty for slug=%s — fallback to platform admin %s",
+            client.slug, admin_ids,
+        )
+    logger.info("cb_redeploy: admin_ids=%s slug=%s", admin_ids, client.slug)
+
+    saas_url = (
+        _s.client_bot_webhook_base.rstrip("/")
+        if _s.client_bot_webhook_base
+        else f"https://{_s.platform_domain}"
+    )
+
+    try:
+        await redeploy_technomarket_client(
+            project_id=project_id,
+            service_id=service_id,
+            slug=client.slug,
+            admin_ids=admin_ids,
+            saas_platform_url=saas_url,
+            cloudinary_cloud=_s.cloudinary_cloud_name,
+            cloudinary_key=_s.cloudinary_api_key,
+            cloudinary_secret=_s.cloudinary_api_secret,
+        )
+        async with AsyncSessionLocal() as session:
+            c = await session.get(Client, client_id)
+            if c:
+                c.deployment_status = "updating"
+                c.deployment_error = None
+                await session.commit()
+        await call.answer("✅ Оновлення запущено", show_alert=True)
+    except Exception as exc:
+        logger.warning("cb_redeploy failed for slug=%s: %s", client.slug, exc, exc_info=True)
+        async with AsyncSessionLocal() as session:
+            c = await session.get(Client, client_id)
+            if c:
+                c.deployment_status = "failed"
+                c.deployment_error = str(exc)[:1000]
+                await session.commit()
+        await call.answer(f"❌ Помилка: {str(exc)[:120]}", show_alert=True)
+
+    await _send_card(call.message, client_id, edit=True)
 
 
 @router.callback_query(F.data.startswith("cli:connect_bot:"))

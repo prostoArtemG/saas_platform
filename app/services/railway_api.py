@@ -427,6 +427,61 @@ async def redeploy_technomarket_client(
     slug: str,
     admin_ids: str,
     saas_platform_url: str,
+    cloudinary_cloud: str = "",
+    cloudinary_key: str = "",
+    cloudinary_secret: str = "",
+) -> None:
+    """Update env vars and trigger redeploy for an existing client Railway project.
+
+    Does NOT recreate Postgres or the service — only refreshes variables and kicks off deploy.
+    Raises on failure so the caller can record deployment_status='failed'.
+    """
+    environment_id = await get_environment_id(project_id)
+
+    _site_url = f"https://client-{slug}.up.railway.app"
+    env_vars = {
+        "ADMIN_IDS": admin_ids,
+        "SAAS_PLATFORM_URL": saas_platform_url,
+        "SAAS_CLIENT_SLUG": slug,
+        "TEMPLATE_NAME": "technomarket_premium",
+        "PUBLIC_BASE_URL": _site_url,
+        "SITE_URL": _site_url,
+        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
+    }
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
+        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
+        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
+    else:
+        logger.warning(
+            "redeploy_technomarket_client: Cloudinary credentials not set for slug=%s, "
+            "image upload will be unavailable.",
+            slug,
+        )
+
+    await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(1)
+
+    variables_deploy = {
+        "serviceId": service_id,
+        "environmentId": environment_id,
+    }
+    query = """
+    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
+    }
+    """
+    result = await graphql(query, variables_deploy)
+    logger.info("redeploy_technomarket_client result for slug=%s: %s", slug, result)
+
+
+async def redeploy_technomarket_client(
+    project_id: str,
+    service_id: str,
+    slug: str,
+    admin_ids: str,
+    saas_platform_url: str,
     railway_url: str = "",
     cloudinary_cloud: str = "",
     cloudinary_key: str = "",
