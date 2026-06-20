@@ -723,7 +723,7 @@ async def cb_redeploy(call: CallbackQuery) -> None:
     )
 
     try:
-        await redeploy_technomarket_client(
+        _redeploy_res = await redeploy_technomarket_client(
             project_id=project_id,
             service_id=service_id,
             slug=client.slug,
@@ -738,9 +738,15 @@ async def cb_redeploy(call: CallbackQuery) -> None:
             c = await session.get(Client, client_id)
             if c:
                 c.deployment_status = "updating"
-                c.deployment_error = None
+                if not _redeploy_res.get("domain_ok"):
+                    _derr = _redeploy_res.get("domain_error") or "unknown domain error"
+                    c.deployment_error = f"Custom domain error: {_derr}"
+                    logger.error("cb_redeploy: domain failed slug=%s: %s", client.slug, _derr)
+                else:
+                    c.deployment_error = None
                 await session.commit()
-        await call.answer("✅ Оновлення запущено", show_alert=True)
+        _dom_note = "" if _redeploy_res.get("domain_ok") else f"\n⚠️ Custom domain: {_redeploy_res.get('domain_error', '')[:80]}"
+        await call.answer(f"✅ Оновлення запущено{_dom_note}", show_alert=True)
     except Exception as exc:
         logger.warning("cb_redeploy failed for slug=%s: %s", client.slug, exc, exc_info=True)
         async with AsyncSessionLocal() as session:
@@ -975,7 +981,7 @@ async def cli_redeploy(cb: CallbackQuery) -> None:
 
     try:
         from app.services.railway_api import redeploy_technomarket_client
-        await redeploy_technomarket_client(
+        _redeploy_res = await redeploy_technomarket_client(
             project_id=client.railway_project_id,
             service_id=client.railway_service_id,
             slug=client.slug,
@@ -986,16 +992,20 @@ async def cli_redeploy(cb: CallbackQuery) -> None:
             cloudinary_key=_s.cloudinary_api_key,
             cloudinary_secret=_s.cloudinary_api_secret,
         )
+        _dom_ok = _redeploy_res.get("domain_ok", True)
+        _dom_err = _redeploy_res.get("domain_error") or ""
         async with AsyncSessionLocal() as session:
             upd = await session.get(Client, client_id)
             if upd:
-                upd.deployment_status = "ready"
+                upd.deployment_status = "updating"
+                upd.deployment_error = f"Custom domain error: {_dom_err}" if not _dom_ok else None
                 await session.commit()
+        _domain_note = f"\n⚠️ Custom domain error: {_dom_err[:80]}" if not _dom_ok else ""
         await cb.message.answer(
             f"✅ <b>Оновлення запущено</b>\n\n"
             f"Клієнт: <b>{client.business_name}</b>\n"
             f"ADMIN_IDS: <code>{admin_ids}</code>\n"
-            f"Railway перезапускає сервіс — зачекайте 1–2 хвилини.",
+            f"Railway перезапускає сервіс — зачекайте 1–2 хвилини.{_domain_note}",
             parse_mode="HTML",
             reply_markup=_back_kb(client_id),
         )

@@ -217,8 +217,12 @@ async def create_service_domain(service_id: str, environment_id: str) -> str:
     return f"https://{domain}" if domain else ""
 
 
-async def add_custom_domain(service_id: str, environment_id: str, domain: str) -> bool:
-    """Add custom domain to service."""
+async def add_custom_domain(service_id: str, environment_id: str, domain: str) -> tuple[bool, str]:
+    """Add custom domain to Railway service.
+
+    Returns (ok, error_message).
+    Treats 'already exists / duplicate / taken' errors as idempotent success.
+    """
     query = """
     mutation customDomainCreate($input: CustomDomainCreateInput!) {
         customDomainCreate(input: $input) {
@@ -234,12 +238,34 @@ async def add_custom_domain(service_id: str, environment_id: str, domain: str) -
             "domain": domain,
         }
     }
+    logger.info(
+        "add_custom_domain: domain=%s service=%s env=%s",
+        domain, service_id, environment_id,
+    )
     result = await graphql(query, variables)
-    logger.info("add_custom_domain result: %s", result)
+    logger.info("add_custom_domain raw response for %s: %s", domain, result)
     if "errors" in result:
-        logger.warning("Custom domain creation failed: %s", result["errors"])
-        return False
-    return True
+        errors = result["errors"]
+        err_msg = errors[0].get("message", str(errors)) if errors else "unknown error"
+        lower = err_msg.lower()
+        # Idempotent: domain already registered on this or another service
+        if any(kw in lower for kw in ("already", "exists", "duplicate", "taken", "in use")):
+            logger.info(
+                "add_custom_domain(%s): already registered — treating as OK (idempotent)",
+                domain,
+            )
+            return True, ""
+        logger.error(
+            "add_custom_domain(%s) FAILED with Railway error: %s | full response: %s",
+            domain, err_msg, result,
+        )
+        return False, err_msg
+    created = result.get("data", {}).get("customDomainCreate", {})
+    logger.info(
+        "add_custom_domain SUCCESS: domain=%s id=%s",
+        domain, created.get("id"),
+    )
+    return True, ""
 
 
 async def deploy_shop_bot(
@@ -318,7 +344,9 @@ async def deploy_shop_bot(
 
     # 8. Try custom domain (may take time to propagate)
     custom_domain = f"{slug}.shopplatform.app"
-    await add_custom_domain(service_id, environment_id, custom_domain)
+    _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
+    if not _dom_ok:
+        logger.error("deploy_shop_bot: custom domain FAILED for %s: %s", custom_domain, _dom_err)
 
     # Return railway URL immediately — client can use it right away
     return {
@@ -417,14 +445,19 @@ async def deploy_technomarket_client(
 
     # 8. Register custom domain {slug}.PLATFORM_DOMAIN on the Railway service
     custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
-    await add_custom_domain(service_id, environment_id, custom_domain)
-    logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
+    _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
+    if not _dom_ok:
+        logger.error("deploy_technomarket_client: custom domain FAILED: %s", _dom_err)
+    else:
+        logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
 
     return {
         "project_id": project_id,
         "service_id": service_id,
         "url": railway_url,
         "custom_domain_url": f"https://{custom_domain}",
+        "domain_ok": _dom_ok,
+        "domain_error": _dom_err or None,
     }
 
 
@@ -438,16 +471,22 @@ async def redeploy_technomarket_client(
     cloudinary_cloud: str = "",
     cloudinary_key: str = "",
     cloudinary_secret: str = "",
-) -> None:
+) -> dict:
     """Update env vars and trigger a redeploy for an existing personal client service.
 
-    Unlike deploy_technomarket_client, this does NOT create a new project or
-    Postgres — it only refreshes variables and fires a new deployment on the
-    existing service.
+    Returns a dict with keys: domain_ok, domain_error, deploy_result.
+    Raises on fatal errors so the caller can record deployment_status='failed'.
     """
+    logger.info(
+        "redeploy_technomarket_client START: slug=%s project_id=%s service_id=%s",
+        slug, project_id, service_id,
+    )
+
     environment_id = await get_environment_id(project_id)
+    logger.info("redeploy_technomarket_client: environment_id=%s slug=%s", environment_id, slug)
 
     _site_url = f"https://{slug}.{PLATFORM_DOMAIN}"
+    logger.info("redeploy_technomarket_client: SITE_URL=%s ADMIN_IDS=%s", _site_url, admin_ids)
     env_vars = {
         "ADMIN_IDS": admin_ids,
         "SITE_URL": _site_url,
@@ -462,20 +501,37 @@ async def redeploy_technomarket_client(
         env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
         env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
 
-    logger.info("Client deploy ADMIN_IDS=%s slug=%s", admin_ids, slug)
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(1)
 
-    # Ensure custom domain is registered (idempotent — safe to call on redeploy)
+    # Ensure custom domain is registered (idempotent — safe to call on every redeploy)
     custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
-    await add_custom_domain(service_id, environment_id, custom_domain)
-    logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
+    _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
+    if _dom_ok:
+        logger.info(
+            "redeploy_technomarket_client: custom domain OK: %s -> service %s",
+            custom_domain, service_id,
+        )
+    else:
+        logger.error(
+            "redeploy_technomarket_client: custom domain FAILED for %s: %s",
+            custom_domain, _dom_err,
+        )
 
-    # Reuse the environment_id we already fetched — no extra API call
+    # Trigger Railway redeploy
     query = """
     mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
         serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
     }
     """
-    result = await graphql(query, {"serviceId": service_id, "environmentId": environment_id})
-    logger.info("redeploy_technomarket_client triggered: service=%s result=%s", service_id, result)
+    deploy_result = await graphql(query, {"serviceId": service_id, "environmentId": environment_id})
+    logger.info(
+        "redeploy_technomarket_client deploy result: service=%s result=%s",
+        service_id, deploy_result,
+    )
+
+    return {
+        "domain_ok": _dom_ok,
+        "domain_error": _dom_err or None,
+        "deploy_result": deploy_result,
+    }

@@ -1140,6 +1140,11 @@ async def dashboard_redeploy(
             # No Railway project — redirect back without action
             return RedirectResponse(_back + ("&" if "?" in _back else "?") + "redeploy=no_project", status_code=303)
 
+        logger.info(
+            "dashboard_redeploy: slug=%s project_id=%s service_id=%s railway_url=%s",
+            slug, project_id, service_id, client.railway_url,
+        )
+
         # Resolve ADMIN_IDS
         admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
         if not admin_ids and settings.admin_ids:
@@ -1154,7 +1159,7 @@ async def dashboard_redeploy(
         )
 
         try:
-            await redeploy_technomarket_client(
+            _redeploy_result = await redeploy_technomarket_client(
                 project_id=project_id,
                 service_id=service_id,
                 slug=slug,
@@ -1166,8 +1171,17 @@ async def dashboard_redeploy(
                 cloudinary_secret=settings.cloudinary_api_secret,
             )
             client.deployment_status = "updating"
-            client.deployment_error = None
-            logger.info("dashboard_redeploy: deploy triggered for slug=%s", slug)
+            # Surface custom domain errors in deployment_error (deploy itself still fired)
+            if not _redeploy_result.get("domain_ok"):
+                _domain_err = _redeploy_result.get("domain_error") or "unknown Railway domain error"
+                client.deployment_error = f"Custom domain error: {_domain_err}"
+                logger.error(
+                    "dashboard_redeploy: domain not registered for slug=%s: %s",
+                    slug, _domain_err,
+                )
+            else:
+                client.deployment_error = None
+            logger.info("dashboard_redeploy: deploy triggered for slug=%s domain_ok=%s", slug, _redeploy_result.get("domain_ok"))
         except Exception as exc:
             logger.warning("dashboard_redeploy failed for slug=%s: %s", slug, exc, exc_info=True)
             client.deployment_status = "failed"
