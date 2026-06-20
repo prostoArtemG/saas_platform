@@ -334,11 +334,14 @@ async def create_site_submit(
             slug = await _allocate_slug(session, business_name)
 
             # 3. Create Client + flush + onboard, all-or-nothing
-            # For personal bot mode, admin TG ID is sourced from the telegram field
+            # Resolve admin Telegram ID: explicit form field takes priority,
+            # then the telegram field if it contains a bare numeric ID.
             _admin_tg_id = admin_telegram_id
-            if template_name == "technomarket_premium" and bot_mode == "personal":
-                if telegram.strip().isdigit():
-                    _admin_tg_id = telegram.strip()
+            if not _admin_tg_id.isdigit():
+                # telegram field may be a bare numeric ID (not a @username)
+                _raw_tg = telegram.strip().lstrip("@")
+                if _raw_tg.isdigit():
+                    _admin_tg_id = _raw_tg
             client = Client(
                 business_name=business_name,
                 slug=slug,
@@ -415,6 +418,17 @@ async def create_site_submit(
 
     # Auto-deploy for technomarket_premium + personal bot mode
     if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token and settings.client_deploy_enabled:
+        # Resolve ADMIN_IDS for the deployed client:
+        # _admin_tg_id already prefers the telegram field if it is a digit.
+        # Fall back to the first platform admin when nothing is set.
+        _deploy_admin_ids = _admin_tg_id if _admin_tg_id.isdigit() else ""
+        if not _deploy_admin_ids and settings.admin_ids:
+            _deploy_admin_ids = str(settings.admin_ids[0])
+            logger.warning(
+                "admin_telegram_id empty for slug=%s — falling back to platform admin %s",
+                slug, _deploy_admin_ids,
+            )
+        logger.info("Deploy client admin_ids=%s slug=%s", _deploy_admin_ids, slug)
         logger.info("Starting Railway deploy for technomarket_premium personal slug=%s", slug)
         _deploy_ok = False
         _deploy_error: str | None = None
@@ -424,7 +438,7 @@ async def create_site_submit(
                 client_name=business_name,
                 slug=slug,
                 bot_token=bot_token,
-                admin_ids=admin_telegram_id if admin_telegram_id.isdigit() else "",
+                admin_ids=_deploy_admin_ids,
                 saas_platform_url=str(request.base_url).rstrip("/"),
                 cloudinary_cloud=settings.cloudinary_cloud_name,
                 cloudinary_key=settings.cloudinary_api_key,
@@ -458,6 +472,15 @@ async def create_site_submit(
     railway_url = None
     logger.info("Deploy check: template_name=%r bot_token_bool=%r", template_name, bool(bot_token.strip()) if bot_token else False)
     if template_name == "premium_store" and bot_token:
+        # Resolve ADMIN_IDS: prefer _admin_tg_id, fallback to platform admin
+        _ps_admin_ids = _admin_tg_id if _admin_tg_id.isdigit() else ""
+        if not _ps_admin_ids and settings.admin_ids:
+            _ps_admin_ids = str(settings.admin_ids[0])
+            logger.warning(
+                "admin_telegram_id empty for premium_store slug=%s — falling back to platform admin %s",
+                slug, _ps_admin_ids,
+            )
+        logger.info("Deploy client admin_ids=%s slug=%s", _ps_admin_ids, slug)
         logger.info("Starting Railway deploy for template=%s slug=%s", template_name, slug)
         try:
             from app.config import settings as app_settings
@@ -465,7 +488,7 @@ async def create_site_submit(
                 client_name=business_name,
                 slug=slug,
                 bot_token=bot_token,
-                admin_ids=admin_telegram_id if admin_telegram_id.isdigit() else "",
+                admin_ids=_ps_admin_ids,
                 cloudinary_cloud=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
                 cloudinary_key=os.getenv("CLOUDINARY_API_KEY", ""),
                 cloudinary_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
