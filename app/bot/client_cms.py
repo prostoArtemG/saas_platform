@@ -43,6 +43,7 @@ from app.bot.keyboards import (
 )
 from app.db import AsyncSessionLocal
 from app.models import Client, ClientSettings, Order, Plan, Product, ProductSpec, SiteEvent
+from app.site.routes import get_public_site_url
 
 logger = logging.getLogger(__name__)
 
@@ -720,11 +721,8 @@ async def cms_prod_view(cb: CallbackQuery, state: FSMContext) -> None:
         return
     from app.config import settings as app_settings
     _domain = (app_settings.platform_domain or "").strip()
-    if _domain:
-        site_url = f"https://{client.slug}.{_domain}/product/{product.id}"
-    else:
-        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{_base}/site/{client.slug}/product/{product.id}" if _base else ""
+    _pub = get_public_site_url(client, _domain, fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"))
+    site_url = f"{_pub}/product/{product.id}"
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(product),
         parse_mode="HTML",
@@ -836,11 +834,8 @@ async def cms_prod_edit_field_input(message: Message, state: FSMContext) -> None
     await _clear_fsm_keep_test(state)
     from app.config import settings as app_settings
     _domain = (app_settings.platform_domain or "").strip()
-    if _domain:
-        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
-    else:
-        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
+    _pub = get_public_site_url(client, _domain, fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"))
+    site_url = f"{_pub}/product/{fresh.id}"
     await message.answer(
         "✅ Збережено\n\n" + _prod_card_text(fresh),
         parse_mode="HTML",
@@ -903,11 +898,8 @@ async def _save_prod_photo(message: Message, state: FSMContext, url: str | None)
     await _clear_fsm_keep_test(state)
     from app.config import settings as app_settings
     _domain = (app_settings.platform_domain or "").strip()
-    if _domain:
-        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
-    else:
-        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
+    _pub = get_public_site_url(client, _domain, fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"))
+    site_url = f"{_pub}/product/{fresh.id}"
     await message.answer(
         "✅ Фото оновлено\n\n" + _prod_card_text(fresh),
         parse_mode="HTML",
@@ -941,11 +933,8 @@ async def cms_prod_toggle(cb: CallbackQuery, state: FSMContext) -> None:
         fresh = product
     from app.config import settings as app_settings
     _domain = (app_settings.platform_domain or "").strip()
-    if _domain:
-        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
-    else:
-        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
+    _pub = get_public_site_url(client, _domain, fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"))
+    site_url = f"{_pub}/product/{fresh.id}"
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(fresh),
         parse_mode="HTML",
@@ -1160,11 +1149,8 @@ async def cms_prod_badge_set(cb: CallbackQuery, state: FSMContext) -> None:
         fresh = product
     from app.config import settings as app_settings
     _domain = (app_settings.platform_domain or "").strip()
-    if _domain:
-        site_url = f"https://{client.slug}.{_domain}/product/{fresh.id}"
-    else:
-        _base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{_base}/site/{client.slug}/product/{fresh.id}" if _base else ""
+    _pub = get_public_site_url(client, _domain, fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"))
+    site_url = f"{_pub}/product/{fresh.id}"
     await cb.message.edit_text(  # type: ignore[union-attr]
         _prod_card_text(fresh),
         parse_mode="HTML",
@@ -1224,14 +1210,13 @@ async def cms_site(message: Message, state: FSMContext) -> None:
 
     from app.config import settings as app_settings
 
-    # Subdomain URL: https://{slug}.{platform_domain}
-    # Fallback to /site/{slug} if platform_domain is not configured.
+    # Public URL: personal mode → railway_url; shared mode → {slug}.{platform_domain}
     domain = (app_settings.platform_domain or "").strip()
-    if domain:
-        site_url = f"https://{client.slug}.{domain}"
-    else:
-        base = (app_settings.payment_webhook_base_url or "").rstrip("/")
-        site_url = f"{base}/site/{client.slug}" if base else f"/site/{client.slug}"
+    site_url = get_public_site_url(
+        client,
+        domain,
+        fallback_base=(app_settings.payment_webhook_base_url or "").rstrip("/"),
+    )
 
     # Dashboard URL with token (if set)
     dashboard_url: str | None = None

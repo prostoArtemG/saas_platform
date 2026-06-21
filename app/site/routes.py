@@ -72,6 +72,22 @@ def get_client_slug_from_host(host: str, platform_domain: str) -> Optional[str]:
     return subdomain
 
 
+def get_public_site_url(client, platform_domain: str, *, fallback_base: str = "") -> str:
+    """Return the canonical public URL of the client's storefront.
+
+    - personal mode with railway_url → railway_url (dedicated Railway service)
+    - shared mode with platform_domain → https://{slug}.{platform_domain}
+    - fallback → {fallback_base}/site/{slug}
+    """
+    if getattr(client, "bot_mode", "shared") == "personal" and getattr(client, "railway_url", None):
+        return (client.railway_url or "").rstrip("/")
+    if platform_domain:
+        return f"https://{client.slug}.{platform_domain}"
+    if fallback_base:
+        return fallback_base.rstrip("/") + f"/site/{client.slug}"
+    return f"/site/{client.slug}"
+
+
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
@@ -692,11 +708,12 @@ async def onboarding_success(
                 if platform_bot_username else None
             )
 
-        # Build public site URL: prefer subdomain, fallback to /site/{slug}
-        if settings.platform_domain:
-            site_url = f"https://{client.slug}.{settings.platform_domain}"
-        else:
-            site_url = str(request.base_url).rstrip("/") + f"/site/{client.slug}"
+        # Build public site URL – personal mode uses railway_url directly
+        site_url = get_public_site_url(
+            client,
+            settings.platform_domain,
+            fallback_base=str(request.base_url).rstrip("/"),
+        )
 
     _token_suffix = f"?token={client.dashboard_token}" if client.dashboard_token else ""
     dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}{_token_suffix}"
