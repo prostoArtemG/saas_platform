@@ -420,12 +420,16 @@ async def deploy_technomarket_client(
 
     # 5. Set core environment variables before first deploy
     # SITE_URL / PUBLIC_BASE_URL will be updated after Railway generates the domain (step 7)
+    shop_title = client_name or slug
+    logger.info("Deploy client shop_title=%s slug=%s", shop_title, slug)
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
         "DATABASE_URL": "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway",
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
+        "SHOP_TITLE": shop_title,
+        "SHOP_SUBTITLE": "Побутова техніка під замовлення та в наявності",
         "TEMPLATE_NAME": "technomarket_premium",
         "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
     }
