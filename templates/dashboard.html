@@ -259,6 +259,10 @@
               {% if client.deployment_status == 'failed' and client.deployment_error %}
               <p class="text-xs text-red-400/80 mt-2 font-mono break-all">{{ client.deployment_error[:200] }}</p>
               {% endif %}
+              <p class="text-xs text-white/30 mt-3">
+                Для особистого бота використовується окремий Railway URL.
+                Підключення красивого домену буде додано пізніше.
+              </p>
             </div>
             <!-- Redeploy button -->
             <form method="post" action="/dashboard/{{ client.slug }}/redeploy{% if dashboard_token %}?token={{ dashboard_token }}{% endif %}"

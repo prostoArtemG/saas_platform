@@ -412,9 +412,8 @@ async def deploy_technomarket_client(
     service_id = result["data"]["serviceCreate"]["id"]
     await asyncio.sleep(2)
 
-    # 5. Set environment variables before first deploy
-    # Personal client URL uses CLIENT_APPS_DOMAIN to avoid wildcard conflict with saas_platform
-    _site_url = f"https://{slug}.{CLIENT_APPS_DOMAIN}"
+    # 5. Set core environment variables before first deploy
+    # SITE_URL / PUBLIC_BASE_URL will be updated after Railway generates the domain (step 7)
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
@@ -422,8 +421,6 @@ async def deploy_technomarket_client(
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
         "TEMPLATE_NAME": "technomarket_premium",
-        "PUBLIC_BASE_URL": _site_url,
-        "SITE_URL": _site_url,
         "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
     }
     if cloudinary_cloud and cloudinary_key and cloudinary_secret:
@@ -440,30 +437,33 @@ async def deploy_technomarket_client(
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(2)
 
-    # 6. Trigger deployment
+    # 6. Trigger initial deployment
     await trigger_deployment(project_id, service_id)
     await asyncio.sleep(3)
 
-    # 7. Create Railway domain
+    # 7. Create Railway-generated domain (e.g. technomarket-production.up.railway.app)
     await asyncio.sleep(5)
     railway_url = await create_service_domain(service_id, environment_id)
+    logger.info("deploy_technomarket_client: railway_url=%s slug=%s", railway_url, slug)
 
-    # 8. Register custom domain {slug}.CLIENT_APPS_DOMAIN on the Railway service
-    # (CLIENT_APPS_DOMAIN = store.shopplatform.app by default — separate from shared *.shopplatform.app)
-    custom_domain = f"{slug}.{CLIENT_APPS_DOMAIN}"
-    _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
-    if not _dom_ok:
-        logger.error("deploy_technomarket_client: custom domain FAILED: %s", _dom_err)
+    # 8. Update SITE_URL / PUBLIC_BASE_URL to the real Railway URL and redeploy
+    # No custom domain is added here — Railway wildcard *.shopplatform.app blocks sub-subdomains.
+    # TODO: Cloudflare Worker Router for personal-bot pretty domains (future).
+    if railway_url:
+        await set_variables(project_id, service_id, environment_id, {
+            "SITE_URL": railway_url,
+            "PUBLIC_BASE_URL": railway_url,
+        })
+        await asyncio.sleep(1)
+        await trigger_deployment(project_id, service_id)
+        logger.info("deploy_technomarket_client: updated SITE_URL=%s and retriggered deploy", railway_url)
     else:
-        logger.info("Personal client domain added: %s -> service %s", custom_domain, service_id)
+        logger.warning("deploy_technomarket_client: railway_url is empty for slug=%s — SITE_URL not set", slug)
 
     return {
         "project_id": project_id,
         "service_id": service_id,
         "url": railway_url,
-        "custom_domain_url": f"https://{custom_domain}",
-        "domain_ok": _dom_ok,
-        "domain_error": _dom_err or None,
     }
 
 
@@ -480,27 +480,39 @@ async def redeploy_technomarket_client(
 ) -> dict:
     """Update env vars and trigger a redeploy for an existing personal client service.
 
-    Returns a dict with keys: domain_ok, domain_error, deploy_result.
+    Uses railway_url (the *.up.railway.app URL stored on the client) for SITE_URL / PUBLIC_BASE_URL.
+    No custom domain is registered here — Railway wildcard blocks sub-subdomains.
+    TODO: Cloudflare Worker Router for personal-bot pretty domains (future).
+
+    Returns a dict with key: deploy_result.
     Raises on fatal errors so the caller can record deployment_status='failed'.
     """
     logger.info(
-        "redeploy_technomarket_client START: slug=%s project_id=%s service_id=%s",
-        slug, project_id, service_id,
+        "redeploy_technomarket_client START: slug=%s project_id=%s service_id=%s railway_url=%s",
+        slug, project_id, service_id, railway_url,
     )
 
     environment_id = await get_environment_id(project_id)
     logger.info("redeploy_technomarket_client: environment_id=%s slug=%s", environment_id, slug)
 
-    _site_url = f"https://{slug}.{CLIENT_APPS_DOMAIN}"
-    logger.info("redeploy_technomarket_client: SITE_URL=%s ADMIN_IDS=%s", _site_url, admin_ids)
     env_vars = {
         "ADMIN_IDS": admin_ids,
-        "SITE_URL": _site_url,
-        "PUBLIC_BASE_URL": _site_url,
         "SAAS_PLATFORM_URL": saas_platform_url,
         "SAAS_CLIENT_SLUG": slug,
         "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
     }
+    # SITE_URL / PUBLIC_BASE_URL = real Railway URL (not a custom domain)
+    if railway_url:
+        env_vars["SITE_URL"] = railway_url
+        env_vars["PUBLIC_BASE_URL"] = railway_url
+        logger.info("redeploy_technomarket_client: SITE_URL=%s ADMIN_IDS=%s", railway_url, admin_ids)
+    else:
+        logger.warning(
+            "redeploy_technomarket_client: railway_url is empty for slug=%s — "
+            "SITE_URL/PUBLIC_BASE_URL will not be updated",
+            slug,
+        )
+
     if cloudinary_cloud and cloudinary_key and cloudinary_secret:
         env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
         env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
@@ -510,23 +522,9 @@ async def redeploy_technomarket_client(
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(1)
 
-    # Ensure custom domain is registered (idempotent — safe to call on every redeploy)
-    # Uses CLIENT_APPS_DOMAIN (e.g. store.shopplatform.app) — not PLATFORM_DOMAIN to avoid wildcard conflict
-    custom_domain = f"{slug}.{CLIENT_APPS_DOMAIN}"
-    logger.info("Personal client domain: %s for slug=%s", custom_domain, slug)
-    _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
-    if _dom_ok:
-        logger.info(
-            "redeploy_technomarket_client: custom domain OK: %s -> service %s",
-            custom_domain, service_id,
-        )
-    else:
-        logger.error(
-            "redeploy_technomarket_client: custom domain FAILED for %s: %s",
-            custom_domain, _dom_err,
-        )
-
     # Trigger Railway redeploy
+    # No add_custom_domain — Railway wildcard *.shopplatform.app blocks sub-subdomains.
+    # TODO: Cloudflare Worker Router for personal-bot pretty domains (future).
     query = """
     mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
         serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
@@ -538,8 +536,4 @@ async def redeploy_technomarket_client(
         service_id, deploy_result,
     )
 
-    return {
-        "domain_ok": _dom_ok,
-        "domain_error": _dom_err or None,
-        "deploy_result": deploy_result,
-    }
+    return {"deploy_result": deploy_result}

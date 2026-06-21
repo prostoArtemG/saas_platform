@@ -1068,13 +1068,18 @@ async def client_dashboard(
         plan = sub.plan if sub else None
 
         # Domain shown to the client:
-        # - personal bot → {slug}.{client_apps_domain}  (served by client's Railway service)
-        # - shared bot   → {slug}.{platform_domain}     (served by saas_platform SubdomainMiddleware)
-        _client_domain_host = (
-            f"{client.slug}.{settings.client_apps_domain}"
-            if client.bot_mode == "personal"
-            else f"{client.slug}.{settings.platform_domain}"
-        )
+        # - personal bot → Railway-generated URL (e.g. technomarket-production.up.railway.app)
+        # - shared bot   → {slug}.{platform_domain} served by saas_platform SubdomainMiddleware
+        # TODO: Cloudflare Worker Router for personal-bot pretty domains (future)
+        if client.bot_mode == "personal" and client.railway_url:
+            _client_domain_host = (
+                client.railway_url
+                .removeprefix("https://")
+                .removeprefix("http://")
+                .rstrip("/")
+            )
+        else:
+            _client_domain_host = f"{client.slug}.{settings.platform_domain}"
 
         ctx = {
             "request": request,
@@ -1183,17 +1188,8 @@ async def dashboard_redeploy(
                 cloudinary_secret=settings.cloudinary_api_secret,
             )
             client.deployment_status = "updating"
-            # Surface custom domain errors in deployment_error (deploy itself still fired)
-            if not _redeploy_result.get("domain_ok"):
-                _domain_err = _redeploy_result.get("domain_error") or "unknown Railway domain error"
-                client.deployment_error = f"Custom domain error: {_domain_err}"
-                logger.error(
-                    "dashboard_redeploy: domain not registered for slug=%s: %s",
-                    slug, _domain_err,
-                )
-            else:
-                client.deployment_error = None
-            logger.info("dashboard_redeploy: deploy triggered for slug=%s domain_ok=%s", slug, _redeploy_result.get("domain_ok"))
+            client.deployment_error = None
+            logger.info("dashboard_redeploy: deploy triggered for slug=%s", slug)
         except Exception as exc:
             logger.warning("dashboard_redeploy failed for slug=%s: %s", slug, exc, exc_info=True)
             client.deployment_status = "failed"
