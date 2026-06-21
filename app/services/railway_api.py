@@ -391,6 +391,8 @@ async def deploy_technomarket_client(
     await asyncio.sleep(2)
 
     # 4. Create app service from template repo (no immediate deploy)
+    # Service name includes slug so Railway-generated URL is unique per client
+    service_name = f"technomarket-{slug}"
     query = """
     mutation serviceCreate($input: ServiceCreateInput!) {
         serviceCreate(input: $input) {
@@ -402,7 +404,7 @@ async def deploy_technomarket_client(
     variables = {
         "input": {
             "projectId": project_id,
-            "name": "technomarket",
+            "name": service_name,
             "source": {
                 "repo": TECHNOMARKET_CLIENT_REPO,
             },
@@ -410,6 +412,10 @@ async def deploy_technomarket_client(
     }
     result = await graphql(query, variables)
     service_id = result["data"]["serviceCreate"]["id"]
+    logger.info(
+        "deploy_technomarket_client: created service name=%s id=%s project=%s slug=%s",
+        service_name, service_id, project_id, slug,
+    )
     await asyncio.sleep(2)
 
     # 5. Set core environment variables before first deploy
@@ -444,7 +450,10 @@ async def deploy_technomarket_client(
     # 7. Create Railway-generated domain (e.g. technomarket-production.up.railway.app)
     await asyncio.sleep(5)
     railway_url = await create_service_domain(service_id, environment_id)
-    logger.info("deploy_technomarket_client: railway_url=%s slug=%s", railway_url, slug)
+    logger.info(
+        "Deploy personal client slug=%s service_name=%s railway_url=%s",
+        slug, service_name, railway_url,
+    )
 
     # 8. Update SITE_URL / PUBLIC_BASE_URL to the real Railway URL and redeploy
     # No custom domain is added here — Railway wildcard *.shopplatform.app blocks sub-subdomains.
