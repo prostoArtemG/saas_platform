@@ -14,6 +14,10 @@ TECHNOMARKET_CLIENT_REPO = os.getenv(
     "TECHNOMARKET_CLIENT_REPO", "prostoArtemG/technomarket_client_template"
 )
 PLATFORM_DOMAIN = os.getenv("PLATFORM_DOMAIN", "shopplatform.app")
+# Domain for personal bot Railway services (separate from shared saas_platform subdomain).
+# Personal bots: {slug}.{CLIENT_APPS_DOMAIN}  e.g. tst.store.shopplatform.app
+# DNS requirement: *.store.shopplatform.app CNAME -> Railway (separate from *.shopplatform.app)
+CLIENT_APPS_DOMAIN = os.getenv("CLIENT_APPS_DOMAIN", "store.shopplatform.app")
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -409,7 +413,8 @@ async def deploy_technomarket_client(
     await asyncio.sleep(2)
 
     # 5. Set environment variables before first deploy
-    _site_url = f"https://{slug}.{PLATFORM_DOMAIN}"
+    # Personal client URL uses CLIENT_APPS_DOMAIN to avoid wildcard conflict with saas_platform
+    _site_url = f"https://{slug}.{CLIENT_APPS_DOMAIN}"
     env_vars = {
         "BOT_TOKEN": bot_token,
         "ADMIN_IDS": admin_ids,
@@ -443,13 +448,14 @@ async def deploy_technomarket_client(
     await asyncio.sleep(5)
     railway_url = await create_service_domain(service_id, environment_id)
 
-    # 8. Register custom domain {slug}.PLATFORM_DOMAIN on the Railway service
-    custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
+    # 8. Register custom domain {slug}.CLIENT_APPS_DOMAIN on the Railway service
+    # (CLIENT_APPS_DOMAIN = store.shopplatform.app by default — separate from shared *.shopplatform.app)
+    custom_domain = f"{slug}.{CLIENT_APPS_DOMAIN}"
     _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
     if not _dom_ok:
         logger.error("deploy_technomarket_client: custom domain FAILED: %s", _dom_err)
     else:
-        logger.info("Client custom domain added: %s -> service %s", custom_domain, service_id)
+        logger.info("Personal client domain added: %s -> service %s", custom_domain, service_id)
 
     return {
         "project_id": project_id,
@@ -485,7 +491,7 @@ async def redeploy_technomarket_client(
     environment_id = await get_environment_id(project_id)
     logger.info("redeploy_technomarket_client: environment_id=%s slug=%s", environment_id, slug)
 
-    _site_url = f"https://{slug}.{PLATFORM_DOMAIN}"
+    _site_url = f"https://{slug}.{CLIENT_APPS_DOMAIN}"
     logger.info("redeploy_technomarket_client: SITE_URL=%s ADMIN_IDS=%s", _site_url, admin_ids)
     env_vars = {
         "ADMIN_IDS": admin_ids,
@@ -505,7 +511,9 @@ async def redeploy_technomarket_client(
     await asyncio.sleep(1)
 
     # Ensure custom domain is registered (idempotent — safe to call on every redeploy)
-    custom_domain = f"{slug}.{PLATFORM_DOMAIN}"
+    # Uses CLIENT_APPS_DOMAIN (e.g. store.shopplatform.app) — not PLATFORM_DOMAIN to avoid wildcard conflict
+    custom_domain = f"{slug}.{CLIENT_APPS_DOMAIN}"
+    logger.info("Personal client domain: %s for slug=%s", custom_domain, slug)
     _dom_ok, _dom_err = await add_custom_domain(service_id, environment_id, custom_domain)
     if _dom_ok:
         logger.info(

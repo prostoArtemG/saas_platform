@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     client_deploy_enabled: bool = Field(False, alias="CLIENT_DEPLOY_ENABLED")
     railway_api_token: str = Field("", alias="RAILWAY_API_TOKEN")
 
+    # Domain for personal bot clients (separate Railway project, separate Railway service).
+    # Personal bots are accessible at {slug}.{client_apps_domain}.
+    # IMPORTANT: Requires a separate DNS wildcard in Cloudflare:
+    #   *.store.shopplatform.app  CNAME  <railway-proxy-target>
+    # {slug}.{platform_domain} is reserved for shared-mode sites served by saas_platform.
+    client_apps_domain: str = Field("store.shopplatform.app", alias="CLIENT_APPS_DOMAIN")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):

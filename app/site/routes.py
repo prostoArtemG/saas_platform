@@ -1067,6 +1067,15 @@ async def client_dashboard(
         sub = subs[0] if subs else None
         plan = sub.plan if sub else None
 
+        # Domain shown to the client:
+        # - personal bot → {slug}.{client_apps_domain}  (served by client's Railway service)
+        # - shared bot   → {slug}.{platform_domain}     (served by saas_platform SubdomainMiddleware)
+        _client_domain_host = (
+            f"{client.slug}.{settings.client_apps_domain}"
+            if client.bot_mode == "personal"
+            else f"{client.slug}.{settings.platform_domain}"
+        )
+
         ctx = {
             "request": request,
             "t": t,
@@ -1097,8 +1106,11 @@ async def client_dashboard(
                 "can_buyout": plan.can_buyout,
                 "buyout_months": plan.buyout_months,
             } if plan else None,
+            # Domain shown to the client:
+            # - personal bot → {slug}.{client_apps_domain}  (served by client's Railway service)
+            # - shared bot   → {slug}.{platform_domain}     (served by saas_platform SubdomainMiddleware)
             "domain": {
-                "host": f"{client.slug}.{settings.platform_domain}",
+                "host": _client_domain_host,
                 "status": "pending",
             },
         }
