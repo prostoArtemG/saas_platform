@@ -46,7 +46,7 @@
         <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
           <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </span>
-        <span>SaaSPlatform</span>
+        <span>ShopPlatform</span>
       </a>
       <div class="flex items-center gap-3">
         <span class="hidden md:inline text-xs font-medium text-white/40 uppercase tracking-wider">Dashboard</span>
@@ -197,17 +197,41 @@
             </div>
             <svg class="w-5 h-5 text-brand-lime" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
           </div>
-          <div class="flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10">
-            <code class="text-base font-mono text-white/80 truncate">https://{{ domain.host }}</code>
-            {% if domain.status == 'live' %}
-              <span class="badge badge-active flex-shrink-0"><span class="dot bg-brand-lime animate-pulse"></span>Live</span>
-            {% elif domain.status == 'pending' %}
-              <span class="badge badge-warn flex-shrink-0"><span class="dot bg-amber-400 animate-pulse"></span>Pending</span>
-            {% else %}
-              <span class="badge badge-mute flex-shrink-0"><span class="dot bg-white/40"></span>{{ domain.status }}</span>
-            {% endif %}
+          <div class="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
+              <a href="https://{{ domain.host }}" target="_blank" rel="noopener"
+                 class="flex-1 text-sm font-mono text-brand-lime hover:underline min-w-0"
+                 style="word-break:break-all;overflow-wrap:anywhere;">https://{{ domain.host }}</a>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                {% if client.bot_mode == 'personal' %}
+                  {% if client.deployment_status == 'ready' %}
+                    <span class="badge badge-active"><span class="dot bg-brand-lime animate-pulse"></span>Live</span>
+                  {% elif client.deployment_status == 'updating' %}
+                    <span class="badge badge-warn"><span class="dot bg-amber-400 animate-pulse"></span>Updating</span>
+                  {% elif client.deployment_status == 'failed' %}
+                    <span class="badge" style="background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3);"><span class="dot" style="background:#f87171;"></span>Failed</span>
+                  {% else %}
+                    <span class="badge badge-warn"><span class="dot bg-amber-400 animate-pulse"></span>Deploying</span>
+                  {% endif %}
+                {% elif domain.status == 'live' %}
+                  <span class="badge badge-active"><span class="dot bg-brand-lime animate-pulse"></span>Live</span>
+                {% elif domain.status == 'pending' %}
+                  <span class="badge badge-warn"><span class="dot bg-amber-400 animate-pulse"></span>Pending</span>
+                {% else %}
+                  <span class="badge badge-mute"><span class="dot bg-white/40"></span>{{ domain.status }}</span>
+                {% endif %}
+                <a href="https://{{ domain.host }}" target="_blank" rel="noopener"
+                   class="text-xs px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                  Відкрити →
+                </a>
+              </div>
+            </div>
           </div>
+          {% if client.bot_mode == 'personal' %}
+          <p class="text-sm text-white/30 mt-3">Для особистого бота тимчасово використовується Railway URL. Красивий домен буде додано пізніше.</p>
+          {% else %}
           <p class="text-sm text-white/40 mt-3">DNS provisioning in progress. SSL will be issued automatically.</p>
+          {% endif %}
         </div>
 
         <!-- Quick info -->

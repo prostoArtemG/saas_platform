@@ -207,7 +207,11 @@
           <!-- Warning shown when plan restricts template choice -->
           <p id="tpl-starter-warn"
              class="hidden mt-2 text-xs text-amber-400">
-            Red Market доступний з Business. TechnoMarket Premium — лише для Premium.
+            Red Market та TechnoMarket Premium недоступні для тарифу Starter. Оберіть Pro або вищий.
+          </p>
+          <p id="tpl-business-warn"
+             class="hidden mt-2 text-xs text-amber-400">
+            TechnoMarket Premium доступний лише з тарифом Premium ($30/міс).
           </p>
         </div>
 
@@ -285,86 +289,52 @@
   </main>
   <script>
     (function () {
-      var ADMIN_PREVIEW = {{ 'true' if admin_preview else 'false' }};
-      var planSel    = document.getElementById('plan-select');
-      var shopRadio  = document.getElementById('tpl-shop-bot');
-      var redRadio   = document.getElementById('tpl-red');
-      var redLabel   = document.getElementById('tpl-red-label');
-      var redLock    = document.getElementById('tpl-red-lock');
-      var premRadio  = document.getElementById('tpl-premium');
-      var premLabel  = document.getElementById('tpl-premium-label');
-      var premLock   = document.getElementById('tpl-premium-lock');
-      var warn       = document.getElementById('tpl-starter-warn');
+      var ADMIN_PREVIEW   = {{ 'true' if admin_preview else 'false' }};
+      var planSel         = document.getElementById('plan-select');
+      var shopRadio       = document.getElementById('tpl-shop-bot');
+      var redRadio        = document.getElementById('tpl-red');
+      var redLabel        = document.getElementById('tpl-red-label');
+      var redLock         = document.getElementById('tpl-red-lock');
+      var premRadio       = document.getElementById('tpl-premium');
+      var premLabel       = document.getElementById('tpl-premium-label');
+      var premLock        = document.getElementById('tpl-premium-lock');
+      var warnStarter     = document.getElementById('tpl-starter-warn');
+      var warnBusiness    = document.getElementById('tpl-business-warn');
+      var botModeBlock    = document.getElementById('bot-mode-block');
+      var botTokenBlock   = document.getElementById('bot-token-block');
+      var botModePersonal = document.getElementById('bot-mode-personal');
+      var botModeShared   = document.getElementById('bot-mode-shared');
+      var botTokenInput   = document.getElementById('bot-token-input');
       if (!planSel) return;
 
       function tierOf(val) {
         var v = (val || '').toLowerCase();
-        if (v.startsWith('premium')) return 'premium';
-        if (v.startsWith('business') || v.startsWith('pro')) return 'business';
-        return 'starter'; // default / empty
+        if (v.startsWith('premium'))                              return 'premium';
+        if (v.startsWith('business') || v.startsWith('pro'))     return 'business';
+        return 'starter';
       }
 
       function lockRadio(radio, label, lock) {
         radio.disabled = true;
         label.classList.add('opacity-50', 'cursor-not-allowed');
         label.classList.remove('cursor-pointer');
-        lock.classList.remove('hidden');
+        if (lock) lock.classList.remove('hidden');
       }
 
       function unlockRadio(radio, label, lock) {
         radio.disabled = false;
         label.classList.remove('opacity-50', 'cursor-not-allowed');
         label.classList.add('cursor-pointer');
-        lock.classList.add('hidden');
+        if (lock) lock.classList.add('hidden');
       }
 
-      function sync() {
-        if (ADMIN_PREVIEW) {
-          // Admin: unlock all templates regardless of plan
-          unlockRadio(redRadio, redLabel, redLock);
-          unlockRadio(premRadio, premLabel, premLock);
-          warn.classList.add('hidden');
-          return;
-        }
-        var tier = tierOf(planSel.value);
-
-        if (tier === 'premium') {
-          // All templates available
-          unlockRadio(redRadio, redLabel, redLock);
-          unlockRadio(premRadio, premLabel, premLock);
-          warn.classList.add('hidden');
-        } else if (tier === 'business') {
-          // red_market OK, technomarket_premium locked
-          unlockRadio(redRadio, redLabel, redLock);
-          lockRadio(premRadio, premLabel, premLock);
-          if (premRadio.checked) { premRadio.checked = false; shopRadio.checked = true; }
-          warn.classList.remove('hidden');
-        } else {
-          // Starter: only shop_bot
-          lockRadio(redRadio, redLabel, redLock);
-          lockRadio(premRadio, premLabel, premLock);
-          if (redRadio.checked || premRadio.checked) {
-            redRadio.checked = false;
-            premRadio.checked = false;
-            shopRadio.checked = true;
-          }
-          warn.classList.remove('hidden');
-        }
+      function hideWarnings() {
+        if (warnStarter)  warnStarter.classList.add('hidden');
+        if (warnBusiness) warnBusiness.classList.add('hidden');
       }
 
-      planSel.addEventListener('change', sync);
-      sync();
-    })();
-  </script>
-  <script>
-    (function () {
-      var botModeBlock    = document.getElementById('bot-mode-block');
-      var botTokenBlock   = document.getElementById('bot-token-block');
-      var botModePersonal = document.getElementById('bot-mode-personal');
-      var botTokenInput   = document.getElementById('bot-token-input');
-
+      /* Update bot-mode / bot-token blocks based on current template selection. */
       function syncBotMode() {
-        var premRadio = document.getElementById('tpl-premium');
         var isPrem = premRadio && premRadio.checked && !premRadio.disabled;
         if (isPrem) {
           botModeBlock.classList.remove('hidden');
@@ -374,19 +344,71 @@
         } else {
           botModeBlock.classList.add('hidden');
           botTokenBlock.classList.add('hidden');
-          if (botTokenInput) { botTokenInput.required = false; }
+          if (botTokenInput) botTokenInput.required = false;
+          /* Reset to shared when premium template is no longer available */
+          if (botModeShared) botModeShared.checked = true;
         }
       }
 
+      /* Update template availability based on selected plan, then sync bot mode. */
+      function sync() {
+        if (ADMIN_PREVIEW) {
+          unlockRadio(redRadio, redLabel, redLock);
+          unlockRadio(premRadio, premLabel, premLock);
+          hideWarnings();
+          syncBotMode();
+          return;
+        }
+
+        var planVal = planSel.value;
+
+        if (!planVal) {
+          /* No plan chosen yet — lock everything silently */
+          lockRadio(redRadio, redLabel, redLock);
+          lockRadio(premRadio, premLabel, premLock);
+          if (redRadio.checked || premRadio.checked) {
+            redRadio.checked = false; premRadio.checked = false; shopRadio.checked = true;
+          }
+          hideWarnings();
+          syncBotMode();
+          return;
+        }
+
+        var tier = tierOf(planVal);
+
+        if (tier === 'premium') {
+          unlockRadio(redRadio, redLabel, redLock);
+          unlockRadio(premRadio, premLabel, premLock);
+          hideWarnings();
+        } else if (tier === 'business') {
+          /* Pro / Business: red_market OK, technomarket_premium locked */
+          unlockRadio(redRadio, redLabel, redLock);
+          lockRadio(premRadio, premLabel, premLock);
+          if (premRadio.checked) { premRadio.checked = false; shopRadio.checked = true; }
+          if (warnStarter)  warnStarter.classList.add('hidden');
+          if (warnBusiness) warnBusiness.classList.remove('hidden');
+        } else {
+          /* Starter / unknown: only shop_bot */
+          lockRadio(redRadio, redLabel, redLock);
+          lockRadio(premRadio, premLabel, premLock);
+          if (redRadio.checked || premRadio.checked) {
+            redRadio.checked = false; premRadio.checked = false; shopRadio.checked = true;
+          }
+          if (warnBusiness) warnBusiness.classList.add('hidden');
+          if (warnStarter)  warnStarter.classList.remove('hidden');
+        }
+
+        syncBotMode();
+      }
+
+      planSel.addEventListener('change', sync);
       document.querySelectorAll('input[name="site_type"]').forEach(function (r) {
         r.addEventListener('change', syncBotMode);
       });
       document.querySelectorAll('input[name="bot_mode"]').forEach(function (r) {
         r.addEventListener('change', syncBotMode);
       });
-      var planSelectEl = document.getElementById('plan-select');
-      if (planSelectEl) planSelectEl.addEventListener('change', syncBotMode);
-      syncBotMode();
+      sync();
     })();
   </script>
 </body>
