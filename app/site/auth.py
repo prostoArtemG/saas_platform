@@ -21,29 +21,25 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 # ---------------------------------------------------------------------------
-# Lazy-loaded passlib context (avoids hard import error if bcrypt not installed)
+# Password hashing — uses bcrypt directly (passlib 1.7.4 is incompatible with
+# bcrypt >= 4.0 because bcrypt.__about__ was removed; avoid passlib entirely).
 # ---------------------------------------------------------------------------
-_pwd_context = None
-
-
-def _get_pwd_context():
-    global _pwd_context
-    if _pwd_context is None:
-        try:
-            from passlib.context import CryptContext  # type: ignore
-            _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        except ImportError:
-            logger.error("passlib[bcrypt] not installed — password auth unavailable")
-            raise
-    return _pwd_context
-
 
 def hash_password(password: str) -> str:
-    return _get_pwd_context().hash(password)
+    try:
+        import bcrypt as _bcrypt  # type: ignore
+        return _bcrypt.hashpw(password.encode("utf-8"), _bcrypt.gensalt()).decode("utf-8")
+    except ImportError:
+        logger.error("bcrypt not installed — password hashing unavailable")
+        raise
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return _get_pwd_context().verify(password, hashed)
+    try:
+        import bcrypt as _bcrypt  # type: ignore
+        return _bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -109,25 +105,32 @@ async def register_submit(
         return _render_error(request, "auth_register.html",
                              "Введіть коректний email.", email=email, name=name)
 
-    async with AsyncSessionLocal() as session:
-        existing = await session.scalar(select(User).where(User.email == email))
-        if existing:
-            return _render_error(request, "auth_register.html",
-                                 "Цей email вже зареєстровано. Увійдіть.", email=email, name=name)
+    try:
+        async with AsyncSessionLocal() as session:
+            existing = await session.scalar(select(User).where(User.email == email))
+            if existing:
+                return _render_error(request, "auth_register.html",
+                                     "Цей email вже зареєстровано. Увійдіть.", email=email, name=name)
 
-        user = User(
-            email=email,
-            password_hash=hash_password(password),
-            name=name or None,
-            role="client",
-        )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+            user = User(
+                email=email,
+                password_hash=hash_password(password),
+                name=name or None,
+                role="client",
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
 
-    request.session["user_id"] = user.id
-    logger.info("New user registered: email=%s id=%s", email, user.id)
-    return RedirectResponse("/account", status_code=302)
+        request.session["user_id"] = user.id
+        logger.info("New user registered: email=%s id=%s", email, user.id)
+        return RedirectResponse("/account", status_code=302)
+
+    except Exception:
+        logger.exception("Register failed for email=%s", email)
+        return _render_error(request, "auth_register.html",
+                             "Помилка сервера. Спробуйте пізніше або зверніться до підтримки.",
+                             email=email, name=name)
 
 
 # ---------------------------------------------------------------------------
@@ -156,26 +159,33 @@ async def login_submit(
         return _render_error(request, "auth_login.html",
                              "Введіть email та пароль.", email=email)
 
-    async with AsyncSessionLocal() as session:
-        user = await session.scalar(select(User).where(User.email == email))
+    try:
+        async with AsyncSessionLocal() as session:
+            user = await session.scalar(select(User).where(User.email == email))
 
-    if not user or not user.password_hash or not verify_password(password, user.password_hash):
+        if not user or not user.password_hash or not verify_password(password, user.password_hash):
+            return _render_error(request, "auth_login.html",
+                                 "Невірний email або пароль.", email=email)
+
+        request.session["user_id"] = user.id
+
+        # Update last_login_at
+        async with AsyncSessionLocal() as session:
+            from datetime import datetime, timezone
+            db_user = await session.get(User, user.id)
+            if db_user:
+                db_user.last_login_at = datetime.now(timezone.utc)
+                await session.commit()
+
+        logger.info("User logged in: email=%s id=%s", email, user.id)
+        redirect_to = next_url if next_url and next_url.startswith("/") else "/account"
+        return RedirectResponse(redirect_to, status_code=302)
+
+    except Exception:
+        logger.exception("Login failed for email=%s", email)
         return _render_error(request, "auth_login.html",
-                             "Невірний email або пароль.", email=email)
-
-    request.session["user_id"] = user.id
-
-    # Update last_login_at
-    async with AsyncSessionLocal() as session:
-        from datetime import datetime, timezone
-        db_user = await session.get(User, user.id)
-        if db_user:
-            db_user.last_login_at = datetime.now(timezone.utc)
-            await session.commit()
-
-    logger.info("User logged in: email=%s id=%s", email, user.id)
-    redirect_to = next_url if next_url and next_url.startswith("/") else "/account"
-    return RedirectResponse(redirect_to, status_code=302)
+                             "Помилка сервера. Спробуйте пізніше або зверніться до підтримки.",
+                             email=email)
 
 
 # ---------------------------------------------------------------------------
