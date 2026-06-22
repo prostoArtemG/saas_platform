@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     # {slug}.{platform_domain} is reserved for shared-mode sites served by saas_platform.
     client_apps_domain: str = Field("store.shopplatform.app", alias="CLIENT_APPS_DOMAIN")
 
+    secret_key: str = Field(
+        "change-me-please-use-32-plus-random-chars",
+        alias="SECRET_KEY",
+    )
+    admin_emails: List[str] = Field(default_factory=list, alias="ADMIN_EMAILS")
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v):

@@ -20,6 +20,8 @@ from app.services.client_bot_manager import (
     stop_all_client_bots,
 )
 from app.site.routes import get_client_slug_from_host, router as site_router
+from app.site.auth import router as auth_router
+from app.site.admin_routes import router as admin_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,7 +53,10 @@ class SubdomainMiddleware:
             headers = dict(scope.get("headers", []))
             host = headers.get(b"host", b"").decode("latin-1")
             slug = get_client_slug_from_host(host, self.platform_domain)
-            _SKIP_PREFIXES = ("/static", "/api", "/dashboard", "/payment", "/health", "/webhook")
+            _SKIP_PREFIXES = (
+                "/static", "/api", "/dashboard", "/payment", "/health",
+                "/webhook", "/login", "/logout", "/register", "/account", "/admin",
+            )
             if slug:
                 path: str = scope.get("path", "/")
                 if any(path == p or path.startswith(p + "/") for p in _SKIP_PREFIXES):
@@ -135,8 +140,10 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="saas_platform", lifespan=lifespan)
+    app = FastAPI(title="ShopPlatform", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.include_router(auth_router)
+    app.include_router(admin_router)
     app.include_router(site_router)
     app.include_router(api_router)
 
@@ -156,6 +163,16 @@ def create_app() -> FastAPI:
     # Subdomain middleware: must be added AFTER routers are registered so that
     # the ASGI app it wraps already has the full route table.
     app.add_middleware(SubdomainMiddleware, platform_domain=settings.platform_domain)
+    # Session middleware for auth (must wrap the app; added after SubdomainMiddleware)
+    from starlette.middleware.sessions import SessionMiddleware
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.secret_key,
+        session_cookie="sp_session",
+        max_age=60 * 60 * 24 * 30,  # 30 days
+        https_only=False,
+        same_site="lax",
+    )
     return app
 
 

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="uk" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopPlatform — Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { lime: '#a3e635', purple: '#7c3aed', dark: '#0f0a1e', card: '#150e2e' } }, fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .stat-card { transition: transform .2s, border-color .2s; }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(163,230,53,.25); }
+    .badge { display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:9999px;border:1px solid; }
+    .badge-active { background:rgba(163,230,53,.1);color:#a3e635;border-color:rgba(163,230,53,.3); }
+    .badge-trial  { background:rgba(124,58,237,.15);color:#c4a8ff;border-color:rgba(124,58,237,.4); }
+    .badge-warn   { background:rgba(251,191,36,.1);color:#fbbf24;border-color:rgba(251,191,36,.3); }
+    .badge-mute   { background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.1); }
+    .badge-red    { background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3); }
+    .dot { width:.5rem;height:.5rem;border-radius:9999px; }
+    th { font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.35);padding:.6rem 1rem;text-align:left;white-space:nowrap; }
+    td { font-size:.78rem;padding:.55rem 1rem;border-top:1px solid rgba(255,255,255,.04); }
+    tr:hover td { background:rgba(255,255,255,.02); }
+  </style>
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>ShopPlatform</span>
+      </a>
+      <div class="flex items-center gap-4 text-sm">
+        <span class="text-brand-lime font-semibold text-xs uppercase tracking-wider">Admin Panel</span>
+        <a href="/account" class="text-white/50 hover:text-white transition-colors">Кабінет</a>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit" class="text-white/40 hover:text-white transition-colors">Вийти</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-7xl mx-auto">
+
+      <!-- Header -->
+      <div class="mb-8 animate-fade-up">
+        <div class="text-xs font-medium text-brand-lime uppercase tracking-widest mb-1">Platform owner</div>
+        <h1 class="text-4xl font-black"><span class="gradient-text">Admin Dashboard</span></h1>
+      </div>
+
+      <!-- Stats grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8 animate-fade-up">
+        {% set stat_items = [
+          ('Клієнтів', stats.total_clients, 'text-white'),
+          ('Активні', stats.active, 'text-brand-lime'),
+          ('Trial', stats.trial, 'text-purple-400'),
+          ('Expired', stats.expired, 'text-white/50'),
+          ('Personal', stats.personal, 'text-amber-400'),
+          ('Shared', stats.shared, 'text-white/70'),
+          ('Користувачів', stats.total_users, 'text-white/70'),
+          ('MRR $', stats.mrr, 'text-brand-lime'),
+        ] %}
+        {% for label, value, cls in stat_items %}
+        <div class="stat-card glass-card rounded-2xl p-4 text-center">
+          <div class="text-xl font-black {{ cls }}">{{ value }}</div>
+          <div class="text-xs text-white/35 mt-0.5">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- By plan / By template -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div class="glass-card rounded-2xl p-5 animate-fade-up">
+          <h3 class="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">По тарифах</h3>
+          <div class="space-y-2">
+            {% for plan_name, cnt in by_plan.items() %}
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-white/70">{{ plan_name }}</span>
+              <span class="font-bold text-white">{{ cnt }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="glass-card rounded-2xl p-5 animate-fade-up">
+          <h3 class="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">По шаблонах</h3>
+          <div class="space-y-2">
+            {% for tpl, cnt in by_template.items() %}
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-white/70">{{ tpl }}</span>
+              <span class="font-bold text-white">{{ cnt }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Failed deploys -->
+      {% if failed_deploys %}
+      <div class="glass-card rounded-2xl p-5 mb-8 animate-fade-up border border-red-500/20">
+        <h3 class="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3">⚠ Помилки деплою ({{ failed_deploys | length }})</h3>
+        <div class="space-y-3">
+          {% for fd in failed_deploys %}
+          <div class="px-3 py-2.5 rounded-lg bg-red-500/5 border border-red-500/15">
+            <div class="flex items-center gap-2 mb-1">
+              <code class="text-xs text-brand-lime">{{ fd.slug }}</code>
+              <span class="text-xs text-white/40">{{ fd.business_name }}</span>
+            </div>
+            <p class="text-xs text-red-300/80 font-mono break-all">{{ fd.error }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- All clients table -->
+      <div class="glass-card rounded-2xl overflow-hidden animate-fade-up">
+        <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-white/70 uppercase tracking-wider">Всі клієнти ({{ all_clients | length }})</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[900px]">
+            <thead>
+              <tr>
+                <th>Slug / Бізнес</th>
+                <th>Власник</th>
+                <th>Тариф</th>
+                <th>Шаблон</th>
+                <th>Bot mode</th>
+                <th>Статус</th>
+                <th>Deploy</th>
+                <th>Сайт</th>
+                <th>Панель</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in all_clients %}
+              <tr>
+                <td>
+                  <div class="font-medium text-white/90">{{ c.business_name }}</div>
+                  <code class="text-white/40 text-[11px]">{{ c.slug }}</code>
+                </td>
+                <td class="text-white/50">{{ c.owner_email }}</td>
+                <td class="text-white/70">{{ c.plan_name }}</td>
+                <td class="text-white/50 text-[11px]">{{ c.template_name }}</td>
+                <td>
+                  {% if c.bot_mode == 'personal' %}
+                    <span class="badge badge-warn">personal</span>
+                  {% else %}
+                    <span class="badge badge-mute">shared</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.sub_status == 'active' %}
+                    <span class="badge badge-active">active</span>
+                  {% elif c.sub_status == 'trial' %}
+                    <span class="badge badge-trial">trial</span>
+                  {% else %}
+                    <span class="badge badge-mute">{{ c.sub_status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.deployment_status == 'ready' %}
+                    <span class="badge badge-active">ready</span>
+                  {% elif c.deployment_status == 'failed' %}
+                    <span class="badge badge-red" title="{{ c.deployment_error }}">failed</span>
+                  {% elif c.deployment_status == 'updating' %}
+                    <span class="badge badge-warn">updating</span>
+                  {% elif c.deployment_status %}
+                    <span class="badge badge-mute">{{ c.deployment_status }}</span>
+                  {% else %}
+                    <span class="text-white/25">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if c.site_url %}
+                  <a href="{{ c.site_url }}" target="_blank" rel="noopener"
+                     class="text-brand-lime hover:underline text-[11px] font-mono"
+                     style="word-break:break-all;max-width:180px;display:inline-block;">
+                    {{ c.site_url | replace('https://', '') | truncate(30, true, '…') }}
+                  </a>
+                  {% else %}—{% endif %}
+                </td>
+                <td>
+                  <a href="{{ c.dashboard_url }}" class="text-xs text-white/50 hover:text-brand-lime transition-colors">
+                    Dashboard →
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

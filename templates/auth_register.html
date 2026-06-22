@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="uk" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopPlatform — Реєстрація</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { lime: '#a3e635', purple: '#7c3aed', dark: '#0f0a1e', card: '#150e2e' } }, fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .form-input { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: white; transition: border-color .2s, box-shadow .2s; }
+    .form-input:focus { outline: none; border-color: rgba(163,230,53,.6); box-shadow: 0 0 0 4px rgba(163,230,53,.1); }
+    .form-input::placeholder { color: rgba(255,255,255,.25); }
+  </style>
+</head>
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen flex items-center justify-center overflow-x-hidden">
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+  <div class="fixed -top-40 -right-40 w-96 h-96 bg-lime-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <main class="relative w-full max-w-md mx-auto px-6 py-16">
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 font-bold text-lg tracking-tight mb-6">
+        <span class="w-8 h-8 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>ShopPlatform</span>
+      </a>
+      <h1 class="text-3xl font-black mb-2"><span class="gradient-text">Реєстрація</span></h1>
+      <p class="text-white/50 text-sm">Створіть акаунт для управління магазинами</p>
+    </div>
+
+    <div class="glass-card rounded-3xl p-8">
+      {% if error %}
+      <div class="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/register">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/70 mb-2">Ім'я (необов'язково)</label>
+          <input type="text" name="name" maxlength="128"
+                 value="{{ name or '' }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="Іван Іванов" autocomplete="name" />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-white/70 mb-2">Email <span class="text-brand-lime">*</span></label>
+          <input type="email" name="email" required autocomplete="email"
+                 value="{{ email or '' }}"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="your@email.com" />
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-white/70 mb-2">Пароль <span class="text-brand-lime">*</span></label>
+          <input type="password" name="password" required minlength="6"
+                 autocomplete="new-password"
+                 class="form-input w-full px-4 py-3 rounded-xl text-base"
+                 placeholder="Мінімум 6 символів" />
+        </div>
+        <button type="submit" class="cta-btn w-full py-3.5 rounded-2xl text-base">
+          Зареєструватися →
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-white/40 mt-5">
+        Вже є акаунт?
+        <a href="/login" class="text-brand-lime hover:underline">Увійти</a>
+      </p>
+    </div>
+  </main>
+</body>
+</html>

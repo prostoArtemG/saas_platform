@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="uk" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopPlatform — Кабінет</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/custom.css" />
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { brand: { lime: '#a3e635', purple: '#7c3aed', dark: '#0f0a1e', card: '#150e2e' } }, fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    .form-input { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: white; transition: border-color .2s; }
+    .form-input:focus { outline: none; border-color: rgba(163,230,53,.6); box-shadow: 0 0 0 4px rgba(163,230,53,.1); }
+    .form-input::placeholder { color: rgba(255,255,255,.25); }
+    .badge { display:inline-flex;align-items:center;gap:.35rem;font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:9999px;border:1px solid; }
+    .badge-active { background:rgba(163,230,53,.1);color:#a3e635;border-color:rgba(163,230,53,.3); }
+    .badge-trial  { background:rgba(124,58,237,.15);color:#c4a8ff;border-color:rgba(124,58,237,.4); }
+    .badge-warn   { background:rgba(251,191,36,.1);color:#fbbf24;border-color:rgba(251,191,36,.3); }
+    .badge-mute   { background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.1); }
+    .dot { width:.5rem;height:.5rem;border-radius:9999px; }
+  </style>
+</head>
+
+<body class="bg-brand-dark text-white font-sans antialiased min-h-screen overflow-x-hidden">
+
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-lg tracking-tight">
+        <span class="w-7 h-7 rounded-lg bg-brand-lime flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </span>
+        <span>ShopPlatform</span>
+      </a>
+      <div class="flex items-center gap-3 text-sm">
+        {% if is_admin %}
+        <a href="/admin" class="text-brand-lime hover:underline font-semibold">Admin</a>
+        <span class="text-white/20">·</span>
+        {% endif %}
+        <span class="text-white/50">{{ user.email or user.name or 'Кабінет' }}</span>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit" class="text-white/40 hover:text-white transition-colors">Вийти</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <div class="fixed inset-0 grid-bg opacity-50 pointer-events-none"></div>
+
+  <main class="relative pt-28 pb-20 px-6">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- Header -->
+      <div class="mb-8 animate-fade-up">
+        <div class="text-xs font-medium text-brand-lime uppercase tracking-widest mb-1">Особистий кабінет</div>
+        <h1 class="text-3xl font-black">
+          <span class="gradient-text">{{ user.name or user.email or 'Мій кабінет' }}</span>
+        </h1>
+      </div>
+
+      <!-- Alerts -->
+      {% set err_msg = request.query_params.get('error', '') %}
+      {% set ok_msg = request.query_params.get('claimed', '') %}
+      {% if err_msg == 'token_not_found' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        Токен не знайдено. Перевірте правильність токена дашборду.
+      </div>
+      {% elif err_msg == 'token_taken' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm">
+        Цей сайт вже прив'язано до іншого акаунту.
+      </div>
+      {% elif err_msg == 'token_empty' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        Введіть токен дашборду.
+      </div>
+      {% endif %}
+      {% if ok_msg %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">
+        ✅ Сайт успішно прив'язано до вашого акаунту.
+      </div>
+      {% endif %}
+
+      <!-- Sites list -->
+      {% if sites %}
+      <div class="grid grid-cols-1 gap-4 mb-10">
+        {% for s in sites %}
+        <div class="glass-card rounded-2xl p-6 animate-fade-up">
+          <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <h2 class="text-lg font-bold">{{ s.business_name }}</h2>
+                <code class="text-xs px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60">{{ s.slug }}</code>
+                {% if s.sub_status == 'active' or s.status == 'active' %}
+                  <span class="badge badge-active"><span class="dot bg-brand-lime"></span>Active</span>
+                {% elif s.sub_status == 'trial' %}
+                  <span class="badge badge-trial"><span class="dot bg-purple-400"></span>Trial</span>
+                {% else %}
+                  <span class="badge badge-mute"><span class="dot bg-white/40"></span>{{ s.status }}</span>
+                {% endif %}
+                <span class="badge badge-mute">{{ s.bot_mode }}</span>
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-white/40 mt-1">
+                <span>Тариф: <span class="text-white/70">{{ s.plan_name }}</span></span>
+                <span>Шаблон: <span class="text-white/70">{{ s.template_name }}</span></span>
+              </div>
+              {% if s.bot_mode == 'personal' and s.railway_url %}
+              <div class="mt-2">
+                <a href="{{ s.railway_url }}" target="_blank" rel="noopener"
+                   class="text-xs font-mono text-brand-lime hover:underline"
+                   style="word-break:break-all;overflow-wrap:anywhere;">{{ s.railway_url }}</a>
+                <span class="ml-2 text-xs text-white/30">Railway URL</span>
+              </div>
+              {% elif s.site_url %}
+              <div class="mt-2">
+                <a href="{{ s.site_url }}" target="_blank" rel="noopener"
+                   class="text-xs font-mono text-brand-lime hover:underline"
+                   style="word-break:break-all;overflow-wrap:anywhere;">{{ s.site_url }}</a>
+              </div>
+              {% endif %}
+            </div>
+            <!-- Actions -->
+            <div class="flex flex-wrap gap-2 flex-shrink-0">
+              {% if s.site_url %}
+              <a href="{{ s.site_url }}" target="_blank" rel="noopener"
+                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                🌐 Сайт
+              </a>
+              {% endif %}
+              <a href="/dashboard/{{ s.slug }}{% if s.dashboard_token %}?token={{ s.dashboard_token }}{% endif %}"
+                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-lime/10 border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/20 transition-colors whitespace-nowrap">
+                📊 Панель
+              </a>
+              {% if s.bot_username %}
+              <a href="https://t.me/{{ s.bot_username }}" target="_blank" rel="noopener"
+                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                🤖 Telegram
+              </a>
+              {% endif %}
+              {% if s.bot_mode == 'personal' and s.dashboard_token %}
+              <form method="post"
+                    action="/dashboard/{{ s.slug }}/redeploy?token={{ s.dashboard_token }}"
+                    onsubmit="this.querySelector('button').disabled=true">
+                <button type="submit"
+                        class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                  🔄 Оновити
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% if s.bot_mode == 'personal' %}
+          <div class="mt-3 text-xs text-white/30">
+            {% if s.deployment_status == 'ready' %}
+              ✅ Deploy готовий
+            {% elif s.deployment_status == 'updating' %}
+              ⏳ Оновлення…
+            {% elif s.deployment_status == 'failed' %}
+              ❌ Deploy завершився з помилкою. Спробуйте оновити.
+            {% else %}
+              ℹ️ Статус: {{ s.deployment_status or '—' }}
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="glass-card rounded-2xl p-10 text-center mb-10 animate-fade-up">
+        <div class="text-4xl mb-4">🏪</div>
+        <h2 class="text-lg font-bold mb-2">Немає магазинів</h2>
+        <p class="text-white/40 text-sm mb-6">Створіть свій перший магазин або прив'яжіть існуючий за токеном</p>
+        <a href="/create-site" class="cta-btn inline-flex px-6 py-3 rounded-xl text-sm">
+          Створити магазин →
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- Claim site by token -->
+      <div class="glass-card rounded-2xl p-6 animate-fade-up">
+        <h3 class="text-base font-bold mb-1">Прив'язати існуючий магазин</h3>
+        <p class="text-sm text-white/40 mb-4">
+          Якщо у вас вже є магазин, але він не відображається тут — введіть токен дашборду, щоб прив'язати його до акаунту.
+        </p>
+        <form method="post" action="/account/claim" class="flex gap-3 flex-wrap">
+          <input type="text" name="dashboard_token" required
+                 class="form-input flex-1 min-w-48 px-4 py-2.5 rounded-xl text-sm font-mono"
+                 placeholder="Токен дашборду (64 символи)" />
+          <button type="submit"
+                  class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+            Прив'язати →
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

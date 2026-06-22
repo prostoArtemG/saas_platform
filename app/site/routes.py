@@ -391,6 +391,10 @@ async def create_site_submit(
                 bot_mode=bot_mode if template_name == "technomarket_premium" else "shared",
                 dashboard_token=secrets.token_urlsafe(24),
             )
+            # Link to authenticated user if logged in
+            _session_user_id = request.session.get("user_id") if hasattr(request, "session") else None
+            if _session_user_id:
+                client.user_id = int(_session_user_id)
             session.add(client)
             try:
                 await session.flush()

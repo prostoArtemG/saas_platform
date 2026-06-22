@@ -17,7 +17,31 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 
-class Client(Base):
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    telegram_id: Mapped[Optional[int]] = mapped_column(
+        BigInteger, nullable=True, unique=True, index=True
+    )
+    name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    role: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="client", default="client"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    clients: Mapped[list["Client"]] = relationship(back_populates="user")
+
+
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -49,6 +73,11 @@ class Client(Base):
     railway_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     deployment_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     deployment_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -68,6 +97,7 @@ class Client(Base):
         cascade="all, delete-orphan",
     )
     plan: Mapped[Optional["Plan"]] = relationship(back_populates="clients")
+    user: Mapped[Optional["User"]] = relationship(back_populates="clients")
 
 
 class Plan(Base):
