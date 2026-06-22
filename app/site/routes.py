@@ -361,13 +361,13 @@ async def create_site_submit(
                     if _pname.startswith("starter"):
                         return _form_error(
                             "Шаблон Red Market недоступний для тарифу Starter. "
-                            "Оберіть Business або вищий тариф."
+                            "Оберіть Pro або вищий тариф."
                         )
                 if template_name == "technomarket_premium":
                     _pname = (plan_row.slug or plan_row.name or "").lower()
-                    if not _pname.startswith("premium"):
+                    if not (_pname.startswith("premium") or _pname.startswith("full")):
                         return _form_error(
-                            "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
+                            "Шаблон TechnoMarket Premium доступний лише для тарифів Premium та Full Ownership."
                         )
 
             # 2. Generate unique slug from business_name
