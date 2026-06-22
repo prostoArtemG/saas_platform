@@ -175,7 +175,13 @@
                   {% if c.deployment_status == 'ready' %}
                     <span class="badge badge-active">ready</span>
                   {% elif c.deployment_status == 'failed' %}
-                    <span class="badge badge-red" title="{{ c.deployment_error }}">failed</span>
+                    <div>
+                      <span class="badge badge-red">failed</span>
+                      {% if c.deployment_error %}
+                      <p class="text-[10px] text-red-400/70 font-mono mt-0.5 break-words max-w-[160px]"
+                         title="{{ c.deployment_error }}">{{ c.deployment_error[:80] }}{% if c.deployment_error|length > 80 %}…{% endif %}</p>
+                      {% endif %}
+                    </div>
                   {% elif c.deployment_status == 'updating' %}
                     <span class="badge badge-warn">updating</span>
                   {% elif c.deployment_status %}
@@ -187,16 +193,18 @@
                 <td>
                   {% if c.site_url %}
                   <a href="{{ c.site_url }}" target="_blank" rel="noopener"
-                     class="text-brand-lime hover:underline text-[11px] font-mono"
-                     style="word-break:break-all;max-width:180px;display:inline-block;">
+                     class="text-brand-lime hover:underline text-[11px] font-mono block"
+                     style="word-break:break-all;max-width:180px;">
                     {{ c.site_url | replace('https://', '') | truncate(30, true, '…') }}
                   </a>
                   {% else %}—{% endif %}
                 </td>
                 <td>
-                  <a href="{{ c.dashboard_url }}" class="text-xs text-white/50 hover:text-brand-lime transition-colors">
-                    Dashboard →
-                  </a>
+                  <div class="flex items-center gap-2">
+                    <a href="{{ c.dashboard_url }}" class="text-xs text-white/50 hover:text-brand-lime transition-colors whitespace-nowrap">
+                      📊 Панель
+                    </a>
+                  </div>
                 </td>
               </tr>
               {% endfor %}

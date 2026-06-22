@@ -128,13 +128,13 @@
             <div class="flex flex-wrap gap-2 flex-shrink-0">
               {% if s.site_url %}
               <a href="{{ s.site_url }}" target="_blank" rel="noopener"
-                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
-                🌐 Сайт
+                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-lime/10 border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/20 transition-colors whitespace-nowrap">
+                🌐 Відкрити сайт
               </a>
               {% endif %}
               <a href="/dashboard/{{ s.slug }}{% if s.dashboard_token %}?token={{ s.dashboard_token }}{% endif %}"
-                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-brand-lime/10 border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/20 transition-colors whitespace-nowrap">
-                📊 Панель
+                 class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                📊 Панель керування
               </a>
               {% if s.bot_username %}
               <a href="https://t.me/{{ s.bot_username }}" target="_blank" rel="noopener"
@@ -148,22 +148,25 @@
                     onsubmit="this.querySelector('button').disabled=true">
                 <button type="submit"
                         class="px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
-                  🔄 Оновити
+                  🔄 Оновити сайт
                 </button>
               </form>
               {% endif %}
             </div>
           </div>
           {% if s.bot_mode == 'personal' %}
-          <div class="mt-3 text-xs text-white/30">
+          <div class="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 flex-wrap">
             {% if s.deployment_status == 'ready' %}
-              ✅ Deploy готовий
+              <span class="badge badge-active"><span class="dot bg-brand-lime"></span>Deploy готовий</span>
             {% elif s.deployment_status == 'updating' %}
-              ⏳ Оновлення…
+              <span class="badge badge-warn"><span class="dot bg-amber-400 animate-pulse"></span>Оновлення…</span>
             {% elif s.deployment_status == 'failed' %}
-              ❌ Deploy завершився з помилкою. Спробуйте оновити.
+              <span class="badge" style="background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3);"><span class="dot" style="background:#f87171;"></span>Deploy з помилкою</span>
+              <span class="text-xs text-red-400/70">Спробуйте оновити сайт.</span>
+            {% elif s.deployment_status %}
+              <span class="badge badge-mute"><span class="dot bg-white/40"></span>{{ s.deployment_status }}</span>
             {% else %}
-              ℹ️ Статус: {{ s.deployment_status or '—' }}
+              <span class="text-xs text-white/30">ℹ️ Для особистого бота тимчасово використовується Railway URL. Красивий домен буде додано пізніше.</span>
             {% endif %}
           </div>
           {% endif %}

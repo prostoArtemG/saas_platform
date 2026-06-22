@@ -244,17 +244,30 @@ async def create_site_submit(
     if not business_name or not site_type or not plan:
         return _form_error(t["create_site"]["error_required"])
 
+    # Validate template exists
+    if site_type not in AVAILABLE_TEMPLATES:
+        return _form_error(f"Невідомий шаблон сайту: {site_type}.")
+
+    # Personal bot only makes sense for technomarket_premium; normalise otherwise.
+    if site_type != "technomarket_premium":
+        bot_mode = "shared"
+
     # Quick template/plan compatibility check (before DB hit)
     _plan_lower = plan.lower()
+    _tier = (
+        "premium" if _plan_lower.startswith("premium") or _plan_lower.startswith("full")
+        else "business" if _plan_lower.startswith("business") or _plan_lower.startswith("pro")
+        else "starter"
+    )
     if not _is_admin_preview:
-        if site_type == "red_market" and _plan_lower.startswith("starter"):
+        if site_type == "red_market" and _tier == "starter":
             return _form_error(
                 "Шаблон Red Market недоступний для тарифу Starter. "
-                "Оберіть Business або вищий тариф."
+                "Оберіть Pro або вищий тариф."
             )
-        if site_type == "technomarket_premium" and not _plan_lower.startswith("premium"):
+        if site_type == "technomarket_premium" and _tier not in ("premium",):
             return _form_error(
-                "Шаблон TechnoMarket Premium доступний лише для тарифу Premium."
+                "Шаблон TechnoMarket Premium доступний лише для тарифів Premium та Full Ownership."
             )
         if site_type == "technomarket_premium" and bot_mode == "personal" and not bot_token:
             return _form_error(

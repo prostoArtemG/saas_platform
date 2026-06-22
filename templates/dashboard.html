@@ -278,7 +278,8 @@
                 {% endif %}
                 {% if client.railway_url %}
                   <a href="{{ client.railway_url }}" target="_blank" rel="noopener"
-                     class="text-brand-lime text-sm font-medium hover:underline truncate max-w-xs">
+                     class="text-brand-lime text-sm font-medium hover:underline"
+                     style="word-break:break-all;overflow-wrap:anywhere;">
                     {{ client.railway_url }}
                   </a>
                 {% endif %}
