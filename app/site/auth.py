@@ -213,18 +213,29 @@ async def account_page(request: Request):
     if not user:
         return RedirectResponse("/login?next=/account", status_code=302)
 
-    async with AsyncSessionLocal() as session:
-        clients_rows = (
-            await session.execute(
-                select(Client)
-                .where(Client.user_id == user.id)
-                .options(
-                    selectinload(Client.subscriptions).selectinload(Subscription.plan),
-                    selectinload(Client.plan),
+    try:
+        async with AsyncSessionLocal() as session:
+            clients_rows = (
+                await session.execute(
+                    select(Client)
+                    .where(Client.user_id == user.id)
+                    .options(
+                        selectinload(Client.subscriptions).selectinload(Subscription.plan),
+                        selectinload(Client.plan),
+                    )
+                    .order_by(Client.created_at.desc())
                 )
-                .order_by(Client.created_at.desc())
-            )
-        ).scalars().all()
+            ).scalars().all()
+    except Exception:
+        logger.exception("account_page: DB query failed for user_id=%s", user.id)
+        return templates.TemplateResponse("account.html", {
+            "request": request,
+            "user": user,
+            "is_admin": _is_admin(user),
+            "sites": [],
+            "base_url": str(request.base_url).rstrip("/"),
+            "db_error": True,
+        }, status_code=500)
 
     sites = []
     for c in clients_rows:
@@ -242,6 +253,7 @@ async def account_page(request: Request):
             "template_name": c.template_name,
             "bot_mode": c.bot_mode or "shared",
             "status": c.status,
+            "sub_status": sub.status if sub else None,  # used in template badge logic
             "deployment_status": c.deployment_status,
             "railway_url": c.railway_url,
             "dashboard_token": c.dashboard_token,

@@ -66,6 +66,11 @@
       <!-- Alerts -->
       {% set err_msg = request.query_params.get('error', '') %}
       {% set ok_msg = request.query_params.get('claimed', '') %}
+      {% if db_error %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        ⚠️ Помилка бази даних. Схоже, що міграції ще не застосовані. Перевірте логи Railway та виконайте <code class="font-mono">alembic upgrade head</code>.
+      </div>
+      {% endif %}
       {% if err_msg == 'token_not_found' %}
       <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
         Токен не знайдено. Перевірте правильність токена або посилання дашборду.
