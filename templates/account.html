@@ -68,7 +68,7 @@
       {% set ok_msg = request.query_params.get('claimed', '') %}
       {% if err_msg == 'token_not_found' %}
       <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
-        Токен не знайдено. Перевірте правильність токена дашборду.
+        Токен не знайдено. Перевірте правильність токена або посилання дашборду.
       </div>
       {% elif err_msg == 'token_taken' %}
       <div class="mb-6 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm">
@@ -76,7 +76,27 @@
       </div>
       {% elif err_msg == 'token_empty' %}
       <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
-        Введіть токен дашборду.
+        Заповніть одне з полів: токен/посилання або slug магазину.
+      </div>
+      {% elif err_msg == 'slug_not_found' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        Магазин із таким slug не знайдено.
+      </div>
+      {% elif err_msg == 'slug_tg_mismatch' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        Telegram ID не збігається з адміністратором цього магазину.
+      </div>
+      {% elif err_msg == 'slug_tg_required' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm">
+        Введіть ваш Telegram ID для прив'язки за slug. Дізнатись ID можна через @userinfobot.
+      </div>
+      {% elif err_msg == 'slug_taken' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm">
+        Цей магазин вже прив'язано до іншого акаунту.
+      </div>
+      {% elif err_msg == 'server_error' %}
+      <div class="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        Помилка сервера. Спробуйте пізніше.
       </div>
       {% endif %}
       {% if ok_msg %}
@@ -184,18 +204,60 @@
       </div>
       {% endif %}
 
-      <!-- Claim site by token -->
+      <!-- Claim site -->
       <div class="glass-card rounded-2xl p-6 animate-fade-up">
-        <h3 class="text-base font-bold mb-1">Прив'язати існуючий магазин</h3>
-        <p class="text-sm text-white/40 mb-4">
-          Якщо у вас вже є магазин, але він не відображається тут — введіть токен дашборду, щоб прив'язати його до акаунту.
+        <h3 class="text-base font-bold mb-2">Прив'язати існуючий магазин</h3>
+        <p class="text-sm text-white/40 mb-5">
+          Якщо у вас вже є магазин, але він не відображається тут — прив'яжіть його одним із способів нижче.
         </p>
-        <form method="post" action="/account/claim" class="flex gap-3 flex-wrap">
-          <input type="text" name="dashboard_token" required
-                 class="form-input flex-1 min-w-48 px-4 py-2.5 rounded-xl text-sm font-mono"
-                 placeholder="Токен дашборду (64 символи)" />
+
+        <form method="post" action="/account/claim">
+
+          <!-- Method 1/2: token or dashboard URL -->
+          <div class="mb-2">
+            <label class="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5">
+              Спосіб 1 — токен або посилання дашборду
+            </label>
+            <input type="text" name="token_or_url"
+                   class="form-input w-full px-4 py-2.5 rounded-xl text-sm font-mono"
+                   placeholder="Токен (64 символи) або https://…/dashboard/slug?token=…" />
+            <p class="mt-1.5 text-xs text-white/30">
+              Вставте токен або повне посилання дашборду.
+              <span class="text-amber-400/80">⚠ BOT_TOKEN Telegram сюди не підходить.</span>
+            </p>
+          </div>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-3 my-4">
+            <div class="flex-1 h-px bg-white/8"></div>
+            <span class="text-xs text-white/30">або</span>
+            <div class="flex-1 h-px bg-white/8"></div>
+          </div>
+
+          <!-- Method 3: slug + telegram_id -->
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5">
+              Спосіб 2 — slug магазину + Telegram ID
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input type="text" name="claim_slug"
+                     class="form-input px-4 py-2.5 rounded-xl text-sm font-mono"
+                     placeholder="Slug магазину (наприклад: miy-kramnychka)" />
+              <input type="text" name="claim_tg_id"
+                     class="form-input px-4 py-2.5 rounded-xl text-sm font-mono"
+                     placeholder="Telegram ID (число, необов'язково)" />
+            </div>
+            <p class="mt-1.5 text-xs text-white/30">
+              Slug — коротка назва магазину (видна в адресі сайту).
+              Telegram ID використовується для підтвердження власника.{% if user.telegram_id %}
+              <span class="text-brand-lime/70"> Ваш ID {{ user.telegram_id }} буде підставлено автоматично.</span>{% endif %}
+
+              Дізнатись ID можна через <a href="https://t.me/userinfobot" target="_blank" rel="noopener" class="text-brand-lime hover:underline">@userinfobot</a>.
+            </p>
+          </div>
+
           <button type="submit"
-                  class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors whitespace-nowrap">
+                  class="w-full px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-white/70 hover:text-white hover:border-brand-lime/40 transition-colors">
             Прив'язати →
           </button>
         </form>

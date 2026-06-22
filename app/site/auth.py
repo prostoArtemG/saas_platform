@@ -263,32 +263,100 @@ async def account_page(request: Request):
 
 
 # ---------------------------------------------------------------------------
-# Claim site by dashboard_token — link existing site to current account
+# Claim site — link existing site to current account
+# Supports three methods:
+#   1. dashboard_token (64-char hex)
+#   2. full dashboard URL (…/dashboard/{slug}?token={token})
+#   3. slug + telegram_id (user's stored or manually entered)
 # ---------------------------------------------------------------------------
 
 @router.post("/account/claim", response_class=HTMLResponse)
 async def claim_site(
     request: Request,
-    dashboard_token: str = Form(""),
+    token_or_url: str = Form(""),
+    claim_slug: str = Form(""),
+    claim_tg_id: str = Form(""),
 ):
     user = await get_current_user(request)
     if not user:
         return RedirectResponse("/login?next=/account", status_code=302)
 
-    dashboard_token = dashboard_token.strip()
-    if not dashboard_token:
-        return RedirectResponse("/account?error=token_empty", status_code=302)
+    token_or_url = token_or_url.strip()
+    claim_slug = claim_slug.strip().lower().strip("/")
+    claim_tg_id = claim_tg_id.strip()
 
-    async with AsyncSessionLocal() as session:
-        client = await session.scalar(
-            select(Client).where(Client.dashboard_token == dashboard_token)
-        )
-        if client is None:
-            return RedirectResponse("/account?error=token_not_found", status_code=302)
+    async def _do_claim(client) -> None:
         if client.user_id and client.user_id != user.id:
-            return RedirectResponse("/account?error=token_taken", status_code=302)
+            raise ValueError("taken")
         client.user_id = user.id
-        await session.commit()
 
-    logger.info("User %s claimed client slug=%s via dashboard_token", user.id, client.slug)
-    return RedirectResponse("/account?claimed=1", status_code=302)
+    # ── Method 1 / 2: token or dashboard URL ────────────────────────────────
+    if token_or_url:
+        from urllib.parse import parse_qs, urlparse
+
+        token = token_or_url
+        # If it looks like a URL, pull the ?token= param out of it
+        if "/" in token_or_url or "?" in token_or_url:
+            try:
+                raw = token_or_url if "://" in token_or_url else f"https://x.x/{token_or_url}"
+                qs = parse_qs(urlparse(raw).query)
+                if "token" in qs:
+                    token = qs["token"][0].strip()
+            except Exception:
+                pass  # fall through — token stays as the raw input
+
+        if not token:
+            return RedirectResponse("/account?error=token_empty", status_code=302)
+
+        try:
+            async with AsyncSessionLocal() as session:
+                client = await session.scalar(
+                    select(Client).where(Client.dashboard_token == token)
+                )
+                if client is None:
+                    return RedirectResponse("/account?error=token_not_found", status_code=302)
+                await _do_claim(client)
+                await session.commit()
+        except ValueError:
+            return RedirectResponse("/account?error=token_taken", status_code=302)
+        except Exception:
+            logger.exception("claim_site (token) failed for user=%s", user.id)
+            return RedirectResponse("/account?error=server_error", status_code=302)
+
+        logger.info("User %s claimed client via token slug=%s", user.id, client.slug)
+        return RedirectResponse("/account?claimed=1", status_code=302)
+
+    # ── Method 3: slug + telegram_id ────────────────────────────────────────
+    if claim_slug:
+        # Resolve telegram_id: explicit input → user's stored id → require one
+        tg_id: Optional[int] = None
+        if claim_tg_id and claim_tg_id.isdigit():
+            tg_id = int(claim_tg_id)
+        elif user.telegram_id:
+            tg_id = user.telegram_id
+
+        if tg_id is None:
+            return RedirectResponse("/account?error=slug_tg_required", status_code=302)
+
+        try:
+            async with AsyncSessionLocal() as session:
+                client = await session.scalar(
+                    select(Client).where(Client.slug == claim_slug)
+                )
+                if client is None:
+                    return RedirectResponse("/account?error=slug_not_found", status_code=302)
+                if client.admin_telegram_id != tg_id:
+                    return RedirectResponse("/account?error=slug_tg_mismatch", status_code=302)
+                await _do_claim(client)
+                await session.commit()
+        except ValueError:
+            return RedirectResponse("/account?error=slug_taken", status_code=302)
+        except Exception:
+            logger.exception("claim_site (slug) failed for user=%s slug=%s", user.id, claim_slug)
+            return RedirectResponse("/account?error=server_error", status_code=302)
+
+        logger.info("User %s claimed client via slug=%s tg_id=%s", user.id, claim_slug, tg_id)
+        return RedirectResponse("/account?claimed=1", status_code=302)
+
+    # Nothing provided
+    return RedirectResponse("/account?error=token_empty", status_code=302)
