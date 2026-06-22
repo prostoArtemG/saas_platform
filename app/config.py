@@ -63,7 +63,15 @@ class Settings(BaseSettings):
         "change-me-please-use-32-plus-random-chars",
         alias="SECRET_KEY",
     )
-    admin_emails: List[str] = Field(default_factory=list, alias="ADMIN_EMAILS")
+    admin_emails_raw: str = Field("", alias="ADMIN_EMAILS")
+
+    @property
+    def admin_emails(self) -> list[str]:
+        return [
+            e.strip().lower()
+            for e in self.admin_emails_raw.replace(";", ",").split(",")
+            if e.strip()
+        ]
 
     @field_validator("admin_ids", mode="before")
     @classmethod
