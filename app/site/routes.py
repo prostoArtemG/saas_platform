@@ -109,7 +109,9 @@ async def index(
     lang: Optional[str] = None,
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
+    from app.site.auth import get_current_user, _is_admin  # local import avoids circular
     chosen = _resolve_lang(lang, lang_cookie)
+    current_user = await get_current_user(request)
     response = templates.TemplateResponse(
         "index.html",
         {
@@ -117,6 +119,8 @@ async def index(
             "t": get_t(chosen),
             "lang": chosen,
             "supported_langs": SUPPORTED_LANGS,
+            "current_user": current_user,
+            "is_admin": _is_admin(current_user),
         },
     )
     response.set_cookie("lang", chosen, max_age=60 * 60 * 24 * 365, samesite="lax")
