@@ -444,10 +444,13 @@ async def create_site_submit(
         except Exception as _e:
             logger.warning("Could not save personal bot info: %s", _e)
 
-    # Register webhook for new personal bot (best-effort, non-blocking)
+    # Register webhook for new personal bot — ONLY when NOT deploying to Railway.
+    # If client_deploy_enabled, the bot runs inside technomarket_client_template
+    # on its own Railway project; starting it inside saas_platform would duplicate
+    # the bot and cause "Router is already attached" for the shared client_cms_router.
     if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token:
         _wb_base = settings.client_bot_webhook_base
-        if _wb_base:
+        if _wb_base and not settings.client_deploy_enabled:
             try:
                 from app.services.client_bot_manager import start_client_bot
                 await start_client_bot(_wb_base, result.slug, bot_token)

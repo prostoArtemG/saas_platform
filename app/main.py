@@ -110,6 +110,9 @@ async def lifespan(app: FastAPI):
                         .where(Client.template_name == "technomarket_premium")
                         .where(Client.bot_mode == "personal")
                         .where(Client.telegram_bot_token.isnot(None))
+                        # Skip clients that have their own Railway project —
+                        # their bot runs in technomarket_client_template, NOT here.
+                        .where(Client.railway_service_id.is_(None))
                     )
                 ).all()
             for _c in _personal_clients:

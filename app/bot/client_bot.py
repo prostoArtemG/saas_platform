@@ -17,7 +17,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from sqlalchemy import select
 
-from app.bot.client_cms import router as client_cms_router
 from app.bot.keyboards import client_main_menu
 from app.bot.middlewares import MenuInterruptMiddleware
 from app.db import AsyncSessionLocal
@@ -79,13 +78,18 @@ def _build_start_router(slug: str) -> Router:
 def create_client_dispatcher(slug: str) -> Dispatcher:
     """Build an isolated Dispatcher for a personal client bot.
 
-    The /start router is registered first (higher priority), then the full
-    client CMS router.  Both share the same CMSFilter logic — access is
-    granted only to the user whose Telegram ID matches Client.admin_telegram_id.
+    Only the /start handler is included here.  The full CMS router
+    (client_cms_router) is intentionally excluded: it is a module-level
+    singleton in aiogram and can only be attached to ONE Dispatcher.
+    Including it here would raise "Router is already attached" for every
+    second personal bot started in the same process.
+
+    Clients using saas_platform webhook mode get CMS access through the
+    platform bot (which includes client_cms_router once in its Dispatcher).
+    Clients deployed to Railway have their own process and their own CMS.
     """
     dp = Dispatcher()
     dp.message.outer_middleware(MenuInterruptMiddleware())
-    # /start must come before cms router so it's matched first
+    # /start must come first — it handles account linking for this slug
     dp.include_router(_build_start_router(slug))
-    dp.include_router(client_cms_router)
     return dp
