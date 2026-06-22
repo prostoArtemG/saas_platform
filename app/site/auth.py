@@ -6,6 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.responses import PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -209,11 +210,17 @@ async def logout_get(request: Request):
 
 @router.get("/account", response_class=HTMLResponse)
 async def account_page(request: Request):
-    user = await get_current_user(request)
-    if not user:
-        return RedirectResponse("/login?next=/account", status_code=302)
-
     try:
+        logger.info("ACCOUNT route entered user_id=%s", request.session.get("user_id"))
+
+        logger.info("ACCOUNT before load user")
+        user = await get_current_user(request)
+        if not user:
+            logger.info("ACCOUNT no user — redirect to login")
+            return RedirectResponse("/login?next=/account", status_code=302)
+        logger.info("ACCOUNT after load user id=%s email=%s", user.id, user.email)
+
+        logger.info("ACCOUNT before load clients")
         async with AsyncSessionLocal() as session:
             clients_rows = (
                 await session.execute(
@@ -226,52 +233,47 @@ async def account_page(request: Request):
                     .order_by(Client.created_at.desc())
                 )
             ).scalars().all()
-    except Exception:
-        logger.exception("account_page: DB query failed for user_id=%s", user.id)
+        logger.info("ACCOUNT after load clients count=%s", len(clients_rows))
+
+        sites = []
+        for c in clients_rows:
+            sub = next(
+                (s for s in sorted(c.subscriptions, key=lambda x: x.id, reverse=True)
+                 if s.status in ("active", "trial")),
+                None,
+            )
+            plan = (sub.plan if sub else None) or c.plan
+            sites.append({
+                "id": c.id,
+                "business_name": c.business_name,
+                "slug": c.slug,
+                "template_name": c.template_name,
+                "bot_mode": c.bot_mode or "shared",
+                "status": c.status,
+                "sub_status": sub.status if sub else None,
+                "deployment_status": c.deployment_status,
+                "railway_url": c.railway_url,
+                "dashboard_token": c.dashboard_token,
+                "bot_username": c.bot_username,
+                "plan_name": plan.name if plan else "—",
+                "site_url": get_public_site_url(
+                    c, settings.platform_domain,
+                    fallback_base=str(request.base_url).rstrip("/"),
+                ),
+            })
+
+        logger.info("ACCOUNT before render account.html sites=%s", len(sites))
         return templates.TemplateResponse("account.html", {
             "request": request,
             "user": user,
             "is_admin": _is_admin(user),
-            "sites": [],
+            "sites": sites,
             "base_url": str(request.base_url).rstrip("/"),
-            "db_error": True,
-        }, status_code=500)
-
-    sites = []
-    for c in clients_rows:
-        # Active subscription
-        sub = next(
-            (s for s in sorted(c.subscriptions, key=lambda x: x.id, reverse=True)
-             if s.status in ("active", "trial")),
-            None,
-        )
-        plan = (sub.plan if sub else None) or c.plan
-        sites.append({
-            "id": c.id,
-            "business_name": c.business_name,
-            "slug": c.slug,
-            "template_name": c.template_name,
-            "bot_mode": c.bot_mode or "shared",
-            "status": c.status,
-            "sub_status": sub.status if sub else None,  # used in template badge logic
-            "deployment_status": c.deployment_status,
-            "railway_url": c.railway_url,
-            "dashboard_token": c.dashboard_token,
-            "bot_username": c.bot_username,
-            "plan_name": plan.name if plan else "—",
-            "site_url": get_public_site_url(
-                c, settings.platform_domain,
-                fallback_base=str(request.base_url).rstrip("/"),
-            ),
         })
 
-    return templates.TemplateResponse("account.html", {
-        "request": request,
-        "user": user,
-        "is_admin": _is_admin(user),
-        "sites": sites,
-        "base_url": str(request.base_url).rstrip("/"),
-    })
+    except Exception:
+        logger.exception("ACCOUNT failed")
+        return PlainTextResponse("ACCOUNT failed, check logs", status_code=500)
 
 
 # ---------------------------------------------------------------------------
