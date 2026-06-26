@@ -166,6 +166,8 @@
             <span class="info-value">
               {% if data.template == 'technomarket_premium' %}
                 ⭐ TechnoMarket Premium
+              {% elif data.template == 'auto_market' %}
+                🚘 Auto Market
               {% elif data.template == 'red_market' %}
                 🔴 Red Market
               {% elif data.template == 'shop_bot' %}
@@ -242,7 +244,7 @@
         </div>
 
         <!-- Personal bot deploy status block -->
-        {% if data.bot_mode == 'personal' and data.template == 'technomarket_premium' %}
+        {% if data.bot_mode == 'personal' and data.template in ['technomarket_premium', 'auto_market'] %}
         <div class="glass-card rounded-2xl p-6 mt-6 animate-fade-up"
              style="border: 1px solid {% if data.deployment_status == 'ready' %}rgba(163,230,53,0.35){% elif data.deployment_status == 'failed' %}rgba(239,68,68,0.35){% else %}rgba(255,255,255,0.08){% endif %};">
           {% if data.deployment_status == 'ready' %}

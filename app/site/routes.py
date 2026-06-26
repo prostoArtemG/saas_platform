@@ -17,7 +17,13 @@ from app.config import settings
 from app.db import AsyncSessionLocal
 from app.models import Client, ClientSettings, Order, Payment, Plan, Product, ProductSpec, SiteEvent, SiteRequest, Subscription
 from app.services.onboarding import TRIAL_DAYS, onboard_client
-from app.services.railway_api import deploy_shop_bot, deploy_technomarket_client, redeploy_technomarket_client
+from app.services.railway_api import (
+    deploy_automarket_client,
+    deploy_shop_bot,
+    deploy_technomarket_client,
+    redeploy_automarket_client,
+    redeploy_technomarket_client,
+)
 from app.site.i18n import DEFAULT_LANG, SUPPORTED_LANGS, get_t
 
 logger = logging.getLogger(__name__)
@@ -94,6 +100,7 @@ templates = Jinja2Templates(directory="templates")
 # Whitelist of installed site templates. Each must have an `index.html`
 # at templates/sites/{name}/index.html
 AVAILABLE_TEMPLATES = {"technovlada", "shop_bot", "red_market", "technomarket_premium", "auto_market"}
+PERSONAL_BOT_TEMPLATES = {"technomarket_premium", "auto_market"}
 
 
 def _resolve_lang(lang: Optional[str], cookie: Optional[str]) -> str:
@@ -252,8 +259,8 @@ async def create_site_submit(
     if site_type not in AVAILABLE_TEMPLATES:
         return _form_error(f"Невідомий шаблон сайту: {site_type}.")
 
-    # Personal bot only makes sense for technomarket_premium; normalise otherwise.
-    if site_type != "technomarket_premium":
+    # Personal bot is supported only by selected dedicated client templates.
+    if site_type not in PERSONAL_BOT_TEMPLATES:
         bot_mode = "shared"
 
     # Quick template/plan compatibility check (before DB hit)
@@ -273,13 +280,22 @@ async def create_site_submit(
             return _form_error(
                 "Шаблон TechnoMarket Premium доступний лише для тарифів Premium та Full Ownership."
             )
-        if site_type == "technomarket_premium" and bot_mode == "personal" and not bot_token:
+        if site_type in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and _tier not in ("premium",):
+            return _form_error(
+                "Особистий бот доступний лише для тарифів Premium та Full Ownership."
+            )
+        if site_type == "auto_market" and bot_mode == "personal" and not settings.client_deploy_enabled:
+            return _form_error(
+                "Для auto_market особистий бот працює лише через окремий клієнтський деплой. "
+                "Увімкніть CLIENT_DEPLOY_ENABLED."
+            )
+        if site_type in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and not bot_token:
             return _form_error(
                 "Для режиму «Особистий бот» необхідно вказати BOT_TOKEN."
             )
         # For personal bot, Telegram field must be a numeric ID (becomes ADMIN_IDS in Railway)
         _check_tg_id = admin_telegram_id.strip() or telegram.strip().lstrip("@")
-        if site_type == "technomarket_premium" and bot_mode == "personal" and not _check_tg_id.isdigit():
+        if site_type in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and not _check_tg_id.isdigit():
             return _form_error(
                 "Для режиму «Особистий бот» необхідно вказати ваш числовий Telegram ID. "
                 "Дізнайтесь його через @userinfobot."
@@ -287,7 +303,7 @@ async def create_site_submit(
 
     # Verify personal bot token via Telegram API (before DB operations)
     _bot_info: dict | None = None
-    if site_type == "technomarket_premium" and bot_mode == "personal" and bot_token and not _is_admin_preview:
+    if site_type in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and bot_token and not _is_admin_preview:
         try:
             import httpx as _httpx
             async with _httpx.AsyncClient(timeout=10) as _hc:
@@ -402,10 +418,10 @@ async def create_site_submit(
                 admin_telegram_id=int(_admin_tg_id) if _admin_tg_id.isdigit() else None,
                 telegram_bot_token=(
                     bot_token
-                    if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token
+                    if template_name in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and bot_token
                     else None
                 ),
-                bot_mode=bot_mode if template_name == "technomarket_premium" else "shared",
+                bot_mode=bot_mode if template_name in PERSONAL_BOT_TEMPLATES else "shared",
                 dashboard_token=secrets.token_urlsafe(24),
             )
             # Link to authenticated user if logged in
@@ -450,7 +466,7 @@ async def create_site_submit(
                 logger.warning("Failed to notify admin %s: %s", admin_id, exc)
 
     # Save personal bot username/id from earlier token verification
-    if template_name == "technomarket_premium" and bot_mode == "personal" and _bot_info:
+    if template_name in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and _bot_info:
         try:
             async with AsyncSessionLocal() as _upd:
                 _c = await _upd.get(Client, client.id)
@@ -475,7 +491,7 @@ async def create_site_submit(
                 logger.warning("Could not start personal bot for %s: %s", result.slug, _e)
 
     # Auto-deploy for technomarket_premium + personal bot mode
-    if template_name == "technomarket_premium" and bot_mode == "personal" and bot_token and settings.client_deploy_enabled:
+    if template_name in PERSONAL_BOT_TEMPLATES and bot_mode == "personal" and bot_token and settings.client_deploy_enabled:
         # Resolve ADMIN_IDS for the deployed client:
         # Use client.admin_telegram_id (already persisted), fallback to platform admin.
         _deploy_admin_ids = str(client.admin_telegram_id) if client.admin_telegram_id else ""
@@ -491,16 +507,28 @@ async def create_site_submit(
         _deploy_error: str | None = None
         _deploy_result: dict | None = None
         try:
-            _deploy_result = await deploy_technomarket_client(
-                client_name=business_name,
-                slug=slug,
-                bot_token=bot_token,
-                admin_ids=_deploy_admin_ids,
-                saas_platform_url=str(request.base_url).rstrip("/"),
-                cloudinary_cloud=settings.cloudinary_cloud_name,
-                cloudinary_key=settings.cloudinary_api_key,
-                cloudinary_secret=settings.cloudinary_api_secret,
-            )
+            if template_name == "auto_market":
+                _deploy_result = await deploy_automarket_client(
+                    client_name=business_name,
+                    slug=slug,
+                    bot_token=bot_token,
+                    admin_ids=_deploy_admin_ids,
+                    saas_platform_url=str(request.base_url).rstrip("/"),
+                    cloudinary_cloud=settings.cloudinary_cloud_name,
+                    cloudinary_key=settings.cloudinary_api_key,
+                    cloudinary_secret=settings.cloudinary_api_secret,
+                )
+            else:
+                _deploy_result = await deploy_technomarket_client(
+                    client_name=business_name,
+                    slug=slug,
+                    bot_token=bot_token,
+                    admin_ids=_deploy_admin_ids,
+                    saas_platform_url=str(request.base_url).rstrip("/"),
+                    cloudinary_cloud=settings.cloudinary_cloud_name,
+                    cloudinary_key=settings.cloudinary_api_key,
+                    cloudinary_secret=settings.cloudinary_api_secret,
+                )
             _deploy_ok = True
         except Exception as _exc:
             logger.warning("deploy_technomarket_client failed for %s: %s", slug, _exc, exc_info=True)
@@ -1217,17 +1245,30 @@ async def dashboard_redeploy(
         )
 
         try:
-            _redeploy_result = await redeploy_technomarket_client(
-                project_id=project_id,
-                service_id=service_id,
-                slug=slug,
-                admin_ids=admin_ids,
-                saas_platform_url=saas_url,
-                railway_url=client.railway_url or "",
-                cloudinary_cloud=settings.cloudinary_cloud_name,
-                cloudinary_key=settings.cloudinary_api_key,
-                cloudinary_secret=settings.cloudinary_api_secret,
-            )
+            if client.template_name == "auto_market":
+                _redeploy_result = await redeploy_automarket_client(
+                    project_id=project_id,
+                    service_id=service_id,
+                    slug=slug,
+                    admin_ids=admin_ids,
+                    saas_platform_url=saas_url,
+                    railway_url=client.railway_url or "",
+                    cloudinary_cloud=settings.cloudinary_cloud_name,
+                    cloudinary_key=settings.cloudinary_api_key,
+                    cloudinary_secret=settings.cloudinary_api_secret,
+                )
+            else:
+                _redeploy_result = await redeploy_technomarket_client(
+                    project_id=project_id,
+                    service_id=service_id,
+                    slug=slug,
+                    admin_ids=admin_ids,
+                    saas_platform_url=saas_url,
+                    railway_url=client.railway_url or "",
+                    cloudinary_cloud=settings.cloudinary_cloud_name,
+                    cloudinary_key=settings.cloudinary_api_key,
+                    cloudinary_secret=settings.cloudinary_api_secret,
+                )
             client.deployment_status = "updating"
             client.deployment_error = None
             logger.info("dashboard_redeploy: deploy triggered for slug=%s", slug)

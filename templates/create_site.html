@@ -185,6 +185,17 @@
                 🔒 Business+
               </span>
             </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="site_type" value="auto_market" id="tpl-auto"
+                     class="sr-only peer"
+                     {% if form.site_type == 'auto_market' %}checked{% endif %}>
+              <div class="peer-checked:border-brand-lime peer-checked:bg-brand-lime/10
+                          border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
+                <div class="text-xl mb-1">🚘</div>
+                <div class="font-semibold text-sm text-white">Auto Market</div>
+                <div class="text-xs text-white/40 mt-0.5">Каталог авто з фільтрами, заявками та Telegram CMS</div>
+              </div>
+            </label>
             <label id="tpl-premium-label" class="cursor-pointer relative">
               <input type="radio" name="site_type" value="technomarket_premium" id="tpl-premium"
                      class="sr-only peer"
@@ -215,7 +226,7 @@
           </p>
         </div>
 
-        <!-- Bot mode — shown only for TechnoMarket Premium -->
+        <!-- Bot mode — shown only for templates with dedicated personal bot support -->
         <div id="bot-mode-block" class="mb-5 hidden">
           <label class="block text-sm font-medium text-white/70 mb-3">
             Режим Telegram-бота <span class="text-brand-lime">*</span>
@@ -293,6 +304,7 @@
       var planSel         = document.getElementById('plan-select');
       var shopRadio       = document.getElementById('tpl-shop-bot');
       var redRadio        = document.getElementById('tpl-red');
+      var autoRadio       = document.getElementById('tpl-auto');
       var redLabel        = document.getElementById('tpl-red-label');
       var redLock         = document.getElementById('tpl-red-lock');
       var premRadio       = document.getElementById('tpl-premium');
@@ -335,8 +347,10 @@
 
       /* Update bot-mode / bot-token blocks based on current template selection. */
       function syncBotMode() {
-        var isPrem = premRadio && premRadio.checked && !premRadio.disabled;
-        if (isPrem) {
+        var supportsPersonal =
+          (premRadio && premRadio.checked && !premRadio.disabled) ||
+          (autoRadio && autoRadio.checked && !autoRadio.disabled);
+        if (supportsPersonal) {
           botModeBlock.classList.remove('hidden');
           var isPersonal = botModePersonal && botModePersonal.checked;
           botTokenBlock.classList[isPersonal ? 'remove' : 'add']('hidden');

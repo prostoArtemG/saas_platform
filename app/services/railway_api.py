@@ -13,6 +13,9 @@ GITHUB_REPO_PREMIUM = "prostoArtemG/premium_store"
 TECHNOMARKET_CLIENT_REPO = os.getenv(
     "TECHNOMARKET_CLIENT_REPO", "prostoArtemG/technomarket_client_template"
 )
+AUTOMARKET_CLIENT_REPO = os.getenv(
+    "AUTOMARKET_CLIENT_REPO", "prostoArtemG/automarket_client_template"
+)
 PLATFORM_DOMAIN = os.getenv("PLATFORM_DOMAIN", "shopplatform.app")
 # Domain for personal bot Railway services (separate from shared saas_platform subdomain).
 # Personal bots: {slug}.{CLIENT_APPS_DOMAIN}  e.g. tst.store.shopplatform.app
@@ -480,6 +483,114 @@ async def deploy_technomarket_client(
     }
 
 
+async def deploy_automarket_client(
+    client_name: str,
+    slug: str,
+    bot_token: str,
+    admin_ids: str,
+    saas_platform_url: str,
+    cloudinary_cloud: str = "",
+    cloudinary_key: str = "",
+    cloudinary_secret: str = "",
+) -> dict:
+    """Deploy a personal auto_market bot to a dedicated Railway project."""
+    project_name = f"client-{slug}"
+
+    project_id = await create_project(project_name)
+    await asyncio.sleep(2)
+
+    environment_id = await get_environment_id(project_id)
+    await asyncio.sleep(1)
+
+    await create_postgres(project_id, environment_id)
+    await asyncio.sleep(2)
+
+    service_name = f"automarket-{slug}"
+    query = """
+    mutation serviceCreate($input: ServiceCreateInput!) {
+        serviceCreate(input: $input) {
+            id
+            name
+        }
+    }
+    """
+    variables = {
+        "input": {
+            "projectId": project_id,
+            "name": service_name,
+            "source": {
+                "repo": AUTOMARKET_CLIENT_REPO,
+            },
+        }
+    }
+    result = await graphql(query, variables)
+    service_id = result["data"]["serviceCreate"]["id"]
+    logger.info(
+        "deploy_automarket_client: created service name=%s id=%s project=%s slug=%s",
+        service_name, service_id, project_id, slug,
+    )
+    await asyncio.sleep(2)
+
+    shop_title = client_name or slug
+    env_vars = {
+        "BOT_TOKEN": bot_token,
+        "ADMIN_IDS": admin_ids,
+        "DATABASE_URL": "postgresql://postgres:postgres123@postgres.railway.internal:5432/railway",
+        "SAAS_PLATFORM_URL": saas_platform_url,
+        "SAAS_CLIENT_SLUG": slug,
+        "SHOP_TITLE": shop_title,
+        "SHOP_SUBTITLE": "Каталог авто з Telegram CMS, фото та відео-оглядами",
+        "TEMPLATE_NAME": "auto_market",
+        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
+    }
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
+        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
+        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/automarket/{slug}"
+    else:
+        logger.warning(
+            "deploy_automarket_client: Cloudinary credentials not set for slug=%s, "
+            "image upload will be unavailable in client project.",
+            slug,
+        )
+    await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(2)
+
+    await trigger_deployment(project_id, service_id)
+    await asyncio.sleep(3)
+
+    await asyncio.sleep(5)
+    railway_url = await create_service_domain(service_id, environment_id)
+    logger.info(
+        "Deploy automarket client slug=%s service_name=%s railway_url=%s",
+        slug, service_name, railway_url,
+    )
+
+    if railway_url:
+        await set_variables(project_id, service_id, environment_id, {
+            "SITE_URL": railway_url,
+            "PUBLIC_BASE_URL": railway_url,
+        })
+        await asyncio.sleep(1)
+        await trigger_deployment(project_id, service_id)
+        logger.info(
+            "deploy_automarket_client: updated SITE_URL=%s and retriggered deploy",
+            railway_url,
+        )
+    else:
+        logger.warning(
+            "deploy_automarket_client: railway_url is empty for slug=%s — SITE_URL not set",
+            slug,
+        )
+
+    return {
+        "project_id": project_id,
+        "service_id": service_id,
+        "url": railway_url,
+    }
+
+
 async def redeploy_technomarket_client(
     project_id: str,
     service_id: str,
@@ -530,7 +641,7 @@ async def redeploy_technomarket_client(
         env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
         env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
         env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
-        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/{slug}"
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/automarket/{slug}"
 
     await set_variables(project_id, service_id, environment_id, env_vars)
     await asyncio.sleep(1)
@@ -546,6 +657,59 @@ async def redeploy_technomarket_client(
     deploy_result = await graphql(query, {"serviceId": service_id, "environmentId": environment_id})
     logger.info(
         "redeploy_technomarket_client deploy result: service=%s result=%s",
+        service_id, deploy_result,
+    )
+
+    return {"deploy_result": deploy_result}
+
+
+async def redeploy_automarket_client(
+    project_id: str,
+    service_id: str,
+    slug: str,
+    admin_ids: str,
+    saas_platform_url: str,
+    railway_url: str = "",
+    cloudinary_cloud: str = "",
+    cloudinary_key: str = "",
+    cloudinary_secret: str = "",
+) -> dict:
+    """Update env vars and trigger a redeploy for an existing auto_market client."""
+    logger.info(
+        "redeploy_automarket_client START: slug=%s project_id=%s service_id=%s railway_url=%s",
+        slug, project_id, service_id, railway_url,
+    )
+
+    environment_id = await get_environment_id(project_id)
+    logger.info("redeploy_automarket_client: environment_id=%s slug=%s", environment_id, slug)
+
+    env_vars = {
+        "ADMIN_IDS": admin_ids,
+        "SAAS_PLATFORM_URL": saas_platform_url,
+        "SAAS_CLIENT_SLUG": slug,
+        "TEMPLATE_NAME": "auto_market",
+        "MISE_PYTHON_GITHUB_ATTESTATIONS": "0",
+    }
+    if railway_url:
+        env_vars["SITE_URL"] = railway_url
+        env_vars["PUBLIC_BASE_URL"] = railway_url
+    if cloudinary_cloud and cloudinary_key and cloudinary_secret:
+        env_vars["CLOUDINARY_CLOUD_NAME"] = cloudinary_cloud
+        env_vars["CLOUDINARY_API_KEY"] = cloudinary_key
+        env_vars["CLOUDINARY_API_SECRET"] = cloudinary_secret
+        env_vars["CLOUDINARY_FOLDER"] = f"shopplatform/automarket/{slug}"
+
+    await set_variables(project_id, service_id, environment_id, env_vars)
+    await asyncio.sleep(1)
+
+    query = """
+    mutation serviceInstanceDeploy($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId)
+    }
+    """
+    deploy_result = await graphql(query, {"serviceId": service_id, "environmentId": environment_id})
+    logger.info(
+        "redeploy_automarket_client deploy result: service=%s result=%s",
         service_id, deploy_result,
     )
 
