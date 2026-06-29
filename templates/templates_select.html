@@ -39,11 +39,6 @@
         <span>ShopPlatform</span>
       </a>
       <div class="flex items-center gap-3">
-        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
-          {% for l in supported_langs %}
-          <a href="/templates?plan={{ plan }}&lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
-          {% endfor %}
-        </div>
         <a href="/" class="text-sm text-white/60 hover:text-white transition-colors hidden md:inline">← На головну</a>
       </div>
     </div>
@@ -71,8 +66,33 @@
         <p class="text-white/50 max-w-lg mx-auto">Клікніть на шаблон, щоб продовжити заповнення форми</p>
       </div>
 
+      <div class="grid lg:grid-cols-[1.1fr,0.9fr] gap-6 mb-10 animate-fade-up">
+        <div class="glass-card rounded-3xl p-7">
+          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Що доступно зараз</div>
+          <h2 class="text-2xl font-black mb-3">Оберіть сценарій під свій бізнес</h2>
+          <p class="text-sm text-white/55 leading-relaxed">
+            Для автосалону або автоплощадки обирайте <span class="text-white font-semibold">Auto Market</span>.
+            Для магазину техніки обирайте <span class="text-white font-semibold">TechnoMarket</span> або
+            <span class="text-white font-semibold">TechnoMarket Premium</span>, якщо потрібен окремий бот.
+          </p>
+        </div>
+        <div class="glass-card rounded-3xl p-7 border border-white/10">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Як перевірити вибір</div>
+          <div class="space-y-3 text-sm text-white/60">
+            <p><span class="text-white font-semibold">1.</span> Вибери шаблон.</p>
+            <p><span class="text-white font-semibold">2.</span> Переконайся, що форма відкрилась уже з правильним типом сайту.</p>
+            <p><span class="text-white font-semibold">3.</span> Для Auto Market і Premium перевір блок вибору бота.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-6 animate-fade-up">
+        <div class="text-2xl font-black">Готові шаблони</div>
+        <div class="text-sm text-white/45 mt-1">Тільки ті варіанти, які можна реально запускати в поточному потоці</div>
+      </div>
+
       <!-- Template cards -->
-      <div class="grid md:grid-cols-3 gap-6 animate-fade-up">
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-up">
 
         <!-- TechnoVlada -->
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-brand-lime/40 border border-white/5"
@@ -123,33 +143,6 @@
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Замовлення</span>
             </div>
             <div class="w-full glass border border-emerald-400/30 text-emerald-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-emerald-400 group-hover:text-black transition-all duration-200">
-              Обрати шаблон →
-            </div>
-          </div>
-        </div>
-
-        <!-- Premium Store -->
-        <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-orange-400/40 border border-white/5"
-             onclick="window.location='/create-site?plan={{ plan }}&template=premium_store'">
-          <div class="relative h-52 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
-            <div class="absolute inset-0 grid-bg opacity-60"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-5xl mb-2">⭐</div>
-                <div class="text-xs text-white/40">Premium Store</div>
-              </div>
-            </div>
-            <div class="absolute top-3 right-3 bg-orange-400/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-400/30">NEW</div>
-          </div>
-          <div class="p-6">
-            <h3 class="text-xl font-bold mb-2">Premium Store</h3>
-            <p class="text-white/50 text-sm mb-5 leading-relaxed">Преміум магазин із сучасним дизайном, розширеними категоріями та аналітикою.</p>
-            <div class="flex flex-wrap gap-2 mb-6">
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Преміум</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Аналітика</span>
-              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Дизайн</span>
-            </div>
-            <div class="w-full glass border border-orange-400/30 text-orange-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-orange-400 group-hover:text-black transition-all duration-200">
               Обрати шаблон →
             </div>
           </div>
@@ -226,6 +219,46 @@
 
       </div>
 
+      <div class="mt-14 mb-6 animate-fade-up">
+        <div class="text-2xl font-black">Скоро або окремо допрацьовується</div>
+        <div class="text-sm text-white/45 mt-1">Не смешиваем это с готовыми шаблонами, чтобы клиент не запутался</div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 animate-fade-up">
+        <div class="glass-card rounded-3xl overflow-hidden opacity-75 border border-white/5">
+          <div class="relative h-44 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl mb-2">⭐</div>
+                <div class="text-xs text-white/40">Premium Store</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-300 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">Уточнюється</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">Premium Store</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Шаблон не змішується з основним потоком запуску, поки не буде підтверджений його фінальний сценарій підключення.</p>
+          </div>
+        </div>
+        <div class="glass-card rounded-3xl overflow-hidden opacity-75 border border-white/5">
+          <div class="relative h-44 bg-gradient-to-br from-slate-800/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl mb-2">🧩</div>
+                <div class="text-xs text-white/40">Індивідуальні збірки</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-white/10 text-white/60 text-xs font-medium px-2 py-0.5 rounded-full border border-white/10">Окремо</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">Індивідуальний сценарій</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Для нестандартних сайтів або майбутніх шаблонів краще вести клієнта окремим маршрутом, а не через базовий вибір шаблону.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Back link -->
       <div class="text-center mt-10">
         <a href="/#pricing" class="text-sm text-white/40 hover:text-white transition-colors">← Назад до тарифів</a>
@@ -233,6 +266,16 @@
 
     </div>
   </main>
+  <footer class="relative border-t border-white/5 py-8 px-6">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-white/30">© ShopPlatform</p>
+      <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+        {% for l in supported_langs %}
+        <a href="/templates?plan={{ plan }}&lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </footer>
 
 </body>
 </html>

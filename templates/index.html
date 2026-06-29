@@ -45,13 +45,6 @@
         <a href="#pricing" class="hover:text-white transition-colors">{{ t.nav.pricing }}</a>
       </nav>
       <div class="flex items-center gap-2">
-        <!-- Language switcher -->
-        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
-          {% for l in supported_langs %}
-          <a href="/?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
-          {% endfor %}
-        </div>
-
         {% if current_user %}
           <!-- Logged-in state -->
           {% if is_admin %}
@@ -97,6 +90,32 @@
             </svg>
           </a>
         {% endif %}
+        <details class="md:hidden relative">
+          <summary class="list-none px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white transition-colors cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </summary>
+          <div class="absolute right-0 mt-3 w-64 rounded-2xl border border-white/10 bg-[#130d27]/95 backdrop-blur-xl shadow-2xl p-3">
+            <div class="flex flex-col gap-1 text-sm">
+              <a href="#how" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">{{ t.nav.how }}</a>
+              <a href="#templates" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">{{ t.nav.templates }}</a>
+              <a href="#pricing" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">{{ t.nav.pricing }}</a>
+              {% if current_user %}
+              <a href="/account" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">👤 Мій кабінет</a>
+              {% if is_admin %}
+              <a href="/admin" class="px-3 py-2 rounded-xl text-brand-lime hover:bg-brand-lime/10 transition-colors">⚙ Адмінка</a>
+              {% endif %}
+              <form method="post" action="/logout">
+                <button type="submit" class="w-full text-left px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">Вийти</button>
+              </form>
+              {% else %}
+              <a href="/login" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">Вхід</a>
+              <a href="/register" class="px-3 py-2 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors">Реєстрація</a>
+              {% endif %}
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </header>
@@ -246,70 +265,37 @@
         <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.templates.title }} <span class="gradient-text">{{ t.templates.title_accent }}</span></h2>
         <p class="text-white/50 max-w-lg mx-auto">{{ t.templates.subtitle }}</p>
       </div>
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
-        <!-- Card 1: Mini Market — в разработке -->
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:default;">
-          <div class="relative h-48 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
-            <div class="absolute inset-0 grid-bg opacity-60"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-4xl font-black text-brand-lime mb-1">🛒</div>
-                <div class="text-xs text-white/40">Mini Market</div>
-              </div>
-            </div>
-            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
-          </div>
-          <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">{{ t.templates.t1_name }}</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t1_desc }}</p>
-            <div class="flex flex-wrap gap-2">
-              {% for tag in t.templates.t1_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
-            </div>
+      <div class="grid lg:grid-cols-[1.2fr,0.8fr] gap-8 mb-10">
+        <div class="glass-card rounded-3xl p-7">
+          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Що можна запустити вже зараз</div>
+          <h3 class="text-2xl font-black mb-3">Готові сценарії без плутанини</h3>
+          <p class="text-white/55 text-sm leading-relaxed">
+            Якщо потрібен автомобільний сайт з фільтрами і Telegram-CMS, обирайте <span class="text-white font-semibold">Auto Market</span>.
+            Якщо потрібен магазин техніки з можливістю підключити <span class="text-white font-semibold">особистого бота</span>,
+            обирайте <span class="text-white font-semibold">TechnoMarket Premium</span>.
+          </p>
+        </div>
+        <div class="glass-card rounded-3xl p-7 border border-white/10">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Як вибрати</div>
+          <div class="space-y-3 text-sm text-white/60">
+            <p><span class="text-white font-semibold">1.</span> Спочатку оберіть тариф.</p>
+            <p><span class="text-white font-semibold">2.</span> Потім виберіть шаблон під свою нішу.</p>
+            <p><span class="text-white font-semibold">3.</span> Якщо тариф дозволяє, можна підключити персонального бота окремо.</p>
           </div>
         </div>
-        <!-- Card 2: Market — demo link -->
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
-             onclick="window.open('https://demo-market.shopplatform.app', '_blank')">
-          <div class="relative h-48 bg-gradient-to-br from-blue-900/60 to-brand-dark overflow-hidden">
-            <div class="absolute inset-0 grid-bg opacity-60"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-4xl font-black text-blue-400 mb-1">🏪</div>
-                <div class="text-xs text-white/40">Market</div>
-              </div>
-            </div>
-            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.soon_badge }}</div>
-          </div>
-          <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">{{ t.templates.t2_name }}</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t2_desc }}</p>
-            <div class="flex flex-wrap gap-2">
-              {% for tag in t.templates.t2_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
-            </div>
-          </div>
+      </div>
+
+      <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div class="text-2xl font-black">Доступні шаблони</div>
+          <div class="text-sm text-white/45 mt-1">Те, що можна запускати вже зараз</div>
         </div>
-        <!-- Card 3: Super Market — в разработке -->
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:default;">
-          <div class="relative h-48 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
-            <div class="absolute inset-0 grid-bg opacity-60"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-4xl font-black text-emerald-400 mb-1">🏬</div>
-                <div class="text-xs text-white/40">Super Market</div>
-              </div>
-            </div>
-            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
-          </div>
-          <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">{{ t.templates.t3_name }}</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t3_desc }}</p>
-            <div class="flex flex-wrap gap-2">
-              {% for tag in t.templates.t3_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
-            </div>
-          </div>
-        </div>
+        <a href="/create-site" class="glass border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/10 transition-colors px-4 py-2 rounded-2xl text-sm font-semibold">Перейти до запуску</a>
+      </div>
+
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mb-16">
         <!-- Card 4: Pro Market -->
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site'">
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site?plan=pro&template=pro_store'">
           <div class="relative h-48 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
@@ -328,9 +314,9 @@
             </div>
           </div>
         </div>
-        <!-- Card 5: Auto Market — demo link -->
+        <!-- Card 5: Auto Market -->
         <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
-             onclick="window.open('https://demo-auto.shopplatform.app', '_blank')">
+             onclick="window.location='/create-site?plan=pro&template=auto_market'">
           <div class="relative h-48 bg-gradient-to-br from-amber-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
@@ -339,13 +325,19 @@
                 <div class="text-xs text-white/40">Auto Market</div>
               </div>
             </div>
-            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">DEMO</div>
+            <div class="absolute top-3 right-3 flex gap-1 flex-wrap justify-end">
+              <span class="bg-emerald-500/20 text-emerald-300 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-400/30">Готово</span>
+              <span class="bg-amber-500/20 text-amber-200 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">Demo</span>
+            </div>
           </div>
           <div class="p-6">
             <h3 class="text-lg font-bold mb-2">{{ t.templates.t5_name }}</h3>
             <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t5_desc }}</p>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2 mb-4">
               {% for tag in t.templates.t5_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+            <div class="glass border border-amber-400/30 text-amber-200 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-amber-500/20 transition-all duration-200">
+              Запустити Auto Market →
             </div>
           </div>
         </div>
@@ -377,6 +369,77 @@
           </div>
         </div>
       </div>
+
+      <div class="mb-6">
+        <div class="text-2xl font-black">Скоро в платформі</div>
+        <div class="text-sm text-white/45 mt-1">Заготовки, які ще в роботі або чекають на фінальне пакування</div>
+      </div>
+
+      <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+        <!-- Card 1: Mini Market — в разработке -->
+        <div class="glass-card rounded-3xl overflow-hidden group opacity-75" style="cursor:default;">
+          <div class="relative h-48 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl font-black text-brand-lime mb-1">🛒</div>
+                <div class="text-xs text-white/40">Mini Market</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t1_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t1_desc }}</p>
+            <div class="flex flex-wrap gap-2">
+              {% for tag in t.templates.t1_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <!-- Card 2: Market -->
+        <div class="glass-card rounded-3xl overflow-hidden group opacity-75" style="cursor:default;">
+          <div class="relative h-48 bg-gradient-to-br from-blue-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl font-black text-blue-400 mb-1">🏪</div>
+                <div class="text-xs text-white/40">Market</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.soon_badge }}</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t2_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t2_desc }}</p>
+            <div class="flex flex-wrap gap-2">
+              {% for tag in t.templates.t2_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+        <!-- Card 3: Super Market — в разработке -->
+        <div class="glass-card rounded-3xl overflow-hidden group opacity-75" style="cursor:default;">
+          <div class="relative h-48 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-4xl font-black text-emerald-400 mb-1">🏬</div>
+                <div class="text-xs text-white/40">Super Market</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-400 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">{{ t.templates.wip_badge }}</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-bold mb-2">{{ t.templates.t3_name }}</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t3_desc }}</p>
+            <div class="flex flex-wrap gap-2">
+              {% for tag in t.templates.t3_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="pricing" class="py-28 relative">
     <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-64 bg-purple-700/15 blur-3xl rounded-full pointer-events-none"></div>
@@ -385,6 +448,23 @@
         <div class="inline-block glass border border-brand-lime/20 text-brand-lime text-xs font-medium px-4 py-1.5 rounded-full mb-4">{{ t.pricing.badge }}</div>
         <h2 class="text-4xl lg:text-5xl font-black mb-4">{{ t.pricing.title }} <span class="gradient-text">{{ t.pricing.title_accent }}</span></h2>
         <p class="text-white/50 max-w-lg mx-auto">{{ t.pricing.subtitle }}</p>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-6 mb-10">
+        <div class="glass-card rounded-3xl p-6">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/35 mb-3">Starter</div>
+          <div class="text-lg font-bold mb-2">Для простого старту</div>
+          <p class="text-sm text-white/55">Підійде, якщо потрібен базовий запуск без складної автоматизації.</p>
+        </div>
+        <div class="glass-card rounded-3xl p-6 border border-brand-lime/25">
+          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Pro</div>
+          <div class="text-lg font-bold mb-2">Оптимальний варіант для більшості</div>
+          <p class="text-sm text-white/55">Найкращий баланс між ціною, шаблонами і готовністю до реального запуску.</p>
+        </div>
+        <div class="glass-card rounded-3xl p-6">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/35 mb-3">Premium</div>
+          <div class="text-lg font-bold mb-2">Коли потрібен персональний бот</div>
+          <p class="text-sm text-white/55">Для проектів, де потрібен окремий сценарій обслуговування клієнтів і більше гнучкості.</p>
+        </div>
       </div>
       <div class="grid md:grid-cols-3 gap-8 items-start">
         <div class="glass-card rounded-3xl p-8">
@@ -398,6 +478,7 @@
             {% for f in t.pricing.plan1_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
             {% for f in t.pricing.plan1_missing %}<li class="flex items-center gap-2.5 text-white/40"><span>✕</span> {{ f }}</li>{% endfor %}
           </ul>
+          <div class="text-xs text-white/35 mb-4">Краще для: простого сайту або тестового старту</div>
           <a href="/templates?plan=starter" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_select }}</a>
         </div>
         <div class="glass-card plan-popular rounded-3xl p-8 relative">
@@ -411,6 +492,7 @@
           <ul class="space-y-3 mb-8 text-sm">
             {% for f in t.pricing.plan2_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
+          <div class="text-xs text-white/35 mb-4">Краще для: більшості нових клієнтів ShopPlatform</div>
           <a href="/templates?plan=pro" class="cta-btn block text-center py-3 rounded-2xl text-sm font-semibold animate-glow">{{ t.pricing.btn_select }}</a>
         </div>
         <div class="glass-card rounded-3xl p-8">
@@ -423,6 +505,7 @@
           <ul class="space-y-3 mb-8 text-sm">
             {% for f in t.pricing.plan3_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
+          <div class="text-xs text-white/35 mb-4">Краще для: проектів з окремим ботом і розширеним сервісом</div>
           <a href="/templates?plan=premium" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_select }}</a>
         </div>
       </div>
@@ -478,6 +561,11 @@
       </div>
       <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <p class="text-white/30 text-sm">{{ t.footer.copyright }}</p>
+        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+          {% for l in supported_langs %}
+          <a href="/?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+          {% endfor %}
+        </div>
         <div class="flex gap-6 text-sm text-white/30">
           <a href="#" class="hover:text-white transition-colors">{{ t.footer.privacy }}</a>
           <a href="#" class="hover:text-white transition-colors">{{ t.footer.terms }}</a>

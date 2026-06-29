@@ -56,11 +56,6 @@
         <span>ShopPlatform</span>
       </a>
       <div class="flex items-center gap-3">
-        <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
-          {% for l in supported_langs %}
-          <a href="/create-site?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
-          {% endfor %}
-        </div>
         <a href="/" class="text-sm text-white/60 hover:text-white transition-colors hidden md:inline">{{ t.create_site.back }}</a>
       </div>
     </div>
@@ -115,6 +110,24 @@
         </div>
         {% endif %}
 
+        <div class="mb-8 grid md:grid-cols-3 gap-3">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-2">Крок 1</div>
+            <div class="font-semibold text-white mb-1">Оберіть тариф</div>
+            <div class="text-xs text-white/45">Тариф визначає, які шаблони і сценарії будуть доступні.</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-2">Крок 2</div>
+            <div class="font-semibold text-white mb-1">Оберіть шаблон</div>
+            <div class="text-xs text-white/45">Після вибору тарифу лишаться тільки релевантні варіанти.</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-2">Крок 3</div>
+            <div class="font-semibold text-white mb-1">Підключіть бота</div>
+            <div class="text-xs text-white/45">Для Auto Market і Premium можна лишитись на спільному боті або підключити свій.</div>
+          </div>
+        </div>
+
         <!-- Business name -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-white/70 mb-2">
@@ -150,6 +163,20 @@
             <option value="{{ opt }}" {% if form.plan == opt %}selected{% endif %}>{{ opt }}</option>
             {% endfor %}
           </select>
+          <div class="mt-3 grid sm:grid-cols-3 gap-3 text-xs">
+            <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-white/50">
+              <div class="font-semibold text-white mb-1">Starter</div>
+              Простий старт без розширених шаблонів.
+            </div>
+            <div class="rounded-xl border border-brand-lime/20 bg-brand-lime/5 px-3 py-3 text-white/60">
+              <div class="font-semibold text-white mb-1">Pro / Business</div>
+              Оптимально для більшості запусків, включно з Auto Market.
+            </div>
+            <div class="rounded-xl border border-violet-400/20 bg-violet-500/5 px-3 py-3 text-white/60">
+              <div class="font-semibold text-white mb-1">Premium</div>
+              Для складніших сценаріїв і Premium-шаблонів.
+            </div>
+          </div>
         </div>
 
         <!-- Site template -->
@@ -157,6 +184,10 @@
           <label class="block text-sm font-medium text-white/70 mb-3">
             Шаблон сайту <span class="text-brand-lime">*</span>
           </label>
+          <div class="mb-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/55">
+            Якщо потрібен <span class="text-white font-semibold">автосайт</span>, обирайте <span class="text-brand-lime font-semibold">Auto Market</span>.
+            Якщо потрібен <span class="text-white font-semibold">магазин техніки</span>, обирайте один із шаблонів TechnoMarket.
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label class="cursor-pointer">
               <input type="radio" name="site_type" value="shop_bot" id="tpl-shop-bot" class="sr-only peer"
@@ -166,6 +197,7 @@
                 <div class="text-xl mb-1">🏪</div>
                 <div class="font-semibold text-sm text-white">TechnoMarket</div>
                 <div class="text-xs text-white/40 mt-0.5">Інтернет-магазин з корзиною та фільтрами</div>
+                <div class="mt-3 text-[11px] text-white/35">Підійде для стандартного магазину техніки.</div>
               </div>
             </label>
             <label id="tpl-red-label" class="cursor-pointer relative">
@@ -177,6 +209,7 @@
                 <div class="text-xl mb-1">🔴</div>
                 <div class="font-semibold text-sm text-white">Red Market</div>
                 <div class="text-xs text-white/40 mt-0.5">Сучасний магазин з червоною кольоровою схемою</div>
+                <div class="mt-3 text-[11px] text-white/35">Варіант для магазину з іншим візуальним стилем.</div>
               </div>
               <span id="tpl-red-lock"
                     class="hidden absolute top-2 right-2 flex items-center gap-1
@@ -194,6 +227,7 @@
                 <div class="text-xl mb-1">🚘</div>
                 <div class="font-semibold text-sm text-white">Auto Market</div>
                 <div class="text-xs text-white/40 mt-0.5">Каталог авто з фільтрами, заявками та Telegram CMS</div>
+                <div class="mt-3 text-[11px] text-brand-lime/80">Окремий сценарій для автоплощадок і автосалонів.</div>
               </div>
             </label>
             <label id="tpl-premium-label" class="cursor-pointer relative">
@@ -205,6 +239,7 @@
                 <div class="text-xl mb-1">⭐</div>
                 <div class="font-semibold text-sm text-white">TechnoMarket Premium</div>
                 <div class="text-xs text-white/40 mt-0.5">Техніка з фільтрами, брендами та SEO</div>
+                <div class="mt-3 text-[11px] text-white/35">Підійде, якщо потрібен сильніший сценарій для магазину техніки.</div>
               </div>
               <!-- Lock badge — shown when plan is not Premium -->
               <span id="tpl-premium-lock"
@@ -231,6 +266,10 @@
           <label class="block text-sm font-medium text-white/70 mb-3">
             Режим Telegram-бота <span class="text-brand-lime">*</span>
           </label>
+          <div class="mb-3 rounded-2xl border border-brand-lime/15 bg-brand-lime/5 px-4 py-3 text-sm text-white/55">
+            Тут ви вирішуєте: користуватись <span class="text-white font-semibold">загальним ботом платформи</span>
+            або підключити <span class="text-white font-semibold">власного бота клієнта</span>.
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label class="cursor-pointer">
               <input type="radio" name="bot_mode" value="shared" id="bot-mode-shared"
@@ -241,6 +280,7 @@
                 <div class="text-xl mb-1">🤖</div>
                 <div class="font-semibold text-sm text-white">Загальний бот платформи</div>
                 <div class="text-xs text-white/40 mt-0.5">15$/міс · керується платформою</div>
+                <div class="mt-3 text-[11px] text-white/35">Швидше підключення, без окремого налаштування BotFather.</div>
               </div>
             </label>
             <label class="cursor-pointer">
@@ -252,6 +292,7 @@
                 <div class="text-xl mb-1">⭐</div>
                 <div class="font-semibold text-sm text-white">Особистий бот клієнта</div>
                 <div class="text-xs text-white/40 mt-0.5">20$/міс · власний BOT_TOKEN</div>
+                <div class="mt-3 text-[11px] text-white/35">Окремий брендований бот, повністю на стороні клієнта.</div>
               </div>
             </label>
           </div>
@@ -272,6 +313,9 @@
             <a href="https://t.me/BotFather" target="_blank" rel="noopener"
                class="text-brand-lime hover:underline">@BotFather</a>.
             Токен буде перевірено автоматично.
+          </small>
+          <small class="block mt-1 text-white/30 text-xs">
+            Якщо особистий бот не потрібен, залиште режим загального бота платформи і це поле не заповнюйте.
           </small>
         </div>
 
@@ -298,6 +342,16 @@
 
     </div>
   </main>
+  <footer class="relative border-t border-white/5 py-8 px-6">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-white/30">© ShopPlatform</p>
+      <div class="flex items-center glass rounded-xl overflow-hidden border border-white/10 text-xs font-semibold">
+        {% for l in supported_langs %}
+        <a href="/create-site?lang={{ l }}" class="px-3 py-1.5 transition-colors {% if l == lang %}bg-brand-lime text-brand-dark{% else %}text-white/50 hover:text-white{% endif %}">{{ l | upper }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </footer>
   <script>
     (function () {
       var ADMIN_PREVIEW   = {{ 'true' if admin_preview else 'false' }};
