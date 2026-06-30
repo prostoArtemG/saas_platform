@@ -3,8 +3,10 @@ import logging
 import os
 import re
 import secrets
+from datetime import timezone
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Cookie, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -42,6 +44,26 @@ def _clean(s: Optional[str]) -> Optional[str]:
     if not s:
         return s
     return s.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+
+
+async def _probe_public_url_ready(url: Optional[str]) -> bool:
+    """Return True when a deployed client URL starts answering HTTP requests."""
+    if not url:
+        return False
+    base = url.rstrip("/")
+    targets = [f"{base}/health", base]
+    try:
+        async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
+            for target in targets:
+                try:
+                    resp = await client.get(target)
+                except Exception:  # noqa: BLE001
+                    continue
+                if resp.status_code < 500:
+                    return True
+    except Exception:  # noqa: BLE001
+        return False
+    return False
 
 
 async def _record_event(client_id: int, event_type: str, product_id: Optional[int] = None) -> None:
@@ -554,7 +576,7 @@ async def create_site_submit(
                             _deploy_result.get("custom_domain_url")
                             or _deploy_result.get("url")
                         )
-                        _dc.deployment_status = "ready"
+                        _dc.deployment_status = "deploying"
                         _dc.deployment_error = None
                     else:
                         _dc.deployment_status = "failed"
@@ -775,6 +797,22 @@ async def onboarding_success(
             fallback_base=str(request.base_url).rstrip("/"),
         )
 
+        should_poll_deploy = False
+        if (
+            client.bot_mode == "personal"
+            and client.template_name in PERSONAL_BOT_TEMPLATES
+            and client.railway_url
+            and client.deployment_status not in ("failed", "ready")
+        ):
+            is_ready = await _probe_public_url_ready(client.railway_url)
+            if is_ready:
+                client.deployment_status = "ready"
+                client.deployment_error = None
+                await session.commit()
+            else:
+                client.deployment_status = client.deployment_status or "deploying"
+                should_poll_deploy = True
+
     _token_suffix = f"?token={client.dashboard_token}" if client.dashboard_token else ""
     dashboard_url = str(request.base_url).rstrip("/") + f"/dashboard/{client.slug}{_token_suffix}"
 
@@ -792,6 +830,11 @@ async def onboarding_success(
         "deployment_status": client.deployment_status,
         "railway_url": _clean(client.railway_url) if client.railway_url else None,
         "deployment_error": _clean(client.deployment_error) if client.deployment_error else None,
+        "should_poll_deploy": should_poll_deploy,
+        "created_at_iso": (
+            client.created_at.astimezone(timezone.utc).isoformat()
+            if client.created_at else None
+        ),
     }
 
     return templates.TemplateResponse(
