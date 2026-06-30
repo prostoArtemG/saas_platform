@@ -307,7 +307,7 @@ async def cmd_seed_demo_auto(message: Message) -> None:
         )
         if client is None:
             client = Client(
-                business_name="Auto Market Demo",
+                business_name="AutoMarket Demo",
                 slug=_DEMO_AUTO_SLUG,
                 status="active",
                 template_name="auto_market",
@@ -318,7 +318,7 @@ async def cmd_seed_demo_auto(message: Message) -> None:
         else:
             client.status = "active"
             client.template_name = "auto_market"
-            client.business_name = "Auto Market Demo"
+            client.business_name = "AutoMarket Demo"
             log.append(f"♻️ Клієнт <code>{_DEMO_AUTO_SLUG}</code> оновлений (id={client.id})")
 
         # 2. Upsert settings
@@ -330,7 +330,7 @@ async def cmd_seed_demo_auto(message: Message) -> None:
                 currency="USD",
                 timezone="Europe/Kyiv",
                 theme_name="auto_dark",
-                shop_title="Auto Market Demo",
+                shop_title="AutoMarket Demo",
                 phone="+38 (099) 111-22-33",
                 address="Україна",
             )
@@ -338,7 +338,7 @@ async def cmd_seed_demo_auto(message: Message) -> None:
             log.append("✅ Налаштування створені")
         else:
             cs.theme_name = "auto_dark"
-            cs.shop_title = "Auto Market Demo"
+            cs.shop_title = "AutoMarket Demo"
             cs.phone = "+38 (099) 111-22-33"
             cs.address = "Україна"
             log.append("♻️ Налаштування оновлені")

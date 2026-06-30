@@ -230,7 +230,7 @@ async def seed() -> None:
         )
         if client is None:
             client = Client(
-                business_name="Auto Market Demo",
+                business_name="AutoMarket Demo",
                 slug=DEMO_SLUG,
                 status="active",
                 template_name="auto_market",
@@ -241,7 +241,7 @@ async def seed() -> None:
         else:
             client.status = "active"
             client.template_name = "auto_market"
-            client.business_name = "Auto Market Demo"
+            client.business_name = "AutoMarket Demo"
             print(f"[~] Client exists: slug={DEMO_SLUG} id={client.id}")
 
         # ── 2. Upsert settings ───────────────────────────────────────────────
@@ -253,7 +253,7 @@ async def seed() -> None:
                 currency="USD",
                 timezone="Europe/Kyiv",
                 theme_name="auto_dark",
-                shop_title="Auto Market Demo",
+                shop_title="AutoMarket Demo",
                 phone="+38 (099) 111-22-33",
                 address="Україна",
             )
@@ -261,7 +261,7 @@ async def seed() -> None:
             print(f"[+] Settings created for client id={client.id}")
         else:
             cs.theme_name = "auto_dark"
-            cs.shop_title = "Auto Market Demo"
+            cs.shop_title = "AutoMarket Demo"
             cs.phone = "+38 (099) 111-22-33"
             cs.address = "Україна"
             print(f"[~] Settings updated for client id={client.id}")

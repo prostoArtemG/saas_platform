@@ -99,12 +99,12 @@
       <div class="mb-6 grid md:grid-cols-3 gap-3 animate-fade-up">
         <div class="rounded-2xl border border-brand-lime/20 bg-brand-lime/5 p-4">
           <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-2">Обраний тариф</div>
-          <div class="font-semibold text-white">{{ form.plan or 'Не обрано' }}</div>
+          <div id="selected-plan-label" class="font-semibold text-white">{{ form.plan or 'Не обрано' }}</div>
         </div>
         <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Обраний шаблон</div>
           <div class="font-semibold text-white">
-            {% if form.site_type == 'auto_market' %}Auto Market
+            {% if form.site_type == 'auto_market' or focus_template == 'auto_market' %}Auto Market
             {% elif form.site_type == 'technomarket_premium' %}TechnoMarket Premium
             {% elif form.site_type == 'shop_bot' %}TechnoMarket
             {% elif form.site_type == 'red_market' %}Red Market
@@ -189,7 +189,10 @@
                  value="{{ form.telegram or '' }}"
                  class="form-input w-full px-4 py-3 rounded-xl text-base"
                  placeholder="Наприклад: 500134490" />
-          <small class="block mt-1 text-white/40 text-xs">Потрібен для підключення Telegram CMS. ID можна дізнатись через @userinfobot.</small>
+          <small class="block mt-1 text-white/40 text-xs">
+            Потрібен для підключення Telegram CMS. ID можна дізнатись через
+            <a href="https://t.me/userinfobot" target="_blank" rel="noopener" class="text-brand-lime hover:underline">@userinfobot</a>.
+          </small>
         </div>
 
         <!-- Plan (first — determines which templates are available) -->
@@ -356,8 +359,14 @@
                           border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
                 <div class="text-xl mb-1">🤖</div>
                 <div class="font-semibold text-sm text-white">Загальний бот платформи</div>
-                <div class="text-xs text-white/40 mt-0.5">15$/міс · керується платформою</div>
+                <div class="text-xs text-white/40 mt-0.5">Для швидкого старту · бот уже готовий</div>
                 <div class="mt-3 text-[11px] text-white/35">Швидше підключення, без окремого налаштування BotFather.</div>
+                <div class="mt-3 space-y-1 text-[11px] text-white/45">
+                  <div>• Telegram CMS для додавання та редагування авто</div>
+                  <div>• Заявки з сайту в Telegram</div>
+                  <div>• Публікація авто в Telegram-канал</div>
+                  <div>• Мінімум технічних налаштувань</div>
+                </div>
               </div>
             </label>
             <label id="bot-personal-label" class="cursor-pointer">
@@ -368,8 +377,14 @@
                           border border-white/10 rounded-xl p-4 transition-colors hover:border-white/30">
                 <div class="text-xl mb-1">⭐</div>
                 <div class="font-semibold text-sm text-white">Особистий бот клієнта</div>
-                <div class="text-xs text-white/40 mt-0.5">20$/міс · власний BOT_TOKEN</div>
-                <div class="mt-3 text-[11px] text-white/35">Окремий брендований бот, повністю на стороні клієнта.</div>
+                <div class="text-xs text-white/40 mt-0.5">Доступно на тарифі Premium · власний BOT_TOKEN</div>
+                <div class="mt-3 text-[11px] text-white/35">Окремий брендований бот, повністю під клієнта.</div>
+                <div class="mt-3 space-y-1 text-[11px] text-white/45">
+                  <div>• Власне ім'я та бренд бота</div>
+                  <div>• Окремий Railway-сервіс для клієнта</div>
+                  <div>• Telegram CMS, заявки та автопостинг у канал</div>
+                  <div>• Кращий варіант для дорожчого тарифу</div>
+                </div>
               </div>
             </label>
           </div>
@@ -444,6 +459,7 @@
       var premLock        = document.getElementById('tpl-premium-lock');
       var warnStarter     = document.getElementById('tpl-starter-warn');
       var warnBusiness    = document.getElementById('tpl-business-warn');
+      var selectedPlanLabel = document.getElementById('selected-plan-label');
       var botModeBlock    = document.getElementById('bot-mode-block');
       var botTokenBlock   = document.getElementById('bot-token-block');
       var botModePersonal = document.getElementById('bot-mode-personal');
@@ -537,6 +553,10 @@
 
       /* Update template availability based on selected plan, then sync bot mode. */
       function sync() {
+        if (selectedPlanLabel) {
+          selectedPlanLabel.textContent = planSel.value || 'Не обрано';
+        }
+
         if (ADMIN_PREVIEW) {
           unlockRadio(redRadio, redLabel, redLock);
           unlockRadio(premRadio, premLabel, premLock);
