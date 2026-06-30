@@ -177,7 +177,7 @@
         {% endif %}
 
         <!-- Auto Market -->
-        {% if tier in ['starter', 'business', 'premium'] %}
+        {% if tier in ['business', 'premium'] %}
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-amber-400/40 border border-white/5"
              onclick="window.location='/create-site?plan={{ plan }}&template=auto_market'">
           <div class="relative h-52 bg-gradient-to-br from-slate-900/80 to-brand-dark overflow-hidden">

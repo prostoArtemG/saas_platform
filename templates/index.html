@@ -290,33 +290,41 @@
           <div class="text-2xl font-black">Доступні шаблони</div>
           <div class="text-sm text-white/45 mt-1">Те, що можна запускати вже зараз</div>
         </div>
-        <a href="/create-site" class="glass border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/10 transition-colors px-4 py-2 rounded-2xl text-sm font-semibold">Перейти до запуску</a>
+        <a href="#pricing" class="glass border border-brand-lime/30 text-brand-lime hover:bg-brand-lime/10 transition-colors px-4 py-2 rounded-2xl text-sm font-semibold">Спочатку обрати тариф</a>
       </div>
 
       <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mb-16">
-        <!-- Card 4: Pro Market -->
-        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/create-site?plan=pro&template=pro_store'">
-          <div class="relative h-48 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
+        <!-- Card 4: TechnoMarket -->
+        <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;" onclick="window.location='/templates?plan=starter'">
+          <div class="relative h-48 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <div class="text-4xl font-black text-orange-400 mb-1">🚀</div>
-                <div class="text-xs text-white/40">Pro Market</div>
+                <div class="text-4xl font-black text-emerald-400 mb-1">🏪</div>
+                <div class="text-xs text-white/40">TechnoMarket</div>
               </div>
             </div>
-            <div class="absolute top-3 right-3 bg-orange-400/20 text-orange-400 text-xs font-medium px-2 py-0.5 rounded-full border border-orange-400/30">DEMO</div>
+            <div class="absolute top-3 right-3 flex gap-1 flex-wrap justify-end">
+              <span class="bg-emerald-500/20 text-emerald-300 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-400/30">Готово</span>
+              <span class="bg-emerald-500/10 text-emerald-200 text-xs font-medium px-2 py-0.5 rounded-full border border-emerald-400/20">Є демо</span>
+            </div>
           </div>
           <div class="p-6">
-            <h3 class="text-lg font-bold mb-2">{{ t.templates.t4_name }}</h3>
-            <p class="text-white/50 text-sm mb-4 leading-relaxed">{{ t.templates.t4_desc }}</p>
-            <div class="flex flex-wrap gap-2">
-              {% for tag in t.templates.t4_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
+            <h3 class="text-lg font-bold mb-2">TechnoMarket</h3>
+            <p class="text-white/50 text-sm mb-4 leading-relaxed">Інтернет-магазин із кошиком, фільтрами та Telegram-замовленнями.</p>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Кошик</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Фільтри</span>
+              <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Telegram</span>
+            </div>
+            <div class="glass border border-emerald-400/30 text-emerald-200 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-emerald-500/20 transition-all duration-200">
+              Перейти до тарифів →
             </div>
           </div>
         </div>
         <!-- Card 5: Auto Market -->
         <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
-             onclick="window.location='/create-site?plan=pro&template=auto_market'">
+             onclick="window.location='/templates?plan=pro'">
           <div class="relative h-48 bg-gradient-to-br from-amber-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
@@ -337,13 +345,13 @@
               {% for tag in t.templates.t5_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
             <div class="glass border border-amber-400/30 text-amber-200 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-amber-500/20 transition-all duration-200">
-              Запустити Auto Market →
+              Перейти до тарифів →
             </div>
           </div>
         </div>
         <!-- Card 6: TechnoMarket Premium — personal bot -->
         <div class="glass-card rounded-3xl overflow-hidden group" style="cursor:pointer;"
-             onclick="window.location='/create-site?plan=premium&template=technomarket_premium'">
+             onclick="window.location='/templates?plan=premium'">
           <div class="relative h-48 bg-gradient-to-br from-violet-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
             <div class="absolute inset-0 flex items-center justify-center">
@@ -364,7 +372,7 @@
               {% for tag in t.templates.t6_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
             <div class="glass border border-violet-400/30 text-violet-300 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-violet-500/20 transition-all duration-200">
-              Обрати шаблон →
+              Перейти до тарифів →
             </div>
           </div>
         </div>
@@ -453,17 +461,20 @@
         <div class="glass-card rounded-3xl p-6">
           <div class="text-xs uppercase tracking-[0.3em] text-white/35 mb-3">Starter</div>
           <div class="text-lg font-bold mb-2">Для простого старту</div>
-          <p class="text-sm text-white/55">Підійде, якщо потрібен базовий запуск без складної автоматизації.</p>
+          <p class="text-sm text-white/55">Підійде, якщо потрібен базовий запуск без складної автоматизації та без особистого бота.</p>
+          <div class="mt-4 text-xs text-white/40">Зазвичай доступно: TechnoMarket, TechnoVlada</div>
         </div>
         <div class="glass-card rounded-3xl p-6 border border-brand-lime/25">
           <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Pro</div>
           <div class="text-lg font-bold mb-2">Оптимальний варіант для більшості</div>
-          <p class="text-sm text-white/55">Найкращий баланс між ціною, шаблонами і готовністю до реального запуску.</p>
+          <p class="text-sm text-white/55">Найкращий баланс між ціною, шаблонами і готовністю до реального запуску зі спільним ботом платформи.</p>
+          <div class="mt-4 text-xs text-white/40">Зазвичай доступно: TechnoMarket, Red Market, Auto Market</div>
         </div>
         <div class="glass-card rounded-3xl p-6">
           <div class="text-xs uppercase tracking-[0.3em] text-white/35 mb-3">Premium</div>
           <div class="text-lg font-bold mb-2">Коли потрібен персональний бот</div>
-          <p class="text-sm text-white/55">Для проектів, де потрібен окремий сценарій обслуговування клієнтів і більше гнучкості.</p>
+          <p class="text-sm text-white/55">Для проектів, де потрібен окремий сценарій обслуговування клієнтів, Premium-шаблони та особистий бот.</p>
+          <div class="mt-4 text-xs text-white/40">Зазвичай доступно: все з Pro + Premium-сценарії</div>
         </div>
       </div>
       <div class="grid md:grid-cols-3 gap-8 items-start">
@@ -478,8 +489,8 @@
             {% for f in t.pricing.plan1_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
             {% for f in t.pricing.plan1_missing %}<li class="flex items-center gap-2.5 text-white/40"><span>✕</span> {{ f }}</li>{% endfor %}
           </ul>
-          <div class="text-xs text-white/35 mb-4">Краще для: простого сайту або тестового старту</div>
-          <a href="/templates?plan=starter" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_select }}</a>
+          <div class="text-xs text-white/35 mb-4">Краще для: простого сайту або тестового старту. Особистий бот недоступний.</div>
+          <a href="/templates?plan=starter" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">Подивитись доступні шаблони</a>
         </div>
         <div class="glass-card plan-popular rounded-3xl p-8 relative">
           <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-lime text-black text-xs font-bold px-4 py-1 rounded-full">{{ t.pricing.plan2_badge }}</div>
@@ -492,8 +503,8 @@
           <ul class="space-y-3 mb-8 text-sm">
             {% for f in t.pricing.plan2_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
-          <div class="text-xs text-white/35 mb-4">Краще для: більшості нових клієнтів ShopPlatform</div>
-          <a href="/templates?plan=pro" class="cta-btn block text-center py-3 rounded-2xl text-sm font-semibold animate-glow">{{ t.pricing.btn_select }}</a>
+          <div class="text-xs text-white/35 mb-4">Краще для: більшості нових клієнтів ShopPlatform. Auto Market тут уже доступний.</div>
+          <a href="/templates?plan=pro" class="cta-btn block text-center py-3 rounded-2xl text-sm font-semibold animate-glow">Подивитись доступні шаблони</a>
         </div>
         <div class="glass-card rounded-3xl p-8">
           <div class="text-sm font-medium text-white/50 mb-4 uppercase tracking-widest">{{ t.pricing.plan3_name }}</div>
@@ -505,8 +516,8 @@
           <ul class="space-y-3 mb-8 text-sm">
             {% for f in t.pricing.plan3_features %}<li class="flex items-center gap-2.5 text-white/70"><span class="text-brand-lime font-bold">✓</span> {{ f }}</li>{% endfor %}
           </ul>
-          <div class="text-xs text-white/35 mb-4">Краще для: проектів з окремим ботом і розширеним сервісом</div>
-          <a href="/templates?plan=premium" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">{{ t.pricing.btn_select }}</a>
+          <div class="text-xs text-white/35 mb-4">Краще для: проектів з окремим ботом, Premium-шаблонами і розширеним сервісом.</div>
+          <a href="/templates?plan=premium" class="block glass border border-white/10 hover:border-brand-lime/40 transition-colors text-center py-3 rounded-2xl text-sm font-semibold hover:text-white">Подивитись доступні шаблони</a>
         </div>
       </div>
     </div>
