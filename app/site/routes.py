@@ -51,16 +51,21 @@ async def _probe_public_url_ready(url: Optional[str]) -> bool:
     if not url:
         return False
     base = url.rstrip("/")
-    targets = [f"{base}/health", base]
     try:
         async with httpx.AsyncClient(timeout=8, follow_redirects=True) as client:
-            for target in targets:
-                try:
-                    resp = await client.get(target)
-                except Exception:  # noqa: BLE001
-                    continue
-                if resp.status_code < 500:
+            try:
+                health = await client.get(f"{base}/health")
+                if health.status_code == 200:
                     return True
+            except Exception:  # noqa: BLE001
+                pass
+
+            try:
+                resp = await client.get(base)
+                if 200 <= resp.status_code < 400:
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
     except Exception:  # noqa: BLE001
         return False
     return False
