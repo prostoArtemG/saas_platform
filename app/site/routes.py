@@ -186,6 +186,7 @@ async def create_site_form(
             "submitted": False,
             "error": None,
             "admin_preview": admin_preview,
+            "focus_template": template or "",
             "form": {
                 "plan": plan_matched,
                 "site_type": template or "",
@@ -209,6 +210,7 @@ async def create_site_submit(
     bot_mode: str = Form("shared"),
     admin_telegram_id: str = Form(""),
     admin_preview: str = Form(""),
+    focus_template: str = Form(""),
     lang_cookie: Optional[str] = Cookie(default=None, alias="lang"),
 ) -> HTMLResponse:
     chosen = _resolve_lang(None, lang_cookie)
@@ -238,6 +240,7 @@ async def create_site_submit(
                 "submitted": False,
                 "error": message,
                 "admin_preview": _is_admin_preview,
+                "focus_template": focus_template,
                 "form": {
                     "business_name": business_name,
                     "telegram": telegram,
@@ -271,6 +274,11 @@ async def create_site_submit(
         else "starter"
     )
     if not _is_admin_preview:
+        if site_type == "auto_market" and _tier == "starter":
+            return _form_error(
+                "Шаблон Auto Market недоступний для тарифу Starter. "
+                "Оберіть Pro або Premium."
+            )
         if site_type == "red_market" and _tier == "starter":
             return _form_error(
                 "Шаблон Red Market недоступний для тарифу Starter. "
