@@ -95,6 +95,30 @@
         <p class="text-white/50 max-w-md mx-auto">{{ t.create_site.subtitle }}</p>
       </div>
 
+      {% if form.plan or form.site_type %}
+      <div class="mb-6 grid md:grid-cols-3 gap-3 animate-fade-up">
+        <div class="rounded-2xl border border-brand-lime/20 bg-brand-lime/5 p-4">
+          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-2">Обраний тариф</div>
+          <div class="font-semibold text-white">{{ form.plan or 'Не обрано' }}</div>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Обраний шаблон</div>
+          <div class="font-semibold text-white">
+            {% if form.site_type == 'auto_market' %}Auto Market
+            {% elif form.site_type == 'technomarket_premium' %}TechnoMarket Premium
+            {% elif form.site_type == 'shop_bot' %}TechnoMarket
+            {% elif form.site_type == 'red_market' %}Red Market
+            {% elif form.site_type == 'technovlada' %}TechnoVlada
+            {% else %}Не обрано{% endif %}
+          </div>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">Що далі</div>
+          <div class="text-sm text-white/60">Заповніть дані бізнесу, а блок бота покаже тільки доступні для цього тарифу опції.</div>
+        </div>
+      </div>
+      {% endif %}
+
       {% if admin_preview %}
       <div class="mb-6 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2">
         <span class="text-base">🔓</span>
@@ -177,6 +201,9 @@
               Для складніших сценаріїв і Premium-шаблонів.
             </div>
           </div>
+          {% if form.plan %}
+          <p class="mt-2 text-xs text-white/35">Тариф уже підставлений із попереднього кроку, але за потреби його ще можна змінити.</p>
+          {% endif %}
         </div>
 
         <!-- Site template -->
@@ -270,8 +297,9 @@
             Тут ви вирішуєте: користуватись <span class="text-white font-semibold">загальним ботом платформи</span>
             або підключити <span class="text-white font-semibold">власного бота клієнта</span>.
           </div>
+          <p id="bot-mode-note" class="hidden mb-3 text-xs text-amber-300"></p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="cursor-pointer">
+            <label id="bot-shared-label" class="cursor-pointer">
               <input type="radio" name="bot_mode" value="shared" id="bot-mode-shared"
                      class="sr-only peer"
                      {% if form.bot_mode != 'personal' %}checked{% endif %}>
@@ -283,7 +311,7 @@
                 <div class="mt-3 text-[11px] text-white/35">Швидше підключення, без окремого налаштування BotFather.</div>
               </div>
             </label>
-            <label class="cursor-pointer">
+            <label id="bot-personal-label" class="cursor-pointer">
               <input type="radio" name="bot_mode" value="personal" id="bot-mode-personal"
                      class="sr-only peer"
                      {% if form.bot_mode == 'personal' %}checked{% endif %}>
@@ -370,6 +398,9 @@
       var botTokenBlock   = document.getElementById('bot-token-block');
       var botModePersonal = document.getElementById('bot-mode-personal');
       var botModeShared   = document.getElementById('bot-mode-shared');
+      var botSharedLabel  = document.getElementById('bot-shared-label');
+      var botPersonalLabel = document.getElementById('bot-personal-label');
+      var botModeNote     = document.getElementById('bot-mode-note');
       var botTokenInput   = document.getElementById('bot-token-input');
       if (!planSel) return;
 
@@ -399,21 +430,54 @@
         if (warnBusiness) warnBusiness.classList.add('hidden');
       }
 
+      function setBotModeUi(showBlock, allowPersonal, noteText) {
+        if (showBlock) {
+          botModeBlock.classList.remove('hidden');
+        } else {
+          botModeBlock.classList.add('hidden');
+        }
+
+        if (botModeNote) {
+          if (noteText) {
+            botModeNote.textContent = noteText;
+            botModeNote.classList.remove('hidden');
+          } else {
+            botModeNote.classList.add('hidden');
+          }
+        }
+
+        if (botPersonalLabel) {
+          botPersonalLabel.classList.toggle('hidden', !allowPersonal);
+        }
+
+        if (!allowPersonal && botModeShared) {
+          botModeShared.checked = true;
+        }
+      }
+
       /* Update bot-mode / bot-token blocks based on current template selection. */
       function syncBotMode() {
+        var tier = tierOf(planSel.value);
         var supportsPersonal =
           (premRadio && premRadio.checked && !premRadio.disabled) ||
           (autoRadio && autoRadio.checked && !autoRadio.disabled);
+        var allowPersonal = supportsPersonal && tier === 'premium';
+
         if (supportsPersonal) {
-          botModeBlock.classList.remove('hidden');
-          var isPersonal = botModePersonal && botModePersonal.checked;
+          setBotModeUi(
+            true,
+            allowPersonal,
+            allowPersonal
+              ? "На цьому тарифі можна обрати спільного або особистого бота."
+              : "На цьому тарифі для цього шаблону доступний лише спільний бот платформи."
+          );
+          var isPersonal = allowPersonal && botModePersonal && botModePersonal.checked;
           botTokenBlock.classList[isPersonal ? 'remove' : 'add']('hidden');
           if (botTokenInput) botTokenInput.required = isPersonal;
         } else {
-          botModeBlock.classList.add('hidden');
+          setBotModeUi(false, false, "");
           botTokenBlock.classList.add('hidden');
           if (botTokenInput) botTokenInput.required = false;
-          /* Reset to shared when premium template is no longer available */
           if (botModeShared) botModeShared.checked = true;
         }
       }

@@ -51,6 +51,8 @@
 
   <main class="relative pt-28 pb-20 px-6">
     <div class="max-w-5xl mx-auto">
+      {% set plan_lower = (plan or '')|lower %}
+      {% set tier = 'premium' if plan_lower.startswith('premium') or plan_lower.startswith('full') else 'business' if plan_lower.startswith('business') or plan_lower.startswith('pro') else 'starter' %}
 
       <!-- Header -->
       <div class="text-center mb-12 animate-fade-up">
@@ -68,33 +70,42 @@
 
       <div class="grid lg:grid-cols-[1.1fr,0.9fr] gap-6 mb-10 animate-fade-up">
         <div class="glass-card rounded-3xl p-7">
-          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Що доступно зараз</div>
-          <h2 class="text-2xl font-black mb-3">Оберіть сценарій під свій бізнес</h2>
+          <div class="text-xs uppercase tracking-[0.3em] text-brand-lime/80 mb-3">Доступно на цьому тарифі</div>
+          <h2 class="text-2xl font-black mb-3">Спочатку тариф, потім тільки релевантні шаблони</h2>
           <p class="text-sm text-white/55 leading-relaxed">
-            Для автосалону або автоплощадки обирайте <span class="text-white font-semibold">Auto Market</span>.
-            Для магазину техніки обирайте <span class="text-white font-semibold">TechnoMarket</span> або
-            <span class="text-white font-semibold">TechnoMarket Premium</span>, якщо потрібен окремий бот.
+            Тут показані тільки ті варіанти, які реально можна запустити на обраному тарифі.
+            Спочатку подивіться <span class="text-white font-semibold">демо</span>, а потім натискайте
+            <span class="text-white font-semibold">Створити сайт</span>.
           </p>
         </div>
         <div class="glass-card rounded-3xl p-7 border border-white/10">
-          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Як перевірити вибір</div>
+          <div class="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Що буде далі</div>
           <div class="space-y-3 text-sm text-white/60">
-            <p><span class="text-white font-semibold">1.</span> Вибери шаблон.</p>
-            <p><span class="text-white font-semibold">2.</span> Переконайся, що форма відкрилась уже з правильним типом сайту.</p>
-            <p><span class="text-white font-semibold">3.</span> Для Auto Market і Premium перевір блок вибору бота.</p>
+            <p><span class="text-white font-semibold">1.</span> Виберіть доступний шаблон.</p>
+            <p><span class="text-white font-semibold">2.</span> Форма відкриється вже з обраним тарифом і шаблоном.</p>
+            <p><span class="text-white font-semibold">3.</span> Блок по боту покаже тільки ті опції, які доступні на цьому тарифі.</p>
           </div>
         </div>
       </div>
 
       <div class="mb-6 animate-fade-up">
-        <div class="text-2xl font-black">Готові шаблони</div>
-        <div class="text-sm text-white/45 mt-1">Тільки ті варіанти, які можна реально запускати в поточному потоці</div>
+        <div class="text-2xl font-black">Доступні шаблони</div>
+        <div class="text-sm text-white/45 mt-1">
+          {% if tier == 'premium' %}
+          На цьому тарифі доступні всі основні сценарії, включно з Premium і особистим ботом.
+          {% elif tier == 'business' %}
+          На цьому тарифі доступні стандартні магазини та Auto Market зі спільним ботом.
+          {% else %}
+          На цьому тарифі доступні базові сценарії запуску без Premium-можливостей.
+          {% endif %}
+        </div>
       </div>
 
       <!-- Template cards -->
       <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-up">
 
         <!-- TechnoVlada -->
+        {% if tier in ['starter', 'business', 'premium'] %}
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-brand-lime/40 border border-white/5"
              onclick="window.location='/create-site?plan={{ plan }}&template=technovlada'">
           <div class="relative h-52 bg-gradient-to-br from-purple-900/60 to-brand-dark overflow-hidden">
@@ -115,13 +126,22 @@
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Каталог</span>
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Запис</span>
             </div>
-            <div class="w-full glass border border-brand-lime/30 text-brand-lime text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-brand-lime group-hover:text-black transition-all duration-200">
-              Обрати шаблон →
+            <div class="flex gap-2">
+              <button type="button"
+                      onclick="event.stopPropagation()"
+                      class="flex-1 glass border border-white/10 text-white/40 text-sm font-semibold py-2.5 rounded-xl text-center cursor-not-allowed">
+                Демо скоро
+              </button>
+              <div class="flex-1 glass border border-brand-lime/30 text-brand-lime text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-brand-lime group-hover:text-black transition-all duration-200">
+                Створити сайт
+              </div>
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- ShopBot / TechnoMarket -->
+        {% if tier in ['starter', 'business', 'premium'] %}
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-emerald-400/40 border border-white/5"
              onclick="window.location='/create-site?plan={{ plan }}&template=shop_bot'">
           <div class="relative h-52 bg-gradient-to-br from-emerald-900/60 to-brand-dark overflow-hidden">
@@ -142,13 +162,22 @@
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Фільтри</span>
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Замовлення</span>
             </div>
-            <div class="w-full glass border border-emerald-400/30 text-emerald-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-emerald-400 group-hover:text-black transition-all duration-200">
-              Обрати шаблон →
+            <div class="flex gap-2">
+              <a href="https://demo-market.shopplatform.app" target="_blank" rel="noopener"
+                 onclick="event.stopPropagation()"
+                 class="flex-1 glass border border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/10 text-sm font-semibold py-2.5 rounded-xl text-center transition-all duration-200">
+                Демо
+              </a>
+              <div class="flex-1 glass border border-emerald-400/30 text-emerald-400 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-emerald-400 group-hover:text-black transition-all duration-200">
+                Створити сайт
+              </div>
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- Auto Market -->
+        {% if tier in ['starter', 'business', 'premium'] %}
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-amber-400/40 border border-white/5"
              onclick="window.location='/create-site?plan={{ plan }}&template=auto_market'">
           <div class="relative h-52 bg-gradient-to-br from-slate-900/80 to-brand-dark overflow-hidden">
@@ -181,13 +210,15 @@
               <a href="https://demo-auto.shopplatform.app" target="_blank" rel="noopener"
                  onclick="event.stopPropagation()"
                  class="glass border border-white/10 text-white/50 hover:text-amber-400 hover:border-amber-400/30 text-sm font-semibold px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-1 whitespace-nowrap">
-                &#x1F441;&#xFE0F; Демо
+                Демо
               </a>
             </div>
           </div>
         </div>
+        {% endif %}
 
         <!-- TechnoMarket Premium -->
+        {% if tier == 'premium' %}
         <div class="glass-card rounded-3xl overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-violet-400/40 border border-white/5"
              onclick="window.location='/create-site?plan=premium&template=technomarket_premium'">
           <div class="relative h-52 bg-gradient-to-br from-violet-900/60 to-brand-dark overflow-hidden">
@@ -211,20 +242,66 @@
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Webhook</span>
               <span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">Telegram CMS</span>
             </div>
-            <div class="w-full glass border border-violet-400/30 text-violet-300 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-violet-500 group-hover:text-white transition-all duration-200">
-              Обрати шаблон →
+            <div class="flex gap-2">
+              <button type="button"
+                      onclick="event.stopPropagation()"
+                      class="flex-1 glass border border-white/10 text-white/40 text-sm font-semibold py-2.5 rounded-xl text-center cursor-not-allowed">
+                Демо скоро
+              </button>
+              <div class="flex-1 glass border border-violet-400/30 text-violet-300 text-sm font-semibold py-2.5 rounded-xl text-center group-hover:bg-violet-500 group-hover:text-white transition-all duration-200">
+                Створити сайт
+              </div>
             </div>
           </div>
         </div>
+        {% endif %}
 
       </div>
 
       <div class="mt-14 mb-6 animate-fade-up">
-        <div class="text-2xl font-black">Скоро або окремо допрацьовується</div>
-        <div class="text-sm text-white/45 mt-1">Не смешиваем это с готовыми шаблонами, чтобы клиент не запутался</div>
+        <div class="text-2xl font-black">Недоступно на цьому тарифі</div>
+        <div class="text-sm text-white/45 mt-1">Тут показано те, що можна буде підключити на вищому тарифі або окремим сценарієм</div>
       </div>
 
       <div class="grid md:grid-cols-2 gap-6 animate-fade-up">
+        {% if tier != 'business' and tier != 'premium' %}
+        <div class="glass-card rounded-3xl overflow-hidden opacity-75 border border-white/5">
+          <div class="relative h-44 bg-gradient-to-br from-red-900/50 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl mb-2">🔴</div>
+                <div class="text-xs text-white/40">Red Market</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-300 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">Доступно з 20$</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">Red Market</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Шаблон стане доступним на тарифі Pro / Business або вище.</p>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if tier != 'premium' %}
+        <div class="glass-card rounded-3xl overflow-hidden opacity-75 border border-white/5">
+          <div class="relative h-44 bg-gradient-to-br from-violet-900/60 to-brand-dark overflow-hidden">
+            <div class="absolute inset-0 grid-bg opacity-60"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="text-center">
+                <div class="text-5xl mb-2">⚡</div>
+                <div class="text-xs text-white/40">TechnoMarket Premium</div>
+              </div>
+            </div>
+            <div class="absolute top-3 right-3 bg-amber-400/20 text-amber-300 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-400/30">Доступно з 30$</div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-xl font-bold mb-2">TechnoMarket Premium</h3>
+            <p class="text-white/50 text-sm leading-relaxed">Premium-шаблон і режим особистого бота відкриваються тільки на старших тарифах.</p>
+          </div>
+        </div>
+        {% endif %}
+
         <div class="glass-card rounded-3xl overflow-hidden opacity-75 border border-white/5">
           <div class="relative h-44 bg-gradient-to-br from-orange-900/60 to-brand-dark overflow-hidden">
             <div class="absolute inset-0 grid-bg opacity-60"></div>
