@@ -344,8 +344,15 @@
             <div class="flex flex-wrap gap-2 mb-4">
               {% for tag in t.templates.t5_tags %}<span class="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1">{{ tag }}</span>{% endfor %}
             </div>
-            <div class="glass border border-amber-400/30 text-amber-200 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-amber-500/20 transition-all duration-200">
-              Обрати тариф і бота →
+            <div class="flex gap-2">
+              <div class="flex-1 glass border border-amber-400/30 text-amber-200 text-xs font-semibold py-2 rounded-xl text-center group-hover:bg-amber-500/20 transition-all duration-200">
+                Обрати тариф і бота →
+              </div>
+              <a href="https://demo-auto.shopplatform.app" target="_blank" rel="noopener"
+                 onclick="event.stopPropagation()"
+                 class="glass border border-white/10 text-white/60 hover:text-amber-200 hover:border-amber-400/30 text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-200 whitespace-nowrap">
+                Демо
+              </a>
             </div>
           </div>
         </div>
